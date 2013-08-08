@@ -6,6 +6,27 @@ include("cmake/hsprj.cmake")
 set(HSPRJ_NAME "hs_sfm")
 hs_project(${HSPRJ_NAME})
 
+#bundle adjustment
+set(BA_NAME "bundle_adjustment")
+set(BA_SOURCES
+  )
+hslib_add_library(${BA_NAME} ${HSPRJ_NAME} ${BA_SOURCES})
+
+set(BA_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  "unit_test/bundle_adjustment/test_ba_naive_base.hpp"
+  "unit_test/bundle_adjustment/test_ba_naive_jac.cpp"
+  "unit_test/bundle_adjustment/test_ba_naive_vec_func.cpp"
+  )
+hslib_add_utest(${BA_NAME} SOURCES ${BA_UTEST_SOURCES})
+hslib_add_dep(${BA_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  3RDPARTY_DEPS boost HEADONLY
+  HS_DEPS hs_math HEADONLY
+  )
+hslib_post_build(${BA_NAME}_utest)
+
+#utility
 set(UTILITY_NAME "utility")
 set(UTILITY_SOURCES
   )
