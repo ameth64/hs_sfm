@@ -128,7 +128,7 @@ TEST(TestSyntheticSceneGenerator, SimpleTest)
   ImageContainer images;
   Pt3DContainer pts;
   sceneGen(intrins, extrins, images, pts);
-  //±£´æÎÄ¼ş·½±ã¿ÉÊÓ»¯¹Û²ì
+  //ä¿å­˜æ–‡ä»¶æ–¹ä¾¿å¯è§†åŒ–è§‚å¯Ÿ
   //sfm::SaveXugFile<Scalar, ImgDim> saver;
   //saver("TestSyntheticSceneGenerator/SimpleTest/test.xug",
   //    intrins, extrins, images, pts, 10);
@@ -142,7 +142,7 @@ TEST(TestSyntheticSceneGenerator, SimpleTest)
   MatchContainer matches;
   mathesGen(tracks, matches);
 
-  //ÌØÕ÷µã¼ÓÈëÔëÉù
+  //ç‰¹å¾ç‚¹åŠ å…¥å™ªå£°
   ImgKeysContainer noisedImgKeysSet = imgKeysSet;
   size_t numCam = noisedImgKeysSet.size();
   KeyCov keyCov = KeyCov::Identity();
@@ -152,7 +152,7 @@ TEST(TestSyntheticSceneGenerator, SimpleTest)
     noiseImgKeys(noisedImgKeysSet[i]);
   }
 
-  //Íâ²ÎÊı¼ÓÈëÔëÉù£¬×÷ÎªPOSĞÅÏ¢
+  //å¤–å‚æ•°åŠ å…¥å™ªå£°ï¼Œä½œä¸ºPOSä¿¡æ¯
   ExtrinContainer priorExtrins = extrins;
   ExtrinCov covR = ExtrinCov::Identity();
   covR *= Scalar(5) / 180 * Scalar(M_PI);
@@ -164,7 +164,7 @@ TEST(TestSyntheticSceneGenerator, SimpleTest)
     noiseExtr(priorExtrins[i]);
   }
 
-  //±£´æÎÄ¼ş·½±ã¿ÉÊÓ»¯¹Û²ì
+  //ä¿å­˜æ–‡ä»¶æ–¹ä¾¿å¯è§†åŒ–è§‚å¯Ÿ
   //saver("TestSyntheticSceneGenerator/SimpleTest/test_noise.xug",
   //  intrins, priorExtrins, images, pts, 10);
 

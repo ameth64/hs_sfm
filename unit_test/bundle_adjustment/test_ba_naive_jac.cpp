@@ -81,15 +81,9 @@ namespace
       {
         Scalar ffdS = ffdJ.coeff(i, j);
         Scalar baS = baJ.coeff(i, j);
-        if (baS == 0)
-        {
-          ASSERT_NEAR(ffdS, 0, 1e-6);
-        }
-        else
-        {
-          Scalar relErr = abs((baS - ffdS) / baS);
-          ASSERT_NEAR(relErr, 0, 1e-3);
-        }
+
+        Scalar absErr = abs(baS - ffdS);
+        ASSERT_NEAR(absErr, 0, 1e-4);
       }
     }
 

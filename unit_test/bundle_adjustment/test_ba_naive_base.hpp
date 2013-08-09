@@ -101,7 +101,7 @@ public:
     baVecFunc.setFeatNum(featNum);
     baVecFunc.setFeatMaps(featMaps);
 
-    //Ïà»úÍâ²ÎÊı
+    //ç›¸æœºå¤–å‚æ•°
     Index xSize = baVecFunc.getXSize();
     x.resize(xSize);
     Index ySize = baVecFunc.getYSize();
@@ -121,7 +121,7 @@ public:
       x[i * BAVecFunc::m_paramsPerCam + 5] = t[2];
     }
 
-    //µãÔÆ
+    //ç‚¹äº‘
     Index camParamSize = baVecFunc.getCamParamsSize();
     auto ptItr = pts.begin();
     auto ptItrEnd = pts.end();
@@ -132,7 +132,7 @@ public:
             BAVecFunc::m_paramsPerPt) = pts[i];
     }
 
-    //ÌØÕ÷µã
+    //ç‰¹å¾ç‚¹
     itrImgKeys = imgKeys.begin();
     i = 0;
     for (; itrImgKeys != itrImgKeysEnd; ++itrImgKeys)

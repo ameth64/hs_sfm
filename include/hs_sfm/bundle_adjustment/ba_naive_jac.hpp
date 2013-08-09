@@ -16,23 +16,23 @@ template <typename _VecFunc>
 class BANaiveJacobian;
 
 /**
- *  ¼ÆËã¼òµ¥Bundle Adjustmentº¯ÊıµÄJacbobian¾ØÕó¡£
+ *  è®¡ç®—ç®€å•Bundle Adjustmentå‡½æ•°çš„JacbobiançŸ©é˜µã€‚
  *
- *  Éè\f$\mathbf{y_i}\f$ÎªµÚi¸öÓ°ÏñÌØÕ÷µã¶ÔÓ¦\f$\mathbf{c_j}\f$ÎªµÚj¸öÏà»úµÄ²ÎÊı£¬
- *  \f$\mathbf{p_k}\f$ÎªµÚk¸öÈıÎ¬µã£¬
- *  Ôò\f$\mathbf{y_i}\f$µÄÆë´Î±íÊ¾\f$\mathbf{\hat{y}_i}\f$ÓĞ£º
+ *  è®¾\f$\mathbf{y_i}\f$ä¸ºç¬¬iä¸ªå½±åƒç‰¹å¾ç‚¹å¯¹åº”\f$\mathbf{c_j}\f$ä¸ºç¬¬jä¸ªç›¸æœºçš„å‚æ•°ï¼Œ
+ *  \f$\mathbf{p_k}\f$ä¸ºç¬¬kä¸ªä¸‰ç»´ç‚¹ï¼Œ
+ *  åˆ™\f$\mathbf{y_i}\f$çš„é½æ¬¡è¡¨ç¤º\f$\mathbf{\hat{y}_i}\f$æœ‰ï¼š
  *  \f[
  *    \mathbf{\hat{y}_i} = \mathbf{r_j}(\mathbf{p_k}) + \mathbf{t_j}
  *  \f]
- *  ÆäÖĞ\f$\mathbf{t_j}\f$±íÊ¾µÚj¸öÏà»úµÄÎ»ÒÆ¡£
- *  \f$\mathbf{r_j}(\mathbf{x})\f$±íÊ¾µÚj¸öÏà»úµÄ³¯Ïò£¬Ê¹ÓÃÖá½ÇĞı×ª±íÊ¾Îª£º
+ *  å…¶ä¸­\f$\mathbf{t_j}\f$è¡¨ç¤ºç¬¬jä¸ªç›¸æœºçš„ä½ç§»ã€‚
+ *  \f$\mathbf{r_j}(\mathbf{x})\f$è¡¨ç¤ºç¬¬jä¸ªç›¸æœºçš„æœå‘ï¼Œä½¿ç”¨è½´è§’æ—‹è½¬è¡¨ç¤ºä¸ºï¼š
  *  \f[
  *    \mathbf{r_j}(\mathbf{x}) = cos(\theta)\mathbf{x} +
  *      sin(\theta)((\mathbf{r_j} / \theta) \times \mathbf{x}) +
  *      \frac{1-cos(\theta)}{\theta^2}(\mathbf{r_j}\cdot\mathbf{x})\mathbf{r_j}
  *  \f]
- *  ÆäÖĞ\f$\theta\f$Îª\f$\mathbf{r_j}\f$µÄÄ£¡£
- *  ÓÚÊÇÓĞ\f$\mathbf{\hat{y}_i} = [\hat{y}_{i0},\hat{y}_{i1},\hat{y}_{i2}]^T\f$£º
+ *  å…¶ä¸­\f$\theta\f$ä¸º\f$\mathbf{r_j}\f$çš„æ¨¡ã€‚
+ *  äºæ˜¯æœ‰\f$\mathbf{\hat{y}_i} = [\hat{y}_{i0},\hat{y}_{i1},\hat{y}_{i2}]^T\f$ï¼š
  *  \f[
  *    \hat{y}_{i0} = cos(\theta)p_{k0} + 
  *           \frac{sin(\theta)}{\theta}r_{j1}p_{k2} +
@@ -48,7 +48,7 @@ class BANaiveJacobian;
  *           \frac{sin(\theta)}{\theta}r_{j0}p_{k1} +
  *           d\frac{1-cos(\theta)}{\theta^2}r_{j2} + t_{j2}
  *  \f]
- *  ÆäÖĞ\f$d=\mathbf{r_j}\cdot\mathbf{p_k}\f$
+ *  å…¶ä¸­\f$d=\mathbf{r_j}\cdot\mathbf{p_k}\f$
  */
 template <typename _Scalar>
 class BANaiveJacobian<BANaiveVecFunc<_Scalar> >

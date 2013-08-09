@@ -17,8 +17,8 @@ public:
   EIGEN_BASE_DEF(Scalar);
 
   /**
-   *  ²âÊÔransacÄâºÏÈıÎ¬µãÆ½Ãæ¡£
-   *  Æ½ÃæÕæÖµÎªxyÆ½Ãæ×÷ÏàËÆ±ä»»ºóµÄÆ½Ãæ¡£
+   *  æµ‹è¯•ransacæ‹Ÿåˆä¸‰ç»´ç‚¹å¹³é¢ã€‚
+   *  å¹³é¢çœŸå€¼ä¸ºxyå¹³é¢ä½œç›¸ä¼¼å˜æ¢åçš„å¹³é¢ã€‚
    */
   static int testRansacFitPlannar(const Mat33& rot,
                const Vec3& trans,
