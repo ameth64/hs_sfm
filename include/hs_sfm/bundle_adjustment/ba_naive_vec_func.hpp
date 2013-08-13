@@ -35,6 +35,7 @@ public:
   typedef EIGEN_VEC(Scalar, Eigen::Dynamic) YVec;
 
   typedef EIGEN_VEC(Scalar, 3) Vec3;
+  typedef EIGEN_VEC(Scalar, 2) Vec2;
 
   typedef typename XVec::Index Index;
 
@@ -144,27 +145,35 @@ public:
       Index camId = m_featMaps[i].first;
       Index ptId = m_featMaps[i].second;
 
-      Vec3 pt = x.segment(camParamSize + ptId * m_paramsPerPt,
-                m_paramsPerPt);
+      Vec3 p = x.segment(camParamSize + ptId * m_paramsPerPt,
+               m_paramsPerPt);
 
       Vec3 r = x.segment(camId * m_paramsPerCam, 3);
       Vec3 t = x.segment(camId * m_paramsPerCam + 3, 3);
 
-      //Rot3D<Scalar> R(r);
-      //Vec3 ptCam = R * pt + t;
+      Vec2 feat;
+      ptPrjToFeat(r, t, p, feat);
 
-      //轴角旋转加上平移
-      Scalar theta = r.norm();
-      r /= theta;
-      Vec3 ptCam = cos(theta) * pt + 
-        sin(theta) * r.cross(pt) + 
-        (1 - cos(theta)) * pt.dot(r) * r + t;
-
-      ptCam /= ptCam[2];
-
-      y.segment(i * m_paramsPerFeat, m_paramsPerFeat) = 
-        ptCam.segment(0, 2);
+      y.segment(i * m_paramsPerFeat, m_paramsPerFeat) = feat;
     }
+
+    return 0;
+  }
+
+  inline static Err ptPrjToFeat(const Vec3& r, const Vec3& t, const Vec3& p,
+                                Vec2& feat)
+  {
+    //hs::math::geometry::Rot3D<Scalar> R(r);
+    //Vec3 ptCam = R * p + t;
+
+    //轴角旋转加上平移
+    Scalar theta = r.norm();
+    Vec3 rN = r / theta;
+    Vec3 ptCam = cos(theta) * p +
+      sin(theta) * rN.cross(p) +
+      (1 - cos(theta)) * p.dot(rN) * rN + t;
+    ptCam /= ptCam[2];
+    feat = ptCam.segment(0, 2);
 
     return 0;
   }

@@ -1,9 +1,10 @@
-#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_JAC_HPP_
-#define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_JAC_HPP_
+#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_ANALYTIC_JAC_HPP_
+#define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_ANALYTIC_JAC_HPP_
 
 #include <vector>
 
 #include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_jac_matrix.hpp"
 
 namespace hs
 {
@@ -13,7 +14,7 @@ namespace ba
 {
 
 template <typename _VecFunc>
-class BANaiveJacobian;
+class BANaiveAnalyticJacobian;
 
 /**
  *  计算简单Bundle Adjustment函数的Jacbobian矩阵。
@@ -51,7 +52,7 @@ class BANaiveJacobian;
  *  其中\f$d=\mathbf{r_j}\cdot\mathbf{p_k}\f$
  */
 template <typename _Scalar>
-class BANaiveJacobian<BANaiveVecFunc<_Scalar> >
+class BANaiveAnalyticJacobian<BANaiveVecFunc<_Scalar> >
 {
 public:
   typedef _Scalar Scalar;
@@ -64,113 +65,26 @@ public:
   typedef typename VecFunc::Index Index;
   typedef typename VecFunc::FeatMap FeatMap;
   typedef typename VecFunc::FeatMapContainer FeatMapContainer;
-
-  enum
-  {
-    EigenDefaultMajor =
-#if defined(EIGEN_DEFAULT_TO_ROW_MAJOR)
-    Eigen::RowMajor
-#else
-    Eigen::ColMajor
-#endif
-  };
-
-  struct Jac
-  {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    typedef EIGEN_SMAT(Index, EigenDefaultMajor, Index) DerivativeIdx;
-
-    struct CamDrvBlk
-    {
-      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-      typedef EIGEN_MAT(Scalar, VecFunc::m_paramsPerFeat, 
-                    VecFunc::m_paramsPerCam) DrvBlk;
-      Index m_camId;
-      Index m_ptId;
-      DrvBlk m_drvBlk;
-    };
-
-    struct PtDrvBlk
-    {
-      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-      typedef EIGEN_MAT(Scalar, VecFunc::m_paramsPerFeat, 
-                    VecFunc::m_paramsPerPt) DrvBlk;
-      Index m_camId;
-      Index m_ptId;
-      DrvBlk m_drvBlk;
-    };
-
-    typedef EIGEN_VECTOR(CamDrvBlk) CamsDrv;
-    typedef EIGEN_VECTOR(PtDrvBlk) PtsDrv;
-
-    inline void clear()
-    {
-      m_camsDrv.clear();
-      m_camsDrvIdx.swap(DerivativeIdx());
-      m_ptsDrv.clear();
-      m_ptsDrvIdx.swap(DerivativeIdx());
-    }
-
-    Scalar coeff(Index i, Index j) const
-    {
-      Index off = j - VecFunc::m_paramsPerCam * m_camNum;
-      Index featId = i / VecFunc::m_paramsPerFeat;
-      Index featParamId = i % VecFunc::m_paramsPerFeat;
-      if (off < 0)
-      {
-        //cam param
-        Index camId = j / VecFunc::m_paramsPerCam;
-        Index camParamId = j % VecFunc::m_paramsPerCam;
-        const CamDrvBlk& camDrvBlk = m_camsDrv[featId];
-        if (camDrvBlk.m_camId == camId)
-        {
-          return camDrvBlk.m_drvBlk(featParamId, camParamId);
-        }
-        else
-        {
-          return Scalar(0);
-        }
-      }
-      else
-      {
-        //pt param
-        Index ptId = off / VecFunc::m_paramsPerPt;
-        Index ptParamId = off % VecFunc::m_paramsPerPt;
-        const PtDrvBlk& ptDrvBlk = m_ptsDrv[featId];
-        if (ptDrvBlk.m_ptId == ptId)
-        {
-          return ptDrvBlk.m_drvBlk(featParamId, ptParamId);
-        }
-        else
-        {
-          return Scalar(0);
-        }
-      }
-    }
-
-    CamsDrv m_camsDrv;
-    DerivativeIdx m_camsDrvIdx;
-    PtsDrv m_ptsDrv;
-    DerivativeIdx m_ptsDrvIdx;
-    Index m_camNum;
-    Index m_ptNum;
-  };
+  typedef BANaiveJacMatrix<Scalar, Index,
+                           VecFunc::m_paramsPerFeat,
+                           VecFunc::m_paramsPerCam,
+                           VecFunc::m_paramsPerPt> Jac;
 
   Err operator()(const VecFunc& vecFunc, const XVec& x, Jac& jac) const
   {
     typedef EIGEN_VEC(Scalar, 3) Vec3;
     typedef EIGEN_MAT(Scalar, 3, 3) Mat33;
-    typedef Eigen::Triplet<Index, Index> TripletType;
+    //typedef Eigen::Triplet<Index, Index> TripletType;
     Index camNum = vecFunc.getCamNum();
     Index ptNum = vecFunc.getPtNum();
     Index featNum = vecFunc.getFeatNum();
     Index camParamsSize = vecFunc.getCamParamsSize();
     FeatMapContainer featMaps = vecFunc.getFeatMaps();
     Index xSize = vecFunc.getXSize();
-    std::vector<TripletType> camsTriplet;
-    camsTriplet.reserve(ptNum * camNum);
-    std::vector<TripletType> ptsTriplet;
-    ptsTriplet.reserve(ptNum * camNum);
+    //std::vector<TripletType> camsTriplet;
+    //camsTriplet.reserve(ptNum * camNum);
+    //std::vector<TripletType> ptsTriplet;
+    //ptsTriplet.reserve(ptNum * camNum);
     jac.clear();
     jac.m_camNum = camNum;
     jac.m_ptNum = ptNum;
@@ -238,7 +152,7 @@ public:
       pupp << r[0] * r[0], r[0] * r[1], r[0] * r[2],
           r[1] * r[0], r[1] * r[1], r[1] * r[2],
           r[2] * r[0], r[2] * r[1], r[2] * r[2];
-      
+
       Vec3 y = f + s * v + c * u + t;
       //\frac{partial y}{\partial r}
       Mat33 pypr = pfpr + 
@@ -268,7 +182,7 @@ public:
       }
 
       jac.m_camsDrv.push_back(camDrvBlk);
-      camsTriplet.push_back(TripletType(k, j, k * camNum + j + 1));
+      //camsTriplet.push_back(TripletType(k, j, k * camNum + j + 1));
 
       Jac::PtDrvBlk ptDrvBlk;
       ptDrvBlk.m_camId = j;
@@ -282,15 +196,15 @@ public:
       }
 
       jac.m_ptsDrv.push_back(ptDrvBlk);
-      ptsTriplet.push_back(TripletType(k, j, k * camNum + j + 1));
+      //ptsTriplet.push_back(TripletType(k, j, k * camNum + j + 1));
     }
 
-    jac.m_camsDrvIdx.resize(ptNum, camNum);
-    jac.m_camsDrvIdx.setFromTriplets(camsTriplet.begin(), 
-                     camsTriplet.end());
-    jac.m_ptsDrvIdx.resize(ptNum, camNum);
-    jac.m_ptsDrvIdx.setFromTriplets(ptsTriplet.begin(),
-                    ptsTriplet.end());
+    //jac.m_camsDrvIdx.resize(ptNum, camNum);
+    //jac.m_camsDrvIdx.setFromTriplets(camsTriplet.begin(), 
+    //                 camsTriplet.end());
+    //jac.m_ptsDrvIdx.resize(ptNum, camNum);
+    //jac.m_ptsDrvIdx.setFromTriplets(ptsTriplet.begin(),
+    //                ptsTriplet.end());
 
     return 0;
   }
