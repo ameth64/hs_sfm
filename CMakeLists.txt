@@ -16,6 +16,7 @@ set(BA_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_base.hpp"
   "unit_test/bundle_adjustment/test_ba_naive_jac.cpp"
+  "unit_test/bundle_adjustment/test_ba_naive_nllso_normal_equation_builder.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_vec_func.cpp"
   )
 hslib_add_utest(${BA_NAME} SOURCES ${BA_UTEST_SOURCES})

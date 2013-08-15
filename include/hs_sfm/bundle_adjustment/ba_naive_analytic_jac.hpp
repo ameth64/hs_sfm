@@ -69,22 +69,21 @@ public:
                            VecFunc::m_paramsPerFeat,
                            VecFunc::m_paramsPerCam,
                            VecFunc::m_paramsPerPt> Jac;
+  typedef typename Jac::DrvIdx DrvIdx;
 
   Err operator()(const VecFunc& vecFunc, const XVec& x, Jac& jac) const
   {
     typedef EIGEN_VEC(Scalar, 3) Vec3;
     typedef EIGEN_MAT(Scalar, 3, 3) Mat33;
-    //typedef Eigen::Triplet<Index, Index> TripletType;
+    typedef Eigen::Triplet<DrvIdx, Index> TripletType;
     Index camNum = vecFunc.getCamNum();
     Index ptNum = vecFunc.getPtNum();
     Index featNum = vecFunc.getFeatNum();
     Index camParamsSize = vecFunc.getCamParamsSize();
     FeatMapContainer featMaps = vecFunc.getFeatMaps();
     Index xSize = vecFunc.getXSize();
-    //std::vector<TripletType> camsTriplet;
-    //camsTriplet.reserve(ptNum * camNum);
-    //std::vector<TripletType> ptsTriplet;
-    //ptsTriplet.reserve(ptNum * camNum);
+    std::vector<TripletType> camsTriplet;
+    std::vector<TripletType> ptsTriplet;
     jac.clear();
     jac.m_camNum = camNum;
     jac.m_ptNum = ptNum;
@@ -155,7 +154,7 @@ public:
 
       Vec3 y = f + s * v + c * u + t;
       //\frac{partial y}{\partial r}
-      Mat33 pypr = pfpr + 
+      Mat33 pypr = pfpr +
              v * pspr.transpose() + s * pvpr +
              u * pcpr.transpose() + c * pupr;
       //\frac{partial y}{\partial p}
@@ -165,13 +164,13 @@ public:
 
       Jac::CamDrvBlk camDrvBlk;
       camDrvBlk.m_camId = j;
-      camDrvBlk.m_ptId = k;
+      camDrvBlk.m_featId = i;
       for (Index m = 0; m < 3; m++)
       {
         //for r
-        camDrvBlk.m_drvBlk(0, m) = 
+        camDrvBlk.m_drvBlk(0, m) =
           (pypr(0, m) * y[2] - y[0] * pypr(2, m)) / y[2] / y[2];
-        camDrvBlk.m_drvBlk(1, m) = 
+        camDrvBlk.m_drvBlk(1, m) =
           (pypr(1, m) * y[2] - y[1] * pypr(2, m)) / y[2] / y[2];
 
         //for t
@@ -182,29 +181,29 @@ public:
       }
 
       jac.m_camsDrv.push_back(camDrvBlk);
-      //camsTriplet.push_back(TripletType(k, j, k * camNum + j + 1));
+      camsTriplet.push_back(TripletType(j, k, jac.m_camsDrv.size()));
 
       Jac::PtDrvBlk ptDrvBlk;
-      ptDrvBlk.m_camId = j;
       ptDrvBlk.m_ptId = k;
+      ptDrvBlk.m_featId = i;
       for (Index m = 0; m < 3; m++)
       {
-        ptDrvBlk.m_drvBlk(0, m) = 
+        ptDrvBlk.m_drvBlk(0, m) =
           (pypp(0, m) * y[2] - y[0] * pypp(2, m)) / y[2] / y[2];
-        ptDrvBlk.m_drvBlk(1, m) = 
+        ptDrvBlk.m_drvBlk(1, m) =
           (pypp(1, m) * y[2] - y[1] * pypp(2, m)) / y[2] / y[2];
       }
 
       jac.m_ptsDrv.push_back(ptDrvBlk);
-      //ptsTriplet.push_back(TripletType(k, j, k * camNum + j + 1));
+      ptsTriplet.push_back(TripletType(j, k, jac.m_ptsDrv.size()));
     }
 
-    //jac.m_camsDrvIdx.resize(ptNum, camNum);
-    //jac.m_camsDrvIdx.setFromTriplets(camsTriplet.begin(), 
-    //                 camsTriplet.end());
-    //jac.m_ptsDrvIdx.resize(ptNum, camNum);
-    //jac.m_ptsDrvIdx.setFromTriplets(ptsTriplet.begin(),
-    //                ptsTriplet.end());
+    jac.m_camsDrvMap.resize(camNum, ptNum);
+    jac.m_camsDrvMap.setFromTriplets(camsTriplet.begin(), 
+                     camsTriplet.end());
+    jac.m_ptsDrvMap.resize(camNum, ptNum);
+    jac.m_ptsDrvMap.setFromTriplets(ptsTriplet.begin(),
+                    ptsTriplet.end());
 
     return 0;
   }

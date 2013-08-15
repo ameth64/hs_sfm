@@ -97,37 +97,37 @@ Err operator ()(IntrinContainer& intrins, ExtrinContainer& extrins,
      0, 0, 1;
   for (size_t i = 0; i < m_stripsNum; i++)
   {
-  for (size_t j = 0; j < m_camsNumInStrip; j++)
-  {
-    size_t id = i * m_camsNumInStrip + j;
-    images[id].m_width = m_imgW;
-    images[id].m_height = m_imgH;
-    images[id].m_id = id;
-    images[id].m_path = "test";
+    for (size_t j = 0; j < m_camsNumInStrip; j++)
+    {
+      size_t id = i * m_camsNumInStrip + j;
+      images[id].m_width = m_imgW;
+      images[id].m_height = m_imgH;
+      images[id].m_id = id;
+      images[id].m_path = "test";
 
-    Pos meanCamPos;
-    meanCamPos << -sceneXDim * 0.5 + m_imgW * m_grdRes * 0.5 +
-        i * lateralRangePerCam,
-        -sceneYDim * 0.5 + m_imgH * m_grdRes * 0.5 + 
-        j * longitudinalRangePerCam,
-        flightHeight;
+      Pos meanCamPos;
+      meanCamPos << -sceneXDim * 0.5 + m_imgW * m_grdRes * 0.5 +
+          i * lateralRangePerCam,
+          -sceneYDim * 0.5 + m_imgH * m_grdRes * 0.5 + 
+          j * longitudinalRangePerCam,
+          flightHeight;
 
-    hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
-    meanCamPos, camPosCov, extrins[id].m_c);
-    extrins[id].m_c = nwRot * extrins[id].m_c;
-    //extrins[id].m_c /= scale;
-    Pos meanAngles = Pos::Zero();
-    Pos angles;
-    hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
-    meanAngles, camRotCov, angles);
+      hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
+      meanCamPos, camPosCov, extrins[id].m_c);
+      extrins[id].m_c = nwRot * extrins[id].m_c;
+      //extrins[id].m_c /= scale;
+      Pos meanAngles = Pos::Zero();
+      Pos angles;
+      hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
+      meanAngles, camRotCov, angles);
 
-    hs::math::geometry::EulerAngles<Scalar> ea(angles[0] / 180 * Scalar(M_PI),
-           angles[1] / 180 * Scalar(M_PI),
-           angles[2] / 180 * Scalar(M_PI));
-    Mat33 R = ea.toOrthoRotMat<2, 1, -3, 1>();
-    R.transposeInPlace();
-    extrins[id].m_r = R * nwRot.transpose();
-  }
+      hs::math::geometry::EulerAngles<Scalar> ea(angles[0] / 180 * Scalar(M_PI),
+             angles[1] / 180 * Scalar(M_PI),
+             angles[2] / 180 * Scalar(M_PI));
+      Mat33 R = ea.toOrthoRotMat<2, 1, -3, 1>();
+      R.transposeInPlace();
+      extrins[id].m_r = R * nwRot.transpose();
+    }
   }
 
   Pt3D maxPt;
@@ -257,23 +257,23 @@ Err operator()(const IntrinContainer& intrins,
   tracks.resize(ptsNum);
   for (size_t i = 0; i < ptsNum; i++)
   {
-  const Pt3D& pt = pts[i];
-  for (size_t j = 0; j < camNum; j++)
-  {
-    PMat P = Cam::getPMat(intrins[j], extrins[j]);
-    Pt3D keyH = P.block(0, 0, 3, 3) * pts[i] + 
-      P.block(0, 3, 3, 1);
-    keyH /= keyH(2);
-    if (keyH(0) > (-Scalar(m_imgW) / 2) && 
-    keyH(0) < ( Scalar(m_imgW) / 2) &&
-    keyH(1) > (-Scalar(m_imgH) / 2) && 
-    keyH(1) < ( Scalar(m_imgH) / 2))
+    const Pt3D& pt = pts[i];
+    for (size_t j = 0; j < camNum; j++)
     {
-    tracks[i].push_back(
-      std::make_pair(j, keySets[j].size()));
-    keySets[j].push_back(keyH.segment(0, 2));
+      PMat P = Cam::getPMat(intrins[j], extrins[j]);
+      Pt3D keyH = P.block(0, 0, 3, 3) * pts[i] + 
+        P.block(0, 3, 3, 1);
+      keyH /= keyH(2);
+      if (keyH(0) > (-Scalar(m_imgW) / 2) && 
+      keyH(0) < ( Scalar(m_imgW) / 2) &&
+      keyH(1) > (-Scalar(m_imgH) / 2) && 
+      keyH(1) < ( Scalar(m_imgH) / 2))
+      {
+      tracks[i].push_back(
+        std::make_pair(j, keySets[j].size()));
+      keySets[j].push_back(keyH.segment(0, 2));
+      }
     }
-  }
   }
   imgKeysSet.clear();
   for (size_t i = 0; i < camNum; i++)

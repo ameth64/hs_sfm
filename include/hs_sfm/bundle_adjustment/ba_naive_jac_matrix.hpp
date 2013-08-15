@@ -22,17 +22,7 @@ struct BANaiveJacMatrix
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   typedef _Scalar Scalar;
   typedef _Index Index;
-//  enum
-//  {
-//    EigenDefaultMajor =
-//#if defined(EIGEN_DEFAULT_TO_ROW_MAJOR)
-//    Eigen::RowMajor
-//#else
-//    Eigen::ColMajor
-//#endif
-//  };
-//
-//  typedef EIGEN_SMAT(Index, EigenDefaultMajor, Index) DerivativeIdx;
+
 
   struct CamDrvBlk
   {
@@ -40,7 +30,7 @@ struct BANaiveJacMatrix
     typedef EIGEN_MAT(Scalar, paramsPerFeat,
                   paramsPerCam) DrvBlk;
     Index m_camId;
-    Index m_ptId;
+    Index m_featId;
     DrvBlk m_drvBlk;
   };
 
@@ -49,20 +39,31 @@ struct BANaiveJacMatrix
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     typedef EIGEN_MAT(Scalar, paramsPerFeat,
                   paramsPerPt) DrvBlk;
-    Index m_camId;
     Index m_ptId;
+    Index m_featId;
     DrvBlk m_drvBlk;
   };
 
   typedef EIGEN_VECTOR(CamDrvBlk) CamsDrv;
   typedef EIGEN_VECTOR(PtDrvBlk) PtsDrv;
+  enum
+  {
+    EigenDefaultMajor =
+#if defined(EIGEN_DEFAULT_TO_ROW_MAJOR)
+    Eigen::RowMajor
+#else
+    Eigen::ColMajor
+#endif
+  };
+  typedef typename CamsDrv::size_type DrvIdx;
+  typedef EIGEN_SMAT(DrvIdx, EigenDefaultMajor, Index) DerivativeMap;
 
   inline void clear()
   {
     m_camsDrv.clear();
-    //m_camsDrvIdx.swap(DerivativeIdx());
+    m_camsDrvMap.swap(DerivativeMap());
     m_ptsDrv.clear();
-    //m_ptsDrvIdx.swap(DerivativeIdx());
+    m_ptsDrvMap.swap(DerivativeMap());
   }
 
   Scalar coeff(Index i, Index j) const
@@ -103,9 +104,9 @@ struct BANaiveJacMatrix
   }
 
   CamsDrv m_camsDrv;
-  //DerivativeIdx m_camsDrvIdx;
+  DerivativeMap m_camsDrvMap;
   PtsDrv m_ptsDrv;
-  //DerivativeIdx m_ptsDrvIdx;
+  DerivativeMap m_ptsDrvMap;
   Index m_camNum;
   Index m_ptNum;
 };

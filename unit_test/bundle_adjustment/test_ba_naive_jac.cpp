@@ -80,7 +80,7 @@ public:
     }
 
     Err rst = 0;
-    const Scalar threshold = Scalar(1e-3);
+    const Scalar threshold = Scalar(1e-5);
     for (Index i = 0; i < Index(baFFDJ.m_camsDrv.size()); i++)
     {
       const typename BAAnaliticJac::CamDrvBlk& baAnalyticCamDrvBlk =
@@ -113,7 +113,7 @@ public:
                      <<baFFDValue<<".\n";
             std::cout<<"baAnalyticCamDrvBlk["<<j<<", "<<k<<"] = "
                      <<baAnalyticValue<<".\n";
-            return -1;
+            rst = -1;
           }
         }
       }
@@ -151,7 +151,7 @@ public:
                      <<baFFDValue<<".\n";
             std::cout<<"baAnalyticPtDrvBlk["<<j<<", "<<k<<"] = "
                      <<baAnalyticValue<<".\n";
-            return -1;
+            rst = -1;
           }
         }
       }
@@ -166,7 +166,7 @@ public:
           Scalar ffdS = ffdJ.coeff(i, j);
           Scalar baFFDS = baFFDJ.coeff(i, j);
           Scalar absErr = abs(baFFDS - ffdS);
-          if (absErr > 1e-6)
+          if (absErr > Scalar(1e-8))
           {
             std::cout<<"baFFDJ[i, j]="<<baFFDS<<".\n";
             std::cout<<"ffdJ[i, j]="<<ffdS<<".\n";
@@ -218,8 +218,32 @@ TEST(TestBANaiveJac, SmallDataTest)
           camHeightDev, camPlannarDev, camRotDev, nwAngle);
   ASSERT_EQ(0, dataGen(baVecFunc, x, y));
 
-  ASSERT_EQ(0, Test::test(baVecFunc, x, true));
+  //ASSERT_EQ(0, Test::test(baVecFunc, x, true));
 
+  f = 0.006;
+  stripNum = 1;
+  camsNumInStrip = 4;
+  grdRes = 0.1;
+  imgW = 6000;
+  imgH = 4000;
+  pixSize = 0.00000203311408298266;
+  ptsNum = 10;
+  lateralOverlap = 0.99;
+  longitudinalOverlap = 0.99;
+  sceneMaxHeight = 50;
+  camHeightDev = 0.01;
+  camPlannarDev = 0.01;
+  camRotDev = 0.01;
+  nwAngle = 60;
+
+  DataGen dataGen1(f, stripNum, camsNumInStrip, grdRes,
+    imgW, imgH, pixSize, ptsNum,
+    lateralOverlap, longitudinalOverlap,
+    sceneMaxHeight,
+    camHeightDev, camPlannarDev, camRotDev, nwAngle);
+  ASSERT_EQ(0, dataGen1(baVecFunc, x, y));
+
+  ASSERT_EQ(0, Test::test(baVecFunc, x, true));
 }
 
 TEST(TestBANaiveJac, BigDataTest)

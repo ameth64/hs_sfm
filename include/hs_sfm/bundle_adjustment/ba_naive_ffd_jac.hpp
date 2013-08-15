@@ -3,7 +3,8 @@
 
 #include <cmath>
 
-#include "hs_sfm/bundle_adjustment/ba_naive_ffd_jac.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_jac_matrix.hpp"
 
 namespace hs
 {
@@ -36,6 +37,7 @@ public:
                            VecFunc::m_paramsPerFeat,
                            VecFunc::m_paramsPerCam,
                            VecFunc::m_paramsPerPt> Jac;
+  typedef typename Jac::DrvIdx DrvIdx;
   typedef EIGEN_VEC(Scalar, 3) Vec3;
   typedef EIGEN_VEC(Scalar, 2) Vec2;
 
@@ -47,6 +49,9 @@ public:
 
   Err operator()(const VecFunc& vecFunc, const XVec& x, Jac& jac) const
   {
+    typedef Eigen::Triplet<DrvIdx, Index> TripletType;
+    std::vector<TripletType> camsTriplet;
+    std::vector<TripletType> ptsTriplet;
     Index camNum = vecFunc.getCamNum();
     Index ptNum = vecFunc.getPtNum();
     Index featNum = vecFunc.getFeatNum();
@@ -71,7 +76,7 @@ public:
 
       Jac::CamDrvBlk camDrvBlk;
       camDrvBlk.m_camId = j;
-      camDrvBlk.m_ptId = k;
+      camDrvBlk.m_featId = i;
       Vec3 rDiff = r;
       for (Index m = 0; m < 3; m++)
       {
@@ -101,10 +106,11 @@ public:
         tDiff[m] = t[m];
       }
       jac.m_camsDrv.push_back(camDrvBlk);
+      camsTriplet.push_back(TripletType(j, k, jac.m_camsDrv.size()));
 
       Jac::PtDrvBlk ptDrvBlk;
-      ptDrvBlk.m_camId = j;
       ptDrvBlk.m_ptId = k;
+      ptDrvBlk.m_featId = i;
       Vec3 pDiff = p;
       for (Index m = 0; m < VecFunc::m_paramsPerPt; m++)
       {
@@ -120,7 +126,14 @@ public:
         pDiff[m] = p[m];
       }
       jac.m_ptsDrv.push_back(ptDrvBlk);
+      ptsTriplet.push_back(TripletType(j, k, jac.m_ptsDrv.size()));
     }
+    jac.m_camsDrvMap.resize(camNum, ptNum);
+    jac.m_camsDrvMap.setFromTriplets(camsTriplet.begin(), 
+                     camsTriplet.end());
+    jac.m_ptsDrvMap.resize(camNum, ptNum);
+    jac.m_ptsDrvMap.setFromTriplets(ptsTriplet.begin(),
+                    ptsTriplet.end());
 
     return 0;
   }

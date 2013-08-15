@@ -128,7 +128,7 @@ public:
     i = 0;
     for (; ptItr != ptItrEnd; ++ptItr, ++i)
     {
-      x.segment(camParamSize + i * BAVecFunc::m_paramsPerPt, 
+      x.segment(camParamSize + i * BAVecFunc::m_paramsPerPt,
             BAVecFunc::m_paramsPerPt) = pts[i];
     }
 
@@ -140,7 +140,7 @@ public:
       for (size_t keyId = 0; keyId < itrImgKeys->size(); keyId++)
       {
         y.segment(i * BAVecFunc::m_paramsPerFeat,
-          BAVecFunc::m_paramsPerFeat) = 
+          BAVecFunc::m_paramsPerFeat) =
           (*itrImgKeys)[keyId] / f;
         i++;
       }
