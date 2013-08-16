@@ -6,8 +6,8 @@
 #include "hs_math/linear_algebra/lafunc/arithmetic_eigen.hpp"
 #include "hs_math/fdjac/ffd_sparse_jac.hpp"
 
-//#include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_ffd_jac.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
+//#include "hs_sfm/bundle_adjustment/ba_naive_ffd_jac.hpp"
 
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_builder.hpp"
 
@@ -37,7 +37,7 @@ public:
 
   typedef hs::math::fdjac::FwdFiniteDiffSparseJacobian<BAVecFunc> FFDJacobian;
   typedef typename FFDJacobian::Jac FFDJac;
-  typedef hs::sfm::ba::BANaiveFFDJacobian<BAVecFunc> BAAnalyticJacobian;
+  typedef hs::sfm::ba::BANaiveAnalyticJacobian<BAVecFunc> BAAnalyticJacobian;
   typedef typename BAAnalyticJacobian::Jac BAAnalyticJac;
 
   typedef EIGEN_MAT(Scalar, Eigen::Dynamic, Eigen::Dynamic)
@@ -73,7 +73,7 @@ public:
       return -1;
     }
 
-    FFDJacobian ffd_jac;
+    FFDJacobian ffd_jac(1e-6, 1e-8, 1e-12);
     BAAnalyticJacobian ba_analytic_jac;
 
     FFDJac ffd_j;
@@ -110,7 +110,7 @@ public:
 
     EIGEN_MAT(Scalar, 6, 6) a = dense_N.block<6, 6>(0, 0);
 
-    const Scalar threshold = 1e-3;
+    const Scalar threshold = 2e-4;
     for (Index i = 0; i < x_size; i++)
     {
       for (Index j = 0; j < x_size; j++)
@@ -123,7 +123,7 @@ public:
           err /= dense_value;
         }
         err = std::abs(err);
-        if (err > 1e-8)
+        if (err > threshold)
         {
           std::cout<<"dense_N["<<i<<", "<<j<<"]:"<<dense_value<<" .\n";
           std::cout<<"N["<<i<<", "<<j<<"]:"<<analytic_value<<" .\n";

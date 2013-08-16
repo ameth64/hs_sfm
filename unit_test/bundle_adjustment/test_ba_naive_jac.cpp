@@ -12,6 +12,8 @@
 
 #include "test_ba_naive_base.hpp"
 
+#include "hs_math/fdjac/ffd_jac.hpp"
+
 namespace
 {
 
@@ -80,7 +82,7 @@ public:
     }
 
     Err rst = 0;
-    const Scalar threshold = Scalar(1e-5);
+    const Scalar threshold = Scalar(1e-6);
     for (Index i = 0; i < Index(baFFDJ.m_camsDrv.size()); i++)
     {
       const typename BAAnaliticJac::CamDrvBlk& baAnalyticCamDrvBlk =
