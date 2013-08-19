@@ -73,7 +73,7 @@ public:
       return -1;
     }
 
-    FFDJacobian ffd_jac(1e-6, 1e-8, 1e-12);
+    FFDJacobian ffd_jac(Scalar(1e-6), Scalar(1e-8), Scalar(1e-12));
     BAAnalyticJacobian ba_analytic_jac;
 
     FFDJac ffd_j;
@@ -110,7 +110,7 @@ public:
 
     EIGEN_MAT(Scalar, 6, 6) a = dense_N.template block<6, 6>(0, 0);
 
-    const Scalar threshold = 2e-4;
+    const Scalar threshold = Scalar(2e-4);
     for (Index i = 0; i < x_size; i++)
     {
       for (Index j = 0; j < x_size; j++)

@@ -42,9 +42,9 @@ public:
     Index xSize = baVecFunc.getXSize();
     Index ySize = baVecFunc.getYSize();
 
-    FFDJacobian ffdJac;
+    FFDJacobian ffdJac(Scalar(1e-6), Scalar(1e-8), Scalar(1e-10));
     BAAnalyticJacobian baAnalyticJac;
-    BAFFDJacobian baFFDJac;
+    BAFFDJacobian baFFDJac(Scalar(1e-6), Scalar(1e-8));
 
     FFDJac ffdJ;
     BAAnaliticJac baAnalyticJ;
@@ -82,7 +82,7 @@ public:
     }
 
     Err rst = 0;
-    const Scalar threshold = Scalar(1e-6);
+    const Scalar threshold = Scalar(1e-5);
     for (Index i = 0; i < Index(baFFDJ.m_camsDrv.size()); i++)
     {
       const typename BAAnaliticJac::CamDrvBlk& baAnalyticCamDrvBlk =
