@@ -162,7 +162,7 @@ public:
       //\frac{partial y}{\partial t} is identity
       Mat33 pypt = Mat33::Identity();
 
-      Jac::CamDrvBlk camDrvBlk;
+      typename Jac::CamDrvBlk camDrvBlk;
       camDrvBlk.m_camId = j;
       camDrvBlk.m_featId = i;
       for (Index m = 0; m < 3; m++)
@@ -183,7 +183,7 @@ public:
       jac.m_camsDrv.push_back(camDrvBlk);
       camsTriplet.push_back(TripletType(j, k, jac.m_camsDrv.size()));
 
-      Jac::PtDrvBlk ptDrvBlk;
+      typename Jac::PtDrvBlk ptDrvBlk;
       ptDrvBlk.m_ptId = k;
       ptDrvBlk.m_featId = i;
       for (Index m = 0; m < 3; m++)

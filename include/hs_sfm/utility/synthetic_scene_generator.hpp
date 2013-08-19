@@ -124,7 +124,7 @@ Err operator ()(IntrinContainer& intrins, ExtrinContainer& extrins,
       hs::math::geometry::EulerAngles<Scalar> ea(angles[0] / 180 * Scalar(M_PI),
              angles[1] / 180 * Scalar(M_PI),
              angles[2] / 180 * Scalar(M_PI));
-      Mat33 R = ea.toOrthoRotMat<2, 1, -3, 1>();
+      Mat33 R = ea.template toOrthoRotMat<2, 1, -3, 1>();
       R.transposeInPlace();
       extrins[id].m_r = R * nwRot.transpose();
     }
@@ -373,7 +373,7 @@ Err operator()(Extrin& extrin) const
   RMat R = extrin.m_r;
   R.transposeInPlace();
   EA ea;
-  ea.fromOrthoRotMat<2, 1, -3, 1>(R);
+  ea.template fromOrthoRotMat<2, 1, -3, 1>(R);
   Pos meanR;
   meanR << ea[0],
   ea[1],
@@ -384,7 +384,7 @@ Err operator()(Extrin& extrin) const
   ea[0] = noiseAngles[0];
   ea[1] = noiseAngles[1];
   ea[2] = noiseAngles[2];
-  R = ea.toOrthoRotMat<2, 1, -3, 1>();
+  R = ea.template toOrthoRotMat<2, 1, -3, 1>();
   R.transposeInPlace();
   extrin.m_r = R;
 

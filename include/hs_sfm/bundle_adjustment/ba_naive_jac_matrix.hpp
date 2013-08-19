@@ -60,10 +60,10 @@ struct BANaiveJacMatrix
 
   inline void clear()
   {
-    m_camsDrv.clear();
-    m_camsDrvMap.swap(DerivativeMap());
-    m_ptsDrv.clear();
-    m_ptsDrvMap.swap(DerivativeMap());
+    CamsDrv().swap(m_camsDrv);
+    PtsDrv().swap(m_ptsDrv);
+    DerivativeMap().swap(m_camsDrvMap);
+    DerivativeMap().swap(m_ptsDrvMap);
   }
 
   Scalar coeff(Index i, Index j) const

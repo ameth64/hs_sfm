@@ -74,7 +74,7 @@ public:
       Vec2 feat;
       VecFunc::ptPrjToFeat(r, t, p, feat);
 
-      Jac::CamDrvBlk camDrvBlk;
+      typename Jac::CamDrvBlk camDrvBlk;
       camDrvBlk.m_camId = j;
       camDrvBlk.m_featId = i;
       Vec3 rDiff = r;
@@ -108,7 +108,7 @@ public:
       jac.m_camsDrv.push_back(camDrvBlk);
       camsTriplet.push_back(TripletType(j, k, jac.m_camsDrv.size()));
 
-      Jac::PtDrvBlk ptDrvBlk;
+      typename Jac::PtDrvBlk ptDrvBlk;
       ptDrvBlk.m_ptId = k;
       ptDrvBlk.m_featId = i;
       Vec3 pDiff = p;

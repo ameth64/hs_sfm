@@ -108,7 +108,7 @@ public:
     dense_N.resize(x_size, x_size);
     dense_N = ffd_j.transpose() * dense_y_cov_inv * ffd_j;
 
-    EIGEN_MAT(Scalar, 6, 6) a = dense_N.block<6, 6>(0, 0);
+    EIGEN_MAT(Scalar, 6, 6) a = dense_N.template block<6, 6>(0, 0);
 
     const Scalar threshold = 2e-4;
     for (Index i = 0; i < x_size; i++)
@@ -151,12 +151,12 @@ private:
     dense_y_cov.setZero();
     for (Index i = 0; i < feat_num; i++)
     {
-      dense_y_cov.block<BAVecFunc::m_paramsPerFeat,
-                        BAVecFunc::m_paramsPerFeat>(
+      dense_y_cov.template block<BAVecFunc::m_paramsPerFeat,
+                                 BAVecFunc::m_paramsPerFeat>(
         i * BAVecFunc::m_paramsPerFeat,
         i * BAVecFunc::m_paramsPerFeat) = feat_cov;
-      dense_y_cov_inv.block<BAVecFunc::m_paramsPerFeat,
-                            BAVecFunc::m_paramsPerFeat>(
+      dense_y_cov_inv.template block<BAVecFunc::m_paramsPerFeat,
+                                     BAVecFunc::m_paramsPerFeat>(
         i * BAVecFunc::m_paramsPerFeat,
         i * BAVecFunc::m_paramsPerFeat) = feat_cov.inverse();
       y_cov_inv.m_blocks.push_back(feat_cov.inverse());

@@ -73,7 +73,7 @@ public:
                             VecFunc::m_paramsPerFeat);
 
       YCovInvBlock y_cov_inv_block = y_cov_inv.m_blocks[i];
-      mahalanobis += feat.transpose() * y_cov_inv_block * feat;
+      mahalanobis_distance += feat.transpose() * y_cov_inv_block * feat;
     }
 
     return mahalanobis_distance;
