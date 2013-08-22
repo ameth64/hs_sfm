@@ -7,8 +7,9 @@
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
 #include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_jac_matrix.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_feat_cov_inv.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_jac_matrix.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_residuals.hpp"
 
 namespace hs
@@ -17,150 +18,6 @@ namespace sfm
 {
 namespace ba
 {
-
-template <typename _Scalar>
-struct BANaiveNormalMatrix
-{
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  typedef _Scalar Scalar;
-  typedef BANaiveVecFunc<Scalar> VecFunc;
-  typedef typename VecFunc::Index Index;
-  typedef EIGEN_MAT(Scalar,
-                    VecFunc::m_paramsPerCam,
-                    VecFunc::m_paramsPerCam) CamBlock;
-  typedef EIGEN_MAT(Scalar,
-                    VecFunc::m_paramsPerPt,
-                    VecFunc::m_paramsPerPt) PtBlock;
-  typedef EIGEN_MAT(Scalar,
-                    VecFunc::m_paramsPerCam,
-                    VecFunc::m_paramsPerPt) MixBlock;
-
-  typedef EIGEN_VECTOR(CamBlock) CamBlockContainer;
-  typedef EIGEN_VECTOR(PtBlock) PtBlockContainer;
-  typedef EIGEN_VECTOR(MixBlock) MixBlockContainer;
-
-  enum
-  {
-    EigenDefaultMajor =
-#if defined(EIGEN_DEFAULT_TO_ROW_MAJOR)
-      Eigen::RowMajor
-#else
-      Eigen::ColMajor
-#endif
-  };
-  typedef typename MixBlockContainer::size_type MixBlockIdx;
-  typedef EIGEN_SMAT(MixBlockIdx, EigenDefaultMajor, Index) MixBlockMap;
-
-  Scalar coeff(Index i, Index j) const
-  {
-    Index number_of_camera_params = VecFunc::m_paramsPerCam * number_of_cameras;
-    Index number_of_point_params = VecFunc::m_paramsPerPt * number_of_points;
-    if (i >= number_of_camera_params + number_of_point_params ||
-        j >= number_of_camera_params + number_of_point_params)
-    {
-      //不合法，返回0
-      return Scalar(0);
-    }
-    else if (i < number_of_camera_params &&
-             j < number_of_camera_params &&
-             i / VecFunc::m_paramsPerCam == j / VecFunc::m_paramsPerCam)
-    {
-      //属于相机块
-      Index camera_id = i / VecFunc::m_paramsPerCam;
-      Index camera_row_offset = i % VecFunc::m_paramsPerCam;
-      Index camera_col_offset = j % VecFunc::m_paramsPerCam;
-      return camera_blocks[camera_id](camera_row_offset, camera_col_offset);
-    }
-    else if (i >= number_of_camera_params &&
-             j >= number_of_camera_params &&
-             i / VecFunc::m_paramsPerPt == j / VecFunc::m_paramsPerPt)
-    {
-      //属于点块
-      Index point_id = (i - number_of_camera_params) / VecFunc::m_paramsPerPt;
-      Index point_row_offset =
-        (i - number_of_camera_params) % VecFunc::m_paramsPerPt;
-      Index point_col_offset =
-        (j - number_of_camera_params) % VecFunc::m_paramsPerPt;
-      return point_blocks[point_id](point_row_offset, point_col_offset);
-    }
-    else if (i < number_of_camera_params &&
-             j >= number_of_camera_params)
-    {
-      //属于混合块
-      Index mix_row_id =
-        i / VecFunc::m_paramsPerCam;
-      Index mix_col_id =
-        (j - number_of_camera_params) / VecFunc::m_paramsPerPt;
-      Index mix_row_offset =
-        i % VecFunc::m_paramsPerCam;
-      Index mix_col_offset =
-        (j - number_of_camera_params) % VecFunc::m_paramsPerPt;
-      MixBlockIdx mix_id =
-        mix_block_map.coeff(mix_row_id, mix_col_id);
-      if (mix_id == 0)
-      {
-        return Scalar(0);
-      }
-      else
-      {
-        return mix_blocks[mix_id - 1](mix_row_offset, mix_col_offset);
-      }
-    }
-    else if (i >= number_of_camera_params &&
-             j < number_of_camera_params)
-    {
-      //属于混合转置块
-      Index mix_row_id =
-        j / VecFunc::m_paramsPerCam;
-      Index mix_col_id =
-        (i - number_of_camera_params) / VecFunc::m_paramsPerPt;
-      Index mix_row_offset =
-        j % VecFunc::m_paramsPerCam;
-      Index mix_col_offset =
-        (i - number_of_camera_params) % VecFunc::m_paramsPerPt;
-      MixBlockIdx mix_id =
-        mix_block_map.coeff(mix_row_id, mix_col_id);
-      if (mix_id == 0)
-      {
-        return Scalar(0);
-      }
-      else
-      {
-        return mix_blocks[mix_id - 1](mix_row_offset, mix_col_offset);
-      }
-    }
-    else
-    {
-      //不属于任何块，为0
-      return Scalar(0);
-    }
-
-  }
-
-  Index number_of_cameras;
-  Index number_of_points;
-  CamBlockContainer camera_blocks;
-  PtBlockContainer point_blocks;
-  MixBlockContainer mix_blocks;
-  MixBlockMap mix_block_map;
-};
-
-template <typename _Scalar>
-struct BANaiveBVec
-{
-  typedef _Scalar Scalar;
-  typedef BANaiveVecFunc<Scalar> VecFunc;
-  typedef typename VecFunc::Index Index;
-  typedef EIGEN_VEC(Scalar, VecFunc::m_paramsPerCam) CamSegment;
-  typedef EIGEN_VEC(Scalar, VecFunc::m_paramsPerPt) PtSegment;
-  typedef EIGEN_VECTOR(CamSegment) CamSegmentContainer;
-  typedef EIGEN_VECTOR(PtSegment) PtSegmentContainer;
-
-  Index number_of_cameras;
-  Index number_of_points;
-  CamSegmentContainer cam_segments;
-  PtSegmentContainer pt_segments;
-};
 
 template <typename _Scalar>
 class BANaiveNormalEquationBuilder
@@ -181,8 +38,12 @@ public:
   typedef BANaiveResidualsCalc<VecFunc> ResidualsCalc;
   typedef typename ResidualsCalc::Residuals Residuals;
 
-  typedef BANaiveNormalMatrix<Scalar> NormalMat;
-  typedef BANaiveBVec<Scalar> BVec;
+  typedef BANaiveNormalMatrix<Scalar, Index,
+                              VecFunc::m_paramsPerCam,
+                              VecFunc::m_paramsPerPt> NormalMat;
+  typedef BANaiveBVec<Scalar, Index,
+                      VecFunc::m_paramsPerCam,
+                      VecFunc::m_paramsPerPt> BVec;
 
   typedef typename Jac::CamDrvBlk CamDrvBlk;
   typedef typename Jac::PtDrvBlk PtDrvBlk;
@@ -244,6 +105,8 @@ public:
     N.mix_blocks.clear();
     N.number_of_cameras = cam_num;
     N.number_of_points = pt_num;
+    b.number_of_cameras = cam_num;
+    b.number_of_points = pt_num;
     for (Index i = 0; i < cam_num; i++)
     {
       for (Index k = 0; k < pt_num; k++)

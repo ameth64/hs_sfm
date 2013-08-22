@@ -26,6 +26,7 @@ public:
   typedef typename KeysGen::ImgKeysContainer ImgKeysContainer;
   typedef typename KeysGen::Track Track;
   typedef typename KeysGen::TrackContainer TrackContainer;
+  typedef typename KeysGen::CamViewContainer CamViewContainer;
 
   typedef hs::sfm::ba::BANaiveVecFunc<Scalar> BAVecFunc;
   typedef typename BAVecFunc::Index Index;
@@ -63,7 +64,8 @@ public:
 
     ImgKeysContainer imgKeys;
     TrackContainer tracks;
-    if (m_keysGen(intrins, extrins, pts, imgKeys, tracks) != 0) 
+    CamViewContainer camViews;
+    if (m_keysGen(intrins, extrins, pts, imgKeys, tracks, camViews) != 0) 
       return -1;
 
     size_t keyNum = 0;
@@ -76,8 +78,38 @@ public:
       imgKeysIdOffsets[i] = keyNum;
       keyNum += itrImgKeys->size();
     }
+
+    std::vector<size_t> camMap(extrins.size(), 0);
+    auto itrCamView = camViews.begin();
+    auto itrCamViewEnd = camViews.end();
+    i = 0;
+    size_t viewKeyCamNum = 0;
+    for (; itrCamView != itrCamViewEnd; ++itrCamView, ++i)
+    {
+      if (!itrCamView->empty())
+      {
+        camMap[i] = viewKeyCamNum + 1;
+        viewKeyCamNum++;
+      }
+    }
+
+
+    std::vector<size_t> ptMap(pts.size(), 0);
     auto itrTrack = tracks.begin();
     auto itrTrackEnd = tracks.end();
+    i = 0;
+    size_t viewKeyPtNum = 0;
+    for (; itrTrack != itrTrackEnd; ++itrTrack, ++i)
+    {
+      if (!itrTrack->empty())
+      {
+        ptMap[i] = viewKeyPtNum + 1;
+        viewKeyPtNum++;
+      }
+    }
+
+    itrTrack = tracks.begin();
+    itrTrackEnd = tracks.end();
     FeatMapContainer featMaps(keyNum);
     i = 0;
     for (; itrTrack != itrTrackEnd; ++itrTrack, ++i)
@@ -88,13 +120,13 @@ public:
       {
         Index featId = imgKeysIdOffsets[itrView->first] + 
                   itrView->second;
-        featMaps[featId].first = Index(itrView->first);
-        featMaps[featId].second = Index(i);
+        featMaps[featId].first = Index(camMap[itrView->first] - 1);
+        featMaps[featId].second = Index(ptMap[i] - 1);
       }
     }
 
-    Index camNum = Index(extrins.size());
-    Index ptNum = Index(pts.size());
+    Index camNum = Index(viewKeyCamNum);
+    Index ptNum = Index(viewKeyPtNum);
     Index featNum = Index(keyNum);
     baVecFunc.setCamNum(camNum);
     baVecFunc.setPtNum(ptNum);
@@ -109,27 +141,39 @@ public:
 
     auto extItr = extrins.begin();
     auto extItrEnd = extrins.end();
+    itrCamView = camViews.begin();
+    itrCamViewEnd = camViews.end();
     i = 0;
-    for (; extItr != extItrEnd; ++extItr, ++i)
+    for (; extItr != extItrEnd; ++extItr, ++itrCamView)
     {
-      Vec3 t = -(extItr->m_r * extItr->m_c);
-      x[i * BAVecFunc::m_paramsPerCam + 0] = extItr->m_r[0];
-      x[i * BAVecFunc::m_paramsPerCam + 1] = extItr->m_r[1];
-      x[i * BAVecFunc::m_paramsPerCam + 2] = extItr->m_r[2];
-      x[i * BAVecFunc::m_paramsPerCam + 3] = t[0];
-      x[i * BAVecFunc::m_paramsPerCam + 4] = t[1];
-      x[i * BAVecFunc::m_paramsPerCam + 5] = t[2];
+      if (!itrCamView->empty())
+      {
+        Vec3 t = -(extItr->m_r * extItr->m_c);
+        x[i * BAVecFunc::m_paramsPerCam + 0] = extItr->m_r[0];
+        x[i * BAVecFunc::m_paramsPerCam + 1] = extItr->m_r[1];
+        x[i * BAVecFunc::m_paramsPerCam + 2] = extItr->m_r[2];
+        x[i * BAVecFunc::m_paramsPerCam + 3] = t[0];
+        x[i * BAVecFunc::m_paramsPerCam + 4] = t[1];
+        x[i * BAVecFunc::m_paramsPerCam + 5] = t[2];
+        i++;
+      }
     }
 
     //点云
     Index camParamSize = baVecFunc.getCamParamsSize();
     auto ptItr = pts.begin();
     auto ptItrEnd = pts.end();
+    itrTrack = tracks.begin();
+    itrTrackEnd = tracks.end();
     i = 0;
-    for (; ptItr != ptItrEnd; ++ptItr, ++i)
+    for (; ptItr != ptItrEnd; ++ptItr, itrTrack++)
     {
-      x.segment(camParamSize + i * BAVecFunc::m_paramsPerPt,
-            BAVecFunc::m_paramsPerPt) = pts[i];
+      if (!itrTrack->empty())
+      {
+        x.segment(camParamSize + i * BAVecFunc::m_paramsPerPt,
+          BAVecFunc::m_paramsPerPt) = *ptItr;
+        i++;
+      }
     }
 
     //特征点

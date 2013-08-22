@@ -235,6 +235,8 @@ typedef ImageKeys<Scalar> ImgKeys;
 typedef EIGEN_VECTOR(ImgKeys) ImgKeysContainer;
 typedef std::vector<std::pair<size_t, size_t> > Track;
 typedef std::vector<Track> TrackContainer;
+typedef std::vector<std::pair<size_t, size_t> > CamView;
+typedef std::vector<CamView> CamViewContainer;
 
 typedef int Err;
 
@@ -244,7 +246,8 @@ Err operator()(const IntrinContainer& intrins,
      const ExtrinContainer& extrins, 
      const Pt3DContainer& pts,
      ImgKeysContainer& imgKeysSet, 
-     TrackContainer& tracks) const
+     TrackContainer& tracks,
+     CamViewContainer& camViews) const
 {
   size_t camNum = intrins.size();
   if (camNum != extrins.size())
@@ -255,6 +258,7 @@ Err operator()(const IntrinContainer& intrins,
   Pt2DSetContainer keySets(camNum);
   size_t ptsNum = pts.size();
   tracks.resize(ptsNum);
+  camViews.resize(camNum);
   for (size_t i = 0; i < ptsNum; i++)
   {
     const Pt3D& pt = pts[i];
@@ -269,16 +273,18 @@ Err operator()(const IntrinContainer& intrins,
       keyH(1) > (-Scalar(m_imgH) / 2) && 
       keyH(1) < ( Scalar(m_imgH) / 2))
       {
-      tracks[i].push_back(
-        std::make_pair(j, keySets[j].size()));
-      keySets[j].push_back(keyH.segment(0, 2));
+        tracks[i].push_back(
+          std::make_pair(j, keySets[j].size()));
+        camViews[j].push_back(
+          std::make_pair(i, keySets[j].size()));
+        keySets[j].push_back(keyH.segment(0, 2));
       }
     }
   }
   imgKeysSet.clear();
   for (size_t i = 0; i < camNum; i++)
   {
-  imgKeysSet.push_back(ImgKeys(keySets[i]));
+    imgKeysSet.push_back(ImgKeys(keySets[i]));
   }
 
   return 0;
