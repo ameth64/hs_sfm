@@ -5,6 +5,7 @@
 #include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_builder.hpp"
 
+#include "hs_sfm/bundle_adjustment/ba_naive_nllso_augmentor.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_solver.hpp"
 
 #include "test_ba_naive_base.hpp"
@@ -36,6 +37,9 @@ public:
 
   typedef hs::sfm::ba::BANaiveNormalEquationSolver<Scalar>
           NormalEquationSolver;
+  typedef typename NormalEquationSolver::AugmentNormalMat AugmentNormalMat;
+
+  typedef hs::sfm::ba::BANaiveAugmentor<Scalar> Augmentor;
   
   typedef EIGEN_MAT(Scalar, Eigen::Dynamic, Eigen::Dynamic)
           MatXX;
@@ -90,9 +94,16 @@ public:
       return -1;
     }
 
+    Scalar max_diag = hs::math::la::MatMaxDiagValFunc<NormalMat>()(N);
+
+    Scalar mu = /*Scalar(1e-3) * */max_diag;
+
+    Augmentor augmentor;
+    AugmentNormalMat AN = augmentor(N, mu);
+
     NormalEquationSolver solver;
     XVec x_delta;
-    if (solver(N, b, x_delta) != 0)
+    if (solver(AN, b, x_delta) != 0)
     {
       std::cout<<"solver failed.\n";
       return -1;
@@ -110,6 +121,7 @@ public:
         dense_N(i, j) = N.coeff(i, j);
       }
       dense_b[i] = b[i];
+      dense_N(i, i) += mu;
     }
 
     Scalar threshold = Scalar(1e-8);

@@ -1,7 +1,10 @@
 #ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_NLLSO_NORMAL_EQUATION_HPP_
 #define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_NLLSO_NORMAL_EQUATION_HPP_
 
+#include <limits>
+
 #include "hs_math/linear_algebra/eigen_macro.hpp"
+#include "hs_math/linear_algebra/lafunc/fwd_decl.hpp"
 
 namespace hs
 {
@@ -144,6 +147,25 @@ template <typename _Scalar,
           typename _Index,
           int params_per_cam,
           int params_per_pt>
+struct BANaiveAugmentNormalMatrix
+{
+  typedef _Scalar Scalar;
+  typedef _Index Index;
+  typedef BANaiveNormalMatrix<Scalar, Index,
+                              params_per_cam,
+                              params_per_pt> NormalMatrix;
+
+  BANaiveAugmentNormalMatrix(const NormalMatrix& N, Scalar mu)
+    : ref_N(N), mu_(mu) {}
+
+  const NormalMatrix& ref_N;
+  Scalar mu_;
+};
+
+template <typename _Scalar,
+          typename _Index,
+          int params_per_cam,
+          int params_per_pt>
 struct BANaiveBVec
 {
   typedef _Scalar Scalar;
@@ -176,6 +198,43 @@ struct BANaiveBVec
   Index number_of_points;
   CamSegmentContainer cam_segments;
   PtSegmentContainer pt_segments;
+};
+
+}
+}
+
+namespace math
+{
+namespace la
+{
+
+template <typename _Scalar,
+          typename _Index,
+          int params_per_cam,
+          int params_per_pt>
+class MatMaxDiagValFunc<hs::sfm::ba::BANaiveNormalMatrix<_Scalar, _Index,
+                                                         params_per_cam,
+                                                         params_per_pt> >
+{
+public:
+  typedef _Scalar Scalar;
+  typedef _Index Index;
+  typedef hs::sfm::ba::BANaiveNormalMatrix<Scalar, Index,
+                                           params_per_cam,
+                                           params_per_pt> Mat;
+
+  Scalar operator()(const Mat& N) const
+  {
+    Index params_size = params_per_cam * N.number_of_cameras +
+                        params_per_pt * N.number_of_points;
+    Scalar max_diag = std::numeric_limits<Scalar>::min();
+    for (Index i = 0; i < params_size; i++)
+    {
+      max_diag = std::max(max_diag, N.coeff(i, i));
+    }
+
+    return max_diag;
+  }
 };
 
 }

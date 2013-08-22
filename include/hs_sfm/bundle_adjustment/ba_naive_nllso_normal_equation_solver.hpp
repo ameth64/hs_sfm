@@ -20,9 +20,11 @@ public:
   typedef typename VecFunc::XVec XVec;
   typedef typename VecFunc::YVec YVec;
   typedef typename VecFunc::Index Index;
-  typedef BANaiveNormalMatrix<Scalar, Index,
-                              VecFunc::m_paramsPerCam,
-                              VecFunc::m_paramsPerPt> NormalMat;
+  typedef BANaiveAugmentNormalMatrix<Scalar, Index,
+                                     VecFunc::m_paramsPerCam,
+                                     VecFunc::m_paramsPerPt> 
+          AugmentNormalMat;
+  typedef typename AugmentNormalMat::NormalMatrix NormalMat;
   typedef BANaiveBVec<Scalar, Index,
                       VecFunc::m_paramsPerCam,
                       VecFunc::m_paramsPerPt> BVec;
@@ -56,34 +58,40 @@ public:
   typedef typename MixPointBlockContainer::size_type MixPointBlockIdx;
   typedef EIGEN_SMAT(MixPointBlockIdx, EigenDefaultMajor, Index) MixPointBlockMap;
 
-  Err operator()(const NormalMat& N, const BVec& b, XVec& x) const
+  Err operator()(const AugmentNormalMat& AN, const BVec& b, XVec& x) const
   {
-    if (SolveCameraParams(N, b, x) != 0) return -1;
-    if (SolvePointParams(N, b, x) != 0) return -1;
+    if (SolveCameraParams(AN, b, x) != 0) return -1;
+    if (SolvePointParams(AN, b, x) != 0) return -1;
     return 0;
   }
 
 private:
-  Err SolveCameraParams(const NormalMat& N, const BVec& b, XVec& x) const
+  Err SolveCameraParams(const AugmentNormalMat& AN, const BVec& b, XVec& x) const
   {
-    Index schur_mat_size = N.number_of_cameras * VecFunc::m_paramsPerCam;
+    Index schur_mat_size = AN.ref_N.number_of_cameras * 
+                           VecFunc::m_paramsPerCam;
     SchurMat schur_mat;
-    x.resize(schur_mat_size + N.number_of_points * VecFunc::m_paramsPerPt);
+    x.resize(schur_mat_size + 
+             AN.ref_N.number_of_points * VecFunc::m_paramsPerPt);
 
     //compute mix point blocks
     MixPointBlockContainer mix_point_blocks;
     MixPointBlockMap mix_point_block_map;
     typedef Eigen::Triplet<MixPointBlockIdx, Index> MixPointTripletType;
     std::vector<MixPointTripletType> mix_point_block_triplets;
-    for (Index i = 0; i < N.number_of_cameras; i++)
+    for (Index i = 0; i < AN.ref_N.number_of_cameras; i++)
     {
-      for (Index j = 0; j < N.number_of_points; j++)
+      for (Index j = 0; j < AN.ref_N.number_of_points; j++)
       {
-        MixBlockIdx mix_id = N.mix_block_map.coeff(i, j);
+        MixBlockIdx mix_id = AN.ref_N.mix_block_map.coeff(i, j);
         if (mix_id > 0)
         {
-          const MixBlock& mix = N.mix_blocks[mix_id - 1];
-          const PtBlock& point = N.point_blocks[j];
+          const MixBlock& mix = AN.ref_N.mix_blocks[mix_id - 1];
+          PtBlock point = AN.ref_N.point_blocks[j];
+          for (Index k = 0; k < VecFunc::m_paramsPerPt; k++)
+          {
+            point(k, k) += AN.mu_;
+          }
           MixPointBlock mix_point = mix * point.inverse();
           mix_point_blocks.push_back(mix_point);
           mix_point_block_triplets.push_back(
@@ -91,35 +99,40 @@ private:
         }
       }
     }
-    mix_point_block_map.resize(N.number_of_cameras,
-                               N.number_of_points);
+    mix_point_block_map.resize(AN.ref_N.number_of_cameras,
+                               AN.ref_N.number_of_points);
     mix_point_block_map.setFromTriplets(mix_point_block_triplets.begin(),
                                         mix_point_block_triplets.end());
 
     //compute schur matrix
     typedef Eigen::Triplet<Scalar, Index> SchurTripletType;
     std::vector<SchurTripletType> schur_triplets;
-    for (Index i = 0; i < N.number_of_cameras; i++)
+    for (Index i = 0; i < AN.ref_N.number_of_cameras; i++)
     {
-      for (Index j = i; j < N.number_of_cameras; j++)
+      for (Index j = i; j < AN.ref_N.number_of_cameras; j++)
       {
         CamBlock camera_block = CamBlock::Zero();
-        for (Index k = 0; k < N.number_of_points; k++)
+        for (Index k = 0; k < AN.ref_N.number_of_points; k++)
         {
           MixPointBlockIdx mix_point_id = mix_point_block_map.coeff(i, k);
-          MixBlockIdx mix_id = N.mix_block_map.coeff(j, k);
+          MixBlockIdx mix_id = AN.ref_N.mix_block_map.coeff(j, k);
           if (mix_point_id != 0 &&
               mix_id != 0)
           {
             camera_block -= mix_point_blocks[mix_point_id - 1] *
-                            N.mix_blocks[mix_id - 1].transpose();
+                            AN.ref_N.mix_blocks[mix_id - 1].transpose();
           }
         }
 
         //fill schur matrix
         if (i == j)
         {
-          camera_block += N.camera_blocks[i];
+          camera_block += AN.ref_N.camera_blocks[i];
+          for (Index m = 0; m < VecFunc::m_paramsPerCam; m++)
+          {
+            camera_block(m, m) += AN.mu_;
+          }
+
           for (Index m = 0; m < VecFunc::m_paramsPerCam; m++)
           {
             for (Index n = 0; n < VecFunc::m_paramsPerCam; n++)
@@ -156,10 +169,10 @@ private:
 
     //compute camera LHS
     CameraLHS camera_lhs(schur_mat_size);
-    for (Index i = 0; i < N.number_of_cameras; i++)
+    for (Index i = 0; i < AN.ref_N.number_of_cameras; i++)
     {
       CamSegment cam_segment = b.cam_segments[i];
-      for (Index j = 0; j < N.number_of_points; j++)
+      for (Index j = 0; j < AN.ref_N.number_of_points; j++)
       {
         MixPointBlockIdx mix_point_id = mix_point_block_map.coeff(i, j);
         if (mix_point_id > 0)
@@ -190,26 +203,32 @@ private:
     return 0;
   }
 
-  Err SolvePointParams(const NormalMat& N, const BVec& b, XVec& x) const
+  Err SolvePointParams(const AugmentNormalMat& AN, 
+                       const BVec& b, XVec& x) const
   {
-    Index camera_params_size = N.number_of_cameras * VecFunc::m_paramsPerCam;
-    for (Index i = 0; i < N.number_of_points; i++)
+    Index camera_params_size = AN.ref_N.number_of_cameras * 
+                               VecFunc::m_paramsPerCam;
+    for (Index i = 0; i < AN.ref_N.number_of_points; i++)
     {
       PtSegment pt_segment = b.pt_segments[i];
-      for (Index j = 0; j < N.number_of_cameras; j++)
+      for (Index j = 0; j < AN.ref_N.number_of_cameras; j++)
       {
-        MixBlockIdx mix_id = N.mix_block_map.coeff(j, i);
+        MixBlockIdx mix_id = AN.ref_N.mix_block_map.coeff(j, i);
         if (mix_id > 0)
         {
-          const MixBlock& mix = N.mix_blocks[mix_id - 1];
+          const MixBlock& mix = AN.ref_N.mix_blocks[mix_id - 1];
           pt_segment -= mix.transpose() *
                         x.segment(j * VecFunc::m_paramsPerCam,
                                   VecFunc::m_paramsPerCam);
         }
       }
+      PtBlock point_block = AN.ref_N.point_blocks[i];
+      for (Index j = 0; j < VecFunc::m_paramsPerPt; j++)
+      {
+        point_block(j, j) += AN.mu_;
+      }
       x.segment(camera_params_size + i * VecFunc::m_paramsPerPt,
-                VecFunc::m_paramsPerPt) =
-        N.point_blocks[i].inverse() * pt_segment;
+                VecFunc::m_paramsPerPt) = point_block.inverse() * pt_segment;
     }
 
     return 0;
