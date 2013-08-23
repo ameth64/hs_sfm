@@ -19,6 +19,7 @@ set(BA_UTEST_SOURCES
   "unit_test/bundle_adjustment/test_ba_naive_nllso_normal_equation_builder.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_nllso_normal_equation_solver.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_vec_func.cpp"
+  "unit_test/bundle_adjustment/test_ba_naive_xcov_calculator.cpp"
   )
 hslib_add_utest(${BA_NAME} SOURCES ${BA_UTEST_SOURCES})
 hslib_add_dep(${BA_NAME}_utest
