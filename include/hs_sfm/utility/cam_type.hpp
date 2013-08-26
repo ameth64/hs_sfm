@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_UTILITY_CAM_TYPE_HPP_
+﻿#ifndef _HS_SFM_UTILITY_CAM_TYPE_HPP_
 #define _HS_SFM_UTILITY_CAM_TYPE_HPP_
 
 #include <bitset>

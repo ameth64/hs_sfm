@@ -2,11 +2,14 @@
 
 #include <gtest/gtest.h>
 
+#include "hs_optimizor/nllso/levenberg_marquardt.hpp"
+
 #include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_builder.hpp"
-
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_augmentor.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_solver.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_xcov_calculator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_nllso_meta.hpp"
 
 #include "test_ba_naive_base.hpp"
 
@@ -14,7 +17,36 @@ namespace
 {
 
 template <typename _Scalar>
-class TestBANaiveNLLSONormalEquationSolver
+class BANaiveOptimizor
+{
+public:
+  typedef _Scalar Scalar;
+  typedef int Err;
+  typedef hs::sfm::ba::BANaiveVecFunc<Scalar> VectorFunction;
+  typedef hs::optimizor::nllso::LevenbergMarquardt<VectorFunction> Optimizor;
+  typedef typename Optimizor::XVec XVec;
+  typedef typename Optimizor::YVec YVec;
+  typedef typename Optimizor::YCovInv YCovarianceInverse;
+
+  BANaiveOptimizor() {}
+  BANaiveOptimizor(size_t maxItrNum, Scalar tau, Scalar eps1, Scalar eps2)
+    : optimizor_(maxItrNum, tau, eps1, eps2) {}
+
+  Err operator() (const VectorFunction& vector_function,
+                  const YVec& near_y, 
+                  const YCovarianceInverse& y_covariance_inverse,
+                  XVec& optmized_x) const
+  {
+    return optimizor_(vector_function, near_y, y_covariance_inverse,
+                      optmized_x);
+  }
+
+private:
+  Optimizor optimizor_;
+};
+
+template <typename _Scalar>
+class TestBANaiveNLLSOLevenbergMarquardt
 {
 public:
   typedef _Scalar Scalar;
@@ -45,6 +77,8 @@ public:
           MatXX;
   typedef EIGEN_MAT(Scalar, 2, 2) Mat22;
 
+  typedef BANaiveOptimizor<Scalar> Optimizor;
+
   static Err Test(const BAVecFunc& f, const XVec& x, const Mat22& feat_cov)
   {
     Err result = 0;
@@ -74,66 +108,15 @@ public:
       return -1;
     }
 
-    BAAnalyticJacobian ba_analytic_jac;
-    BAAnalyticJac ba_analytic_j;
-    if (ba_analytic_jac(f, x, ba_analytic_j) != 0)
+    Optimizor optimizor;
+    XVec optmized_x = x;
+    if (optimizor(f, noised_y, y_cov_inv, optmized_x) != 0)
     {
-      std::cout<<"ba_analytic_jac failed.\n";
-      return -1;
+      std::cout<<"Optimizor Failed.\n";
     }
 
-    ResidualsCalc residuals_calc;
-    Residuals r = residuals_calc(noised_y, y);
-
-    NormalMat N;
-    BVec b;
-    NormalEquationBuilder builder;
-    if (builder(ba_analytic_j, r, y_cov_inv, N, b) != 0)
-    {
-      std::cout<<"builder failed.\n";
-      return -1;
-    }
-
-    Scalar max_diag = hs::math::la::MatMaxDiagValFunc<NormalMat>()(N);
-
-    Scalar mu = /*Scalar(1e-3) * */max_diag;
-
-    Augmentor augmentor;
-    AugmentNormalMat AN = augmentor(N, mu);
-
-    NormalEquationSolver solver;
-    XVec x_delta;
-    if (solver(AN, b, x_delta) != 0)
-    {
-      std::cout<<"solver failed.\n";
-      return -1;
-    }
-
-    MatXX dense_N;
-    XVec dense_b;
-    Index x_size = f.getXSize();
-    dense_N.resize(x_size, x_size);
-    dense_b.resize(x_size);
-    for (Index i = 0; i < x_size; i++)
-    {
-      for (Index j = 0; j < x_size; j++)
-      {
-        dense_N(i, j) = N.coeff(i, j);
-      }
-      dense_b[i] = b[i];
-      dense_N(i, i) += mu;
-    }
-
-    Scalar threshold = Scalar(1e-8);
+    return result;
     
-    if ((dense_N * x_delta).isApprox(dense_b, threshold))
-    {
-      return 0;
-    }
-    else
-    {
-      return -1;
-    }
   }
 
 private:
@@ -176,13 +159,13 @@ private:
   }
 };
 
-TEST(TestBANaiveNLLSONormalEquationSolver, SmallDataTest)
+TEST(TestBANaiveNLLSOLevenbergMarquardt, SmallDataTest)
 {
   typedef double Scalar;
   typedef size_t ImgDim;
 
   typedef SyntheticDataGenerator<Scalar, ImgDim> DataGen;
-  typedef TestBANaiveNLLSONormalEquationSolver<Scalar> Test;
+  typedef TestBANaiveNLLSOLevenbergMarquardt<Scalar> Test;
   typedef Test::Mat22 Mat22;
   typedef Test::BAVecFunc BAVecFunc;
   typedef BAVecFunc::XVec XVec;

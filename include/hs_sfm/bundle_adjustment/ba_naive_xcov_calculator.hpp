@@ -64,8 +64,10 @@ public:
 
     //计算正规矩阵的伪逆即为X的协方差矩阵
     Eigen::JacobiSVD<DenseNormalMatrix> svd(dense_normal_matrix);
-    DenseNormalMatrix U = svd.matrixU();
-    DenseNormalMatrix V = svd.matrixV();
+    DenseNormalMatrix U(x_size, x_size);
+    U = svd.matrixU();
+    DenseNormalMatrix V(x_size, x_size);
+    V = svd.matrixV();
     DenseNormalMatrix D = DenseNormalMatrix::Zero(x_size, x_size);
     EIGEN_VEC(Scalar, Eigen::Dynamic) d = svd.singularValues();
     const Scalar precision = Scalar(1e-6);

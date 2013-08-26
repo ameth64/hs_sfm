@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_RESIDUALS_HPP_
+﻿#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_RESIDUALS_HPP_
 #define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_RESIDUALS_HPP_
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
@@ -59,7 +59,7 @@ public:
 
   Scalar operator()(const Residuals& r, const YCovInv& y_cov_inv) const
   {
-    Index feat_num = r.row() / VecFunc::m_paramsPerFeat;
+    Index feat_num = r.rows() / VecFunc::m_paramsPerFeat;
     if (Index(y_cov_inv.m_blocks.size()) != feat_num)
     {
       //残差与协方差矩阵不匹配，返回0。

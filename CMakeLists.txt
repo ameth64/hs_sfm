@@ -16,6 +16,7 @@ set(BA_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_base.hpp"
   "unit_test/bundle_adjustment/test_ba_naive_jac.cpp"
+  "unit_test/bundle_adjustment/test_ba_naive_nllso_levenberg_marquardt.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_nllso_normal_equation_builder.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_nllso_normal_equation_solver.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_vec_func.cpp"
@@ -26,6 +27,7 @@ hslib_add_dep(${BA_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   3RDPARTY_DEPS boost HEADONLY
   HS_DEPS hs_math HEADONLY
+  HS_DEPS hs_optimizor HEADONLY
   )
 hslib_post_build(${BA_NAME}_utest)
 

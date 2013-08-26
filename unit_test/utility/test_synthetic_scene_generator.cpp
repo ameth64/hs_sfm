@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+﻿#include <gtest/gtest.h>
 
 #include "hs_sfm/utility/synthetic_scene_generator.hpp"
 #include "hs_sfm/utility/sfm_file_io.hpp"

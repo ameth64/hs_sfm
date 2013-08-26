@@ -210,8 +210,8 @@ namespace la
 
 template <typename _Scalar,
           typename _Index,
-          int params_per_cam,
-          int params_per_pt>
+          _Index params_per_cam,
+          _Index params_per_pt>
 class MatMaxDiagValFunc<hs::sfm::ba::BANaiveNormalMatrix<_Scalar, _Index,
                                                          params_per_cam,
                                                          params_per_pt> >

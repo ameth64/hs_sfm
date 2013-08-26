@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_UTILITY_SFM_FILE_IO_HPP_
+﻿#ifndef _HS_SFM_UTILITY_SFM_FILE_IO_HPP_
 #define _HS_SFM_UTILITY_SFM_FILE_IO_HPP_
 
 #include <string>

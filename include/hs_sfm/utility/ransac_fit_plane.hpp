@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_UTILITY_RANSAC_FIT_PLANE_HPP_
+﻿#ifndef _HS_SFM_UTILITY_RANSAC_FIT_PLANE_HPP_
 #define _HS_SFM_UTILITY_RANSAC_FIT_PLANE_HPP_
 
 #include "hs_fit/ransac/ransac.hpp"

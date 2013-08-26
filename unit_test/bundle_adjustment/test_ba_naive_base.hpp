@@ -1,4 +1,4 @@
-#ifndef _UNIT_TEST_TEST_BA_NAIVE_BASE_HPP_
+﻿#ifndef _UNIT_TEST_TEST_BA_NAIVE_BASE_HPP_
 #define _UNIT_TEST_TEST_BA_NAIVE_BASE_HPP_
 
 #include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"

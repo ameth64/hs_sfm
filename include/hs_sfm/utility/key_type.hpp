@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_UTILITY_KEY_TYPE_HPP_
+﻿#ifndef _HS_SFM_UTILITY_KEY_TYPE_HPP_
 #define _HS_SFM_UTILITY_KEY_TYPE_HPP_
 
 #include <vector>
