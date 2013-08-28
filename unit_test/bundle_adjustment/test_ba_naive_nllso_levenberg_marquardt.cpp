@@ -10,40 +10,12 @@
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_solver.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_xcov_calculator.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_meta.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_levenberg_marquardt_optimizor.hpp"
 
 #include "test_ba_naive_base.hpp"
 
 namespace
 {
-
-template <typename _Scalar>
-class BANaiveOptimizor
-{
-public:
-  typedef _Scalar Scalar;
-  typedef int Err;
-  typedef hs::sfm::ba::BANaiveVecFunc<Scalar> VectorFunction;
-  typedef hs::optimizor::nllso::LevenbergMarquardt<VectorFunction> Optimizor;
-  typedef typename Optimizor::XVec XVec;
-  typedef typename Optimizor::YVec YVec;
-  typedef typename Optimizor::YCovInv YCovarianceInverse;
-
-  BANaiveOptimizor() {}
-  BANaiveOptimizor(size_t maxItrNum, Scalar tau, Scalar eps1, Scalar eps2)
-    : optimizor_(maxItrNum, tau, eps1, eps2) {}
-
-  Err operator() (const VectorFunction& vector_function,
-                  const YVec& near_y, 
-                  const YCovarianceInverse& y_covariance_inverse,
-                  XVec& optmized_x) const
-  {
-    return optimizor_(vector_function, near_y, y_covariance_inverse,
-                      optmized_x);
-  }
-
-private:
-  Optimizor optimizor_;
-};
 
 template <typename _Scalar>
 class TestBANaiveNLLSOLevenbergMarquardt
@@ -77,7 +49,7 @@ public:
           MatXX;
   typedef EIGEN_MAT(Scalar, 2, 2) Mat22;
 
-  typedef BANaiveOptimizor<Scalar> Optimizor;
+  typedef hs::sfm::ba::BANaiveLevenbergMarquardtOptimizor<BAVecFunc> Optimizor;
 
   static Err Test(const BAVecFunc& f, const XVec& x, const Mat22& feat_cov)
   {
@@ -108,12 +80,14 @@ public:
       return -1;
     }
 
-    Optimizor optimizor;
-    XVec optmized_x = x;
+    Optimizor optimizor(x);
+    XVec optmized_x;
     if (optimizor(f, noised_y, y_cov_inv, optmized_x) != 0)
     {
       std::cout<<"Optimizor Failed.\n";
     }
+
+    XVec diff = optmized_x - x;
 
     return result;
     

@@ -61,13 +61,20 @@ public:
   Err operator()(const Jac& j, const Residuals& r, const YCovInv& ycovInv,
                  NormalMat& N, BVec& b) const
   {
+    if (BuildNormalMatrix(j, ycovInv, N) != 0) return -1;
+    if (BuildBVector(j, r, ycovInv, b) != 0) return -1;
+
+    return 0;
+  }
+
+  Err BuildNormalMatrix(const Jac& j, const YCovInv& ycovInv,
+                        NormalMat& N) const
+  {
     //Camera blocks
     Index cam_num = j.m_camNum;
     Index pt_num = j.m_ptNum;
     N.camera_blocks.resize(cam_num, CamBlock::Zero());
     N.point_blocks.resize(pt_num, PtBlock::Zero());
-    b.cam_segments.resize(cam_num, CamSegment::Zero());
-    b.pt_segments.resize(pt_num, PtSegment::Zero());
     size_t cam_blks_num = j.m_camsDrv.size();
     for (size_t i = 0; i < cam_blks_num; i++)
     {
@@ -78,10 +85,6 @@ public:
       N.camera_blocks[cam_drv_blk.m_camId] +=
         cam_drv_blk.m_drvBlk.transpose() * y_cov_inv_blk *
         cam_drv_blk.m_drvBlk;
-      b.cam_segments[cam_drv_blk.m_camId] +=
-        cam_drv_blk.m_drvBlk.transpose() * y_cov_inv_blk *
-        r.segment(VecFunc::m_paramsPerFeat * featId,
-                  VecFunc::m_paramsPerFeat);
     }
 
     size_t pt_blks_num = j.m_ptsDrv.size();
@@ -94,10 +97,6 @@ public:
       N.point_blocks[pt_drv_blk.m_ptId] +=
         pt_drv_blk.m_drvBlk.transpose() * y_cov_inv_blk *
         pt_drv_blk.m_drvBlk;
-      b.pt_segments[pt_drv_blk.m_ptId] +=
-        pt_drv_blk.m_drvBlk.transpose() * y_cov_inv_blk *
-        r.segment(VecFunc::m_paramsPerFeat * featId,
-                  VecFunc::m_paramsPerFeat);
     }
 
     typedef Eigen::Triplet<MixBlockIdx, Index> TripletType;
@@ -105,8 +104,6 @@ public:
     N.mix_blocks.clear();
     N.number_of_cameras = cam_num;
     N.number_of_points = pt_num;
-    b.number_of_cameras = cam_num;
-    b.number_of_points = pt_num;
     for (Index i = 0; i < cam_num; i++)
     {
       for (Index k = 0; k < pt_num; k++)
@@ -134,6 +131,46 @@ public:
     N.mix_block_map.resize(cam_num, pt_num);
     N.mix_block_map.setFromTriplets(mix_block_triplets.begin(),
                                     mix_block_triplets.end());
+
+    return 0;
+  }
+
+  Err BuildBVector(const Jac& j, const Residuals& r, const YCovInv& ycovInv,
+                   BVec& b) const
+  {
+    //Camera blocks
+    Index cam_num = j.m_camNum;
+    Index pt_num = j.m_ptNum;
+    b.cam_segments.resize(cam_num, CamSegment::Zero());
+    b.pt_segments.resize(pt_num, PtSegment::Zero());
+    size_t cam_blks_num = j.m_camsDrv.size();
+    for (size_t i = 0; i < cam_blks_num; i++)
+    {
+      const CamDrvBlk& cam_drv_blk = j.m_camsDrv[i];
+      Index featId = cam_drv_blk.m_featId;
+      const YCovInvBlk& y_cov_inv_blk =
+        ycovInv.m_blocks[featId];
+      b.cam_segments[cam_drv_blk.m_camId] +=
+        cam_drv_blk.m_drvBlk.transpose() * y_cov_inv_blk *
+        r.segment(VecFunc::m_paramsPerFeat * featId,
+                  VecFunc::m_paramsPerFeat);
+    }
+
+    size_t pt_blks_num = j.m_ptsDrv.size();
+    for (size_t i = 0; i < pt_blks_num; i++)
+    {
+      const PtDrvBlk& pt_drv_blk = j.m_ptsDrv[i];
+      Index featId = pt_drv_blk.m_featId;
+      const YCovInvBlk& y_cov_inv_blk =
+        ycovInv.m_blocks[featId];
+      b.pt_segments[pt_drv_blk.m_ptId] +=
+        pt_drv_blk.m_drvBlk.transpose() * y_cov_inv_blk *
+        r.segment(VecFunc::m_paramsPerFeat * featId,
+                  VecFunc::m_paramsPerFeat);
+    }
+
+    b.number_of_cameras = cam_num;
+    b.number_of_points = pt_num;
 
     return 0;
   }

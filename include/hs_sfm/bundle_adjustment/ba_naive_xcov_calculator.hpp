@@ -3,8 +3,9 @@
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
+#include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_builder.hpp"
 
 namespace hs
 {
@@ -13,7 +14,7 @@ namespace sfm
 namespace ba
 {
 
-template <typename _VecFunc>
+template <typename _VectorFunction>
 class BANaiveXCovCalculator;
 
 template <typename _Scalar>
@@ -21,37 +22,45 @@ class BANaiveXCovCalculator<BANaiveVecFunc<_Scalar> >
 {
 public:
   typedef _Scalar Scalar;
-  typedef BANaiveVecFunc<Scalar> VecFunc;
-  typedef typename VecFunc::Index Index;
-  typedef typename VecFunc::XVec XVec;
-  typedef typename VecFunc::YVec YVec;
+  typedef BANaiveVecFunc<Scalar> VectorFunction;
+  typedef typename VectorFunction::Index Index;
+  typedef typename VectorFunction::XVec XVector;
+  typedef typename VectorFunction::YVec YVecctor;
 
-  typedef BANaiveNormalMatrix<Scalar, Index,
-                              VecFunc::m_paramsPerCam,
-                              VecFunc::m_paramsPerPt> NormalMatrix;
+  typedef BANaiveAnalyticJacobian<VectorFunction> Jacobian;
+  typedef typename Jacobian::Jac JacobianMatrix;
 
-  enum
-  {
-    EigenDefaultMajor =
-#if defined(EIGEN_DEFAULT_TO_ROW_MAJOR)
-    Eigen::RowMajor
-#else
-    Eigen::ColMajor
-#endif
-  };
+  typedef BANaiveNormalEquationBuilder<Scalar> NormalEquationBuilder;
+  typedef typename NormalEquationBuilder::NormalMat NormalMatrix;
+  typedef typename NormalEquationBuilder::YCovInv YCovarianceInverse;
+
   typedef EIGEN_MAT(Scalar, Eigen::Dynamic, Eigen::Dynamic) DenseNormalMatrix;
   typedef DenseNormalMatrix XCovariance;
 
   typedef int Err;
 
-  Err operator()(const NormalMatrix& normal_matrix,
+  Err operator()(const VectorFunction& vector_function,
+                 const XVector& optimized_x,
+                 const YCovarianceInverse& y_covariance_inverse,
                  XCovariance& x_covariance) const
   {
-    Index camera_params_size = normal_matrix.number_of_cameras *
-                               VecFunc::m_paramsPerCam;
-    Index point_params_size = normal_matrix.number_of_points *
-                              VecFunc::m_paramsPerPt;
-    Index x_size = camera_params_size + point_params_size;
+    Jacobian jacobian;
+    JacobianMatrix jacobian_matrix;
+    if (jacobian(vector_function, optimized_x, jacobian_matrix) != 0)
+    {
+      return -1;
+    }
+
+    NormalEquationBuilder normal_equation_builder;
+    NormalMatrix normal_matrix;
+    if (normal_equation_builder.BuildNormalMatrix(jacobian_matrix,
+                                                  y_covariance_inverse,
+                                                  normal_matrix) != 0)
+    {
+      return -1;
+    }
+
+    Index x_size = optimized_x.rows();
 
     DenseNormalMatrix dense_normal_matrix(x_size, x_size);
     for (Index i = 0; i < x_size; i++)
@@ -63,11 +72,9 @@ public:
     }
 
     //计算正规矩阵的伪逆即为X的协方差矩阵
-    Eigen::JacobiSVD<DenseNormalMatrix> svd(dense_normal_matrix);
-    DenseNormalMatrix U(x_size, x_size);
-    U = svd.matrixU();
-    DenseNormalMatrix V(x_size, x_size);
-    V = svd.matrixV();
+    Eigen::JacobiSVD<DenseNormalMatrix> svd(dense_normal_matrix,
+                                            Eigen::ComputeThinU |
+                                            Eigen::ComputeThinV);
     DenseNormalMatrix D = DenseNormalMatrix::Zero(x_size, x_size);
     EIGEN_VEC(Scalar, Eigen::Dynamic) d = svd.singularValues();
     const Scalar precision = Scalar(1e-6);
@@ -78,9 +85,8 @@ public:
         D(i, i) = Scalar(1) / d(i);
       }
     }
-
     x_covariance.resize(x_size, x_size);
-    x_covariance = V * D * U.transpose();
+    x_covariance = svd.matrixV() * D * (svd.matrixU().transpose());
 
     return 0;
   }

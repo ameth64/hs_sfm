@@ -24,18 +24,8 @@ public:
   typedef typename BAVecFunc::XVec XVec;
   typedef typename BAVecFunc::YVec YVec;
 
-  typedef hs::sfm::ba::BANaiveNormalEquationBuilder<Scalar>
-          NormalEquationBuilder;
-  typedef typename NormalEquationBuilder::YCovInv YCovInv;
-  typedef typename NormalEquationBuilder::NormalMat NormalMatrix;
-  typedef typename NormalEquationBuilder::BVec BVector;
-  typedef typename NormalEquationBuilder::ResidualsCalc ResidualsCalc;
-  typedef typename ResidualsCalc::Residuals Residuals;
-
-  typedef hs::sfm::ba::BANaiveAnalyticJacobian<BAVecFunc> BAAnalyticJacobian;
-  typedef typename BAAnalyticJacobian::Jac BAAnalyticJac;
-
   typedef hs::sfm::ba::BANaiveXCovCalculator<BAVecFunc> BAXCovCalculator;
+  typedef typename BAXCovCalculator::YCovarianceInverse YCovarianceInverse;
   typedef typename BAXCovCalculator::XCovariance XCovariance;
 
   typedef EIGEN_MAT(Scalar, Eigen::Dynamic, Eigen::Dynamic) MatXX;
@@ -54,7 +44,7 @@ public:
 
     Index feat_num = f.getFeatNum();
     MatXX dense_y_cov, dense_y_cov_inv;
-    YCovInv y_cov_inv;
+    YCovarianceInverse y_cov_inv;
     if (GenFeatCovInv(feat_cov, feat_num,
       dense_y_cov, dense_y_cov_inv,
       y_cov_inv) != 0)
@@ -63,36 +53,9 @@ public:
       return -1;
     }
 
-    YVec noised_y = y;
-    if (GenNoisedYVec(dense_y_cov, noised_y) != 0)
-    {
-      std::cout<<"GenNoisedYVec Failed.\n";
-      return -1;
-    }
-
-    BAAnalyticJacobian ba_analytic_jac;
-    BAAnalyticJac ba_analytic_j;
-    if (ba_analytic_jac(f, x, ba_analytic_j) != 0)
-    {
-      std::cout<<"ba_analytic_jac failed.\n";
-      return -1;
-    }
-
-    ResidualsCalc residuals_calc;
-    Residuals r = residuals_calc(noised_y, y);
-
-    NormalMatrix N;
-    BVector b;
-    NormalEquationBuilder builder;
-    if (builder(ba_analytic_j, r, y_cov_inv, N, b) != 0)
-    {
-      std::cout<<"builder failed.\n";
-      return -1;
-    }
-
     XCovariance x_covariance;
     BAXCovCalculator x_cov_calculator;
-    if (x_cov_calculator(N, x_covariance) != 0)
+    if (x_cov_calculator(f, x, y_cov_inv, x_covariance) != 0)
     {
       return -1;
     }
@@ -105,7 +68,7 @@ private:
                            Index feat_num,
                            MatXX& dense_y_cov,
                            MatXX& dense_y_cov_inv,
-                           YCovInv& y_cov_inv)
+                           YCovarianceInverse& y_cov_inv)
   {
     y_cov_inv.m_blocks.clear();
     dense_y_cov_inv.resize(feat_num * BAVecFunc::m_paramsPerFeat,
@@ -130,14 +93,6 @@ private:
     return 0;
   }
 
-  static Err GenNoisedYVec(const MatXX& dense_y_cov,
-                           YVec& y)
-  {
-    YVec mean = y;
-    return hs::math::random::NormalRandomVar<Scalar, 
-                                             Eigen::Dynamic>::normRandomVar(
-      mean, dense_y_cov, y);
-  }
 };
 
 TEST(TestBANaiveXCovCalculator, SimpleTest)
