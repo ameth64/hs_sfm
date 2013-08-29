@@ -12,7 +12,7 @@ namespace sfm
 {
 
 template <typename _Scalar>
-class CameraRotaionCovariance
+class CameraRotaionCovarianceCalculator
 {
 public:
   typedef _Scalar Scalar;
@@ -29,7 +29,7 @@ public:
     typedef EIGEN_VEC(Scalar, 3) XVec;
     typedef EIGEN_VEC(Scalar, 3) YVec;
 
-    Err operator()(const XVec& x, const YVec& y) const
+    Err operator()(const XVec& x, YVec& y) const
     {
       Matrix33 ortho_matrix = GeneralRotation(x);
       EulerAnglesRotation euler_angles;
@@ -47,7 +47,7 @@ public:
     typedef EIGEN_VEC(Scalar, 3) XVec;
     typedef EIGEN_VEC(Scalar, 3) YVec;
 
-    Err operator()(const XVec& x, const YVec& y) const
+    Err operator()(const XVec& x, YVec& y) const
     {
       EulerAnglesRotation euler_angles(x[0], x[1], x[2]);
       Matrix33 ortho_matrix = 
@@ -96,6 +96,9 @@ public:
     }
 
     Matrix33 euler_angles_covariance = Matrix33::Zero();
+    x_rotation_stddev *= Scalar(M_PI) / Scalar(180);
+    y_rotation_stddev *= Scalar(M_PI) / Scalar(180);
+    z_rotation_stddev *= Scalar(M_PI) / Scalar(180);
     euler_angles_covariance(0, 0) = x_rotation_stddev * x_rotation_stddev;
     euler_angles_covariance(1, 1) = y_rotation_stddev * y_rotation_stddev;
     euler_angles_covariance(2, 2) = z_rotation_stddev * z_rotation_stddev;

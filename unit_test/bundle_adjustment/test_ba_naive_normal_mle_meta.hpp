@@ -6,6 +6,7 @@
 
 #include "hs_sfm/bundle_adjustment/ba_naive_levenberg_marquardt_optimizor.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_xcov_calculator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_residuals.hpp"
 
 #include "test_ba_naive_noised_y_generator.hpp"
 
@@ -37,6 +38,14 @@ struct NormalMLENoisedYVectorGeneratorType<
          hs::sfm::ba::BANaiveFeatCovInv<_Scalar> >
 {
   typedef hs::sfm::ba::BANaiveNoisedYGenerator<_Scalar> type;
+};
+
+template <typename _Scalar>
+struct NormalMLEResidualsCalculatorType<
+         hs::sfm::ba::BANaiveVecFunc<_Scalar> >
+{
+  typedef hs::sfm::ba::BANaiveResidualsCalc<
+    hs::sfm::ba::BANaiveVecFunc<_Scalar> > type;
 };
 
 }

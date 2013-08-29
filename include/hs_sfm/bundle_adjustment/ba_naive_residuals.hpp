@@ -34,10 +34,10 @@ public:
   Err operator() (const VecFunc& f,
                   const XVec& x,
                   const YVec& y,
-                  Residuals& r)
+                  Residuals& r) const
   {
     YVec noise_y;
-    if (f(x, y) != 0)
+    if (f(x, noise_y) != 0)
     {
       return -1;
     }

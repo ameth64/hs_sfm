@@ -55,23 +55,6 @@ public:
     optimized_x = initial_x_;
     Err rst = optimizor_(vector_function, near_y, y_covariance_inverse,
                          optimized_x);
-#ifdef _DEBUG
-    YVector optimized_y;
-    vector_function(optimized_x, optimized_y);
-    YVector optimized_residuals = optimized_y - near_y;
-    Scalar optimized_norm = optimized_residuals.squaredNorm();
-    optimized_norm /= optimized_residuals.rows();
-    optimized_norm = std::sqrt(optimized_norm);
-    optimized_norm *= 2951.1378875492117335208598481088;
-    
-    YVector initial_y;
-    vector_function(initial_x_, initial_y);
-    YVector initial_residuals = initial_y - near_y;
-    Scalar initial_norm = initial_residuals.squaredNorm();
-    initial_norm /= initial_residuals.rows();
-    initial_norm = std::sqrt(initial_norm);
-    initial_norm *= 2951.1378875492117335208598481088;
-#endif
 
     return rst;
   }
