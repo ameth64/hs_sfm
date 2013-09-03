@@ -56,3 +56,20 @@ hslib_add_dep(${UTILITY_NAME}_utest
   HS_DEPS hs_fit HEADONLY
   )
 hslib_post_build(${UTILITY_NAME}_utest)
+
+#triangulate
+set(TRIANGULATE_NAME "triangulate")
+set(TRIANGULATE_SOURCES
+  )
+hslib_add_library(${TRIANGULATE_NAME} ${HSPRJ_NAME} ${TRIANGULATE_SOURCES})
+
+set(TRIANGULATE_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  "unit_test/triangulate/test_multiple_view_base.hpp"
+  "unit_test/triangulate/test_multiple_view_vector_function.cpp"
+  )
+hslib_add_utest(${TRIANGULATE_NAME} SOURCES ${TRIANGULATE_UTEST_SOURCES})
+hslib_add_dep(${TRIANGULATE_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  HS_DEPS hs_math HEADONLY)
+hslib_post_build(${TRIANGULATE_NAME}_utest)
