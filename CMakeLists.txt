@@ -66,7 +66,9 @@ hslib_add_library(${TRIANGULATE_NAME} ${HSPRJ_NAME} ${TRIANGULATE_SOURCES})
 set(TRIANGULATE_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/triangulate/test_multiple_view_base.hpp"
+  "unit_test/triangulate/test_multiple_view_normal_mle_meta.hpp"
   "unit_test/triangulate/test_multiple_view_vector_function.cpp"
+  "unit_test/triangulate/test_multiple_view_monte_carlo_simulate.cpp"
   )
 hslib_add_utest(${TRIANGULATE_NAME} SOURCES ${TRIANGULATE_UTEST_SOURCES})
 hslib_add_dep(${TRIANGULATE_NAME}_utest

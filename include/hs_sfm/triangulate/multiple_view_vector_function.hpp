@@ -76,9 +76,19 @@ public:
     intrins_ = intrins;
   }
 
+  const CameraIntrinContainer& GetIntrins() const
+  {
+    return intrins_;
+  }
+
   void SetExtrins(const CameraExtrinContainer& extrins)
   {
     extrins_ = extrins;
+  }
+
+  const CameraExtrinContainer& GetExtrins() const
+  {
+    return extrins_;
   }
 
 private:
