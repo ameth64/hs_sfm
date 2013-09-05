@@ -11,6 +11,8 @@ public:
   typedef _Scalar Scalar;
   typedef _ImgDim ImgDim;
 
+  typedef int Err;
+
   typedef hs::sfm::SceneGenerator<Scalar, ImgDim> SceneGen;
   typedef typename SceneGen::Intrin Intrin;
   typedef typename SceneGen::IntrinContainer IntrinContainer;
@@ -52,7 +54,7 @@ public:
             camHeightDev, camPlannarDev, camRotDev, nwAngle),
       m_keysGen(imgW, imgH) {}
 
-  int operator () (BAVecFunc& baVecFunc, XVec& x, YVec& y) const
+  Err operator () (BAVecFunc& baVecFunc, XVec& x, YVec& y) const
   {
     IntrinContainer intrins;
     ExtrinContainer extrins;
@@ -60,7 +62,7 @@ public:
     Pt3DContainer pts;
     if (m_sceneGen(intrins, extrins, images, pts) != 0) 
       return -1;
-    Scalar f = m_sceneGen.getFInPix();
+    Scalar f = getFInPix();
 
     ImgKeysContainer imgKeys;
     TrackContainer tracks;
@@ -92,7 +94,6 @@ public:
         viewKeyCamNum++;
       }
     }
-
 
     std::vector<size_t> ptMap(pts.size(), 0);
     auto itrTrack = tracks.begin();
@@ -191,6 +192,35 @@ public:
     }
 
     return 0;
+  }
+
+  inline Scalar getFInPix() const
+  {
+    return m_sceneGen.getFInPix();
+  }
+
+  Err genGCPs(size_t gcpNum, const BAVecFunc& baVecFunc, const XVec& x,
+              Pt3DContainer& gcps,
+              ImgKeysContainer& imgKeysSet,
+              TrackContainer& tracks) const
+  {
+    m_sceneGen.genScenePts(gcpNum, gcps);
+    Index camNum = baVecFunc.getCamNum();
+
+    IntrinContainer intrins(camNum, Intrin(getFInPix()));
+    ExtrinContainer extrins(camNum);
+
+    for (Index i = 0; i < camNum; i++)
+    {
+      extrins[i].m_r[0] = x[i * BAVecFunc::m_paramsPerCam + 0];
+      extrins[i].m_r[1] = x[i * BAVecFunc::m_paramsPerCam + 1];
+      extrins[i].m_r[2] = x[i * BAVecFunc::m_paramsPerCam + 2];
+      Vec3 t = x.segment(i * BAVecFunc::m_paramsPerCam + 3, 3);
+      extrins[i].m_c = -(extrins[i].m_r.inverse() * t);
+    }
+
+    CamViewContainer camViews;
+    return m_keysGen(intrins, extrins, gcps, imgKeysSet, tracks, camViews);
   }
 
 private:

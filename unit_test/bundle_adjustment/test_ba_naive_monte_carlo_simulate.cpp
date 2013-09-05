@@ -4,11 +4,11 @@
 
 #include "hs_test_utility/test_monte_carlo/normal_mle_simulator.hpp"
 
-#include "hs_sfm/utility/camera_rotation_covariance.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
 
 #include "test_ba_naive_base.hpp"
 #include "test_ba_naive_normal_mle_meta.hpp"
+#include "test_ba_naive_noised_x_generator.hpp"
 
 namespace
 {
@@ -39,8 +39,8 @@ public:
   typedef typename Simulator::YCovarianceInverse YCovarianceInverse;
   typedef typename Simulator::XCovariance XCovariance;
 
-  typedef hs::sfm::CameraRotaionCovarianceCalculator<Scalar>
-    CameraRotationCovariance;
+  typedef hs::sfm::ba::BANaiveNoisedXGenerator<Scalar>
+    NoisedXVecotrGenerator;
 
   typedef EIGEN_MAT(Scalar, 2, 2) Matrix22;
   typedef EIGEN_MAT(Scalar, 3, 3) Matrix33;
@@ -68,59 +68,23 @@ public:
       return -1;
     }
 
-    XVector near_x = true_x;
-    //put some noise to near_x
-    Index number_of_camera = vector_function.getCamNum();
-    Index camera_params_size = vector_function.getCamParamsSize();
-    Index x_params_size = vector_function.getXSize();
-    CameraRotationCovariance rotation_covariance_calculator;
-    for (Index i = 0; i < number_of_camera; i++)
+    XVector near_x;
+    NoisedXVecotrGenerator noised_x_generator;
+    if (noised_x_generator(vector_function,
+                           true_x,
+                           x_rotation_stddev,
+                           y_rotation_stddev,
+                           z_rotation_stddev,
+                           x_pos_stddev,
+                           y_pos_stddev,
+                           z_pos_stddev,
+                           x_point_stddev,
+                           y_point_stddev,
+                           z_point_stddev,
+                           near_x) != 0)
     {
-      Vector3 camera_rotation = true_x.segment(
-        i * VectorFunction::m_paramsPerCam, 3);
-      Matrix33 camera_rotation_covariance;
-      if (rotation_covariance_calculator(camera_rotation, 
-                                         x_rotation_stddev,
-                                         y_rotation_stddev,
-                                         z_rotation_stddev,
-                                         camera_rotation_covariance) != 0)
-      {
-        std::cout<<"rotation covariance calculator failed!\n";
-        return -1;
-      }
-      Vector3 noised_camera_rotation;
-      hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
-        camera_rotation, camera_rotation_covariance, noised_camera_rotation);
-      near_x.segment(i * VectorFunction::m_paramsPerCam, 3) =
-        noised_camera_rotation;
-
-      Vector3 camera_pos = true_x.segment(
-        i * VectorFunction::m_paramsPerCam + 3, 3);
-      Matrix33 camera_pos_covariance = Matrix33::Zero();
-      camera_pos_covariance(0, 0) = x_pos_stddev * x_pos_stddev;
-      camera_pos_covariance(1, 1) = y_pos_stddev * y_pos_stddev;
-      camera_pos_covariance(2, 2) = z_pos_stddev * z_pos_stddev;
-      Vector3 noised_camera_pos;
-      hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
-        camera_pos, camera_pos_covariance, noised_camera_pos);
-      near_x.segment(i * VectorFunction::m_paramsPerCam + 3, 3) =
-        noised_camera_pos;
-    }
-
-    Index number_of_point = vector_function.getPtNum();
-    for (Index i = 0; i < number_of_point; i++)
-    {
-      Vector3 point = true_x.segment(camera_params_size + 
-                                     i * VectorFunction::m_paramsPerPt, 3);
-      Matrix33 point_covariance = Matrix33::Zero();
-      point_covariance(0, 0) = x_point_stddev * x_point_stddev;
-      point_covariance(1, 1) = y_point_stddev * y_point_stddev;
-      point_covariance(2, 2) = z_point_stddev * z_point_stddev;
-      Vector3 noised_point;
-      hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
-        point, point_covariance, noised_point);
-      near_x.segment(camera_params_size + 
-                     i * VectorFunction::m_paramsPerPt, 3) = noised_point;
+      std::cout<<"noised x vector generator failed!\n";
+      return -1;
     }
 
     XVectorOptimizor x_optimizor(near_x, 100,

@@ -62,27 +62,82 @@ SceneGenerator(Scalar f, size_t stripNum,
 Scalar getFInPix() const {return m_f / m_pixSize;}
 
 Err operator ()(IntrinContainer& intrins, ExtrinContainer& extrins,
-    ImageContainer& images,
-    Pt3DContainer& pts) const
+                ImageContainer& images,
+                Pt3DContainer& pts) const
 {
-  Scalar flightHeight = m_f * m_grdRes / m_pixSize;
+  genSceneCams(intrins, extrins, images);
+  genScenePts(m_ptsNum, pts);
+
+  return 0;
+}
+
+inline Scalar getFlightHeight() const
+{
+  return m_f * m_grdRes / m_pixSize;
+}
+
+void getSceneDimensions(Scalar& sceneXDim,
+                        Scalar& sceneYDim,
+                        Scalar& sceneZDim) const
+{
   Scalar longitudinalRangePerCam =
-  (1 - m_longitudinalOverlap) * m_grdRes * Scalar(m_imgH);
+    (1 - m_longitudinalOverlap) * m_grdRes * Scalar(m_imgH);
   Scalar lateralRangePerCam = 
-  (1 - m_lateralOverlap) * m_grdRes * Scalar(m_imgW);
+    (1 - m_lateralOverlap) * m_grdRes * Scalar(m_imgW);
+
+  sceneXDim = m_imgW * m_grdRes + 
+    lateralRangePerCam * (m_stripsNum - 1);
+  sceneYDim = m_imgH * m_grdRes +
+    longitudinalRangePerCam * (m_camsNumInStrip - 1);
+  sceneZDim = m_sceneMaxHeight;
+}
+
+void genScenePts(size_t ptsNum, Pt3DContainer& pts) const
+{
+  pts.resize(ptsNum);
+  Scalar sceneXDim, sceneYDim, sceneZDim;
+  getSceneDimensions(sceneXDim, sceneYDim, sceneZDim);
+
+  Scalar nwAngleRad = m_nwAngle / 180 * Scalar(M_PI);
+  Mat33 nwRot;
+  nwRot << cos(nwAngleRad), -sin(nwAngleRad), 0,
+           sin(nwAngleRad),  cos(nwAngleRad), 0,
+           0, 0, 1;
+
+  Pt3D maxPt;
+  maxPt << sceneXDim * 0.5,
+           sceneYDim * 0.5,
+           sceneZDim * 0.5;
+  Pt3D minPt = -maxPt;
+
+  for (size_t i = 0; i < ptsNum; i++)
+  {
+    hs::math::random::UniformRandomVar<Scalar, 3>::uniformRandomVar(
+      minPt, maxPt, pts[i]);
+    pts[i] = nwRot * pts[i];
+    //pts[i] /= scale;
+  }
+}
+
+void genSceneCams(IntrinContainer& intrins, ExtrinContainer& extrins,
+                  ImageContainer& images) const
+{
+  Scalar flightHeight = getFlightHeight();
+
+  Scalar longitudinalRangePerCam =
+    (1 - m_longitudinalOverlap) * m_grdRes * Scalar(m_imgH);
+  Scalar lateralRangePerCam = 
+    (1 - m_lateralOverlap) * m_grdRes * Scalar(m_imgW);
 
   size_t camNum = m_stripsNum * m_camsNumInStrip;
 
   intrins.resize(camNum, Intrin(m_f / m_pixSize));
   extrins.resize(camNum);
   images.resize(camNum);
-  pts.resize(m_ptsNum);
 
-  Scalar sceneXDim = m_imgW * m_grdRes + 
-       lateralRangePerCam * (m_stripsNum - 1);
-  Scalar sceneYDim = m_imgH * m_grdRes +
-       longitudinalRangePerCam * (m_camsNumInStrip - 1);
-  Scalar sceneZDim = m_sceneMaxHeight;
+  Scalar sceneXDim, sceneYDim, sceneZDim;
+  getSceneDimensions(sceneXDim, sceneYDim, sceneZDim);
+
   Mat33 camPosCov = Mat33::Identity();
   camPosCov(0, 0) = m_camPlannarDev;
   camPosCov(1, 1) = m_camPlannarDev;
@@ -93,8 +148,8 @@ Err operator ()(IntrinContainer& intrins, ExtrinContainer& extrins,
   Scalar nwAngleRad = m_nwAngle / 180 * Scalar(M_PI);
   Mat33 nwRot;
   nwRot << cos(nwAngleRad), -sin(nwAngleRad), 0,
-     sin(nwAngleRad),  cos(nwAngleRad), 0,
-     0, 0, 1;
+    sin(nwAngleRad),  cos(nwAngleRad), 0,
+    0, 0, 1;
   for (size_t i = 0; i < m_stripsNum; i++)
   {
     for (size_t j = 0; j < m_camsNumInStrip; j++)
@@ -107,44 +162,28 @@ Err operator ()(IntrinContainer& intrins, ExtrinContainer& extrins,
 
       Pos meanCamPos;
       meanCamPos << -sceneXDim * 0.5 + m_imgW * m_grdRes * 0.5 +
-          i * lateralRangePerCam,
-          -sceneYDim * 0.5 + m_imgH * m_grdRes * 0.5 + 
-          j * longitudinalRangePerCam,
-          flightHeight;
+        i * lateralRangePerCam,
+        -sceneYDim * 0.5 + m_imgH * m_grdRes * 0.5 + 
+        j * longitudinalRangePerCam,
+        flightHeight;
 
       hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
-      meanCamPos, camPosCov, extrins[id].m_c);
+        meanCamPos, camPosCov, extrins[id].m_c);
       extrins[id].m_c = nwRot * extrins[id].m_c;
       //extrins[id].m_c /= scale;
       Pos meanAngles = Pos::Zero();
       Pos angles;
       hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(
-      meanAngles, camRotCov, angles);
+        meanAngles, camRotCov, angles);
 
       hs::math::geometry::EulerAngles<Scalar> ea(angles[0] / 180 * Scalar(M_PI),
-             angles[1] / 180 * Scalar(M_PI),
-             angles[2] / 180 * Scalar(M_PI));
+        angles[1] / 180 * Scalar(M_PI),
+        angles[2] / 180 * Scalar(M_PI));
       Mat33 R = ea.template toOrthoRotMat<2, 1, -3, 1>();
       R.transposeInPlace();
       extrins[id].m_r = R * nwRot.transpose();
     }
   }
-
-  Pt3D maxPt;
-  maxPt << sceneXDim * 0.5,
-     sceneYDim * 0.5,
-     sceneZDim * 0.5;
-  Pt3D minPt = -maxPt;
-
-  for (size_t i = 0; i < m_ptsNum; i++)
-  {
-  hs::math::random::UniformRandomVar<Scalar, 3>::uniformRandomVar(
-    minPt, maxPt, pts[i]);
-  pts[i] = nwRot * pts[i];
-  //pts[i] /= scale;
-  }
-
-  return 0;
 }
 
 private:
