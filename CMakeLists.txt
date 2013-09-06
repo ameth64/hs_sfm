@@ -14,9 +14,6 @@ hslib_add_library(${BA_NAME} ${HSPRJ_NAME} ${BA_SOURCES})
 
 set(BA_UTEST_SOURCES
   "unit_test/test_main.cpp"
-  "unit_test/bundle_adjustment/test_ba_naive_base.hpp"
-  "unit_test/bundle_adjustment/test_ba_naive_noised_x_generator.hpp"
-  "unit_test/bundle_adjustment/test_ba_naive_noised_y_generator.hpp"
   "unit_test/bundle_adjustment/test_ba_naive_normal_mle_meta.hpp"
   "unit_test/bundle_adjustment/test_ba_naive_jac.cpp"
   "unit_test/bundle_adjustment/test_ba_naive_monte_carlo_simulate.cpp"
