@@ -10,9 +10,9 @@
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_solver.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_xcov_calculator.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_meta.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_levenberg_marquardt_optimizor.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
 
-#include "test_ba_naive_base.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_levenberg_marquardt_optimizor.hpp"
 
 namespace
 {
@@ -138,7 +138,7 @@ TEST(TestBANaiveNLLSOLevenbergMarquardt, SmallDataTest)
   typedef double Scalar;
   typedef size_t ImgDim;
 
-  typedef SyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
   typedef TestBANaiveNLLSOLevenbergMarquardt<Scalar> Test;
   typedef Test::Mat22 Mat22;
   typedef Test::BAVecFunc BAVecFunc;

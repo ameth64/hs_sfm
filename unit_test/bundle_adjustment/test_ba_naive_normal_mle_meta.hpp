@@ -7,8 +7,7 @@
 #include "hs_sfm/bundle_adjustment/ba_naive_levenberg_marquardt_optimizor.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_xcov_calculator.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_residuals.hpp"
-
-#include "test_ba_naive_noised_y_generator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_noised_y_generator.hpp"
 
 namespace hs
 {

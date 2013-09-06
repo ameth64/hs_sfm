@@ -5,10 +5,9 @@
 #include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_feat_cov_inv.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_builder.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
 
 #include "hs_sfm/bundle_adjustment/ba_naive_xcov_calculator.hpp"
-
-#include "test_ba_naive_base.hpp"
 
 namespace
 {
@@ -100,7 +99,7 @@ TEST(TestBANaiveXCovCalculator, SimpleTest)
   typedef double Scalar;
   typedef size_t ImgDim;
 
-  typedef SyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
   typedef TestBANaiveXCovCalculator<Scalar> Test;
   typedef Test::Mat22 Mat22;
   typedef Test::BAVecFunc BAVecFunc;

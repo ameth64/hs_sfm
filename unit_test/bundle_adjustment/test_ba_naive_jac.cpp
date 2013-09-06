@@ -9,8 +9,7 @@
 
 #include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_ffd_jac.hpp"
-
-#include "test_ba_naive_base.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
 
 #include "hs_math/fdjac/ffd_jac.hpp"
 
@@ -187,7 +186,7 @@ TEST(TestBANaiveJac, SmallDataTest)
   typedef double Scalar;
   typedef size_t ImgDim;
 
-  typedef SyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
   typedef TestBANaiveJac<Scalar> Test;
   typedef Test::BAVecFunc BAVecFunc;
   typedef BAVecFunc::XVec XVec;
@@ -253,7 +252,7 @@ TEST(TestBANaiveJac, BigDataTest)
   typedef double Scalar;
   typedef size_t ImgDim;
 
-  typedef SyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
   typedef TestBANaiveJac<Scalar> Test;
   typedef Test::BAVecFunc BAVecFunc;
   typedef BAVecFunc::XVec XVec;

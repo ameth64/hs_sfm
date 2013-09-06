@@ -5,10 +5,10 @@
 #include "hs_test_utility/test_monte_carlo/normal_mle_simulator.hpp"
 
 #include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_noised_x_generator.hpp"
 
-#include "test_ba_naive_base.hpp"
 #include "test_ba_naive_normal_mle_meta.hpp"
-#include "test_ba_naive_noised_x_generator.hpp"
 
 namespace
 {
@@ -213,7 +213,7 @@ TEST(TestBANaiveMonteCarloSimulate, SmallDataTest)
   typedef double Scalar;
   typedef size_t ImgDim;
 
-  typedef SyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
   typedef TestBANaiveMonteCarloSimulate<Scalar> Test;
   typedef Test::Matrix22 Matrix22;
   typedef Test::VectorFunction VectorFunction;

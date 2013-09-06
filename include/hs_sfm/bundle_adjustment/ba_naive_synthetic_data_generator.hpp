@@ -1,11 +1,18 @@
-﻿#ifndef _UNIT_TEST_TEST_BA_NAIVE_BASE_HPP_
-#define _UNIT_TEST_TEST_BA_NAIVE_BASE_HPP_
+﻿#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_SYNTHETIC_DATA_GENERATOR_HPP_
+#define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_SYNTHETIC_DATA_GENERATOR_HPP_
 
 #include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
 #include "hs_sfm/utility/synthetic_scene_generator.hpp"
 
+namespace hs
+{
+namespace sfm
+{
+namespace ba
+{
+
 template <typename _Scalar, typename _ImgDim>
-class SyntheticDataGenerator
+class BANaiveSyntheticDataGenerator
 {
 public:
   typedef _Scalar Scalar;
@@ -30,7 +37,7 @@ public:
   typedef typename KeysGen::TrackContainer TrackContainer;
   typedef typename KeysGen::CamViewContainer CamViewContainer;
 
-  typedef hs::sfm::ba::BANaiveVecFunc<Scalar> BAVecFunc;
+  typedef BANaiveVecFunc<Scalar> BAVecFunc;
   typedef typename BAVecFunc::Index Index;
   typedef typename BAVecFunc::XVec XVec;
   typedef typename BAVecFunc::YVec YVec;
@@ -38,16 +45,17 @@ public:
   typedef typename BAVecFunc::FeatMapContainer FeatMapContainer;
   typedef typename BAVecFunc::Vec3 Vec3;
 
-  SyntheticDataGenerator(Scalar f, size_t stripNum,
-              size_t camsNumInStrip, Scalar grdRes,
-              ImgDim imgW, ImgDim imgH, Scalar pixSize, size_t ptsNum,
-              Scalar lateralOverlap,
-              Scalar longitudinalOverlap,
-              Scalar sceneMaxHeight,
-              Scalar camHeightDev,
-              Scalar camPlannarDev,
-              Scalar camRotDev,
-              Scalar nwAngle)
+  BANaiveSyntheticDataGenerator(
+    Scalar f, size_t stripNum,
+    size_t camsNumInStrip, Scalar grdRes,
+    ImgDim imgW, ImgDim imgH, Scalar pixSize, size_t ptsNum,
+    Scalar lateralOverlap,
+    Scalar longitudinalOverlap,
+    Scalar sceneMaxHeight,
+    Scalar camHeightDev,
+    Scalar camPlannarDev,
+    Scalar camRotDev,
+    Scalar nwAngle)
     : m_sceneGen(f, stripNum, camsNumInStrip, grdRes,
             imgW, imgH, pixSize, ptsNum, 
             lateralOverlap, longitudinalOverlap, sceneMaxHeight,
@@ -227,5 +235,9 @@ private:
   SceneGen m_sceneGen;
   KeysGen m_keysGen;
 };
+
+}
+}
+}
 
 #endif

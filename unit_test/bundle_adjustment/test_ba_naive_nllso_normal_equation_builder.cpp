@@ -8,10 +8,9 @@
 
 #include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
 //#include "hs_sfm/bundle_adjustment/ba_naive_ffd_jac.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
 
 #include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_builder.hpp"
-
-#include "test_ba_naive_base.hpp"
 
 namespace
 {
@@ -179,7 +178,7 @@ TEST(TestBANaiveNLLSONormalEquationBuilder, SmallDataTest)
   typedef double Scalar;
   typedef size_t ImgDim;
 
-  typedef SyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
   typedef TestBANaiveNLLSONormalEquationBuilder<Scalar> Test;
   typedef Test::Mat22 Mat22;
   typedef Test::BAVecFunc BAVecFunc;

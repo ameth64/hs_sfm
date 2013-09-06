@@ -7,10 +7,9 @@
 #include "hs_sfm/triangulate/multiple_view_levenberg_marquardt_optimizor.hpp"
 
 #include "hs_sfm/bundle_adjustment/ba_naive_levenberg_marquardt_optimizor.hpp"
-
-#include "test_ba_naive_noised_x_generator.hpp"
-#include "test_ba_naive_noised_y_generator.hpp"
-#include "test_ba_naive_base.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_noised_x_generator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_noised_y_generator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
 
 namespace
 {
@@ -30,7 +29,8 @@ private:
   typedef typename VectorFunction::Index Index;
   typedef hs::sfm::ba::BANaiveLevenbergMarquardtOptimizor<VectorFunction>
           Optimizor;
-  typedef SyntheticDataGenerator<Scalar, ImgDim> DataGenerator;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim>
+          DataGenerator;
   typedef typename DataGenerator::Intrin Intrin;
   typedef typename DataGenerator::IntrinContainer IntrinContainer;
   typedef typename DataGenerator::Extrin Extrin;

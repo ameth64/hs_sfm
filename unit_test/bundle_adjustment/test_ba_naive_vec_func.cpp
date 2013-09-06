@@ -1,6 +1,8 @@
 ﻿#include <gtest/gtest.h>
 
-#include "test_ba_naive_base.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
+
+#include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
 
 namespace
 {
@@ -10,7 +12,7 @@ TEST(TestBANaiveVecFunc, SimpleTest)
   typedef double Scalar;
   typedef size_t ImgDim;
 
-  typedef SyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
 
   typedef hs::sfm::ba::BANaiveVecFunc<Scalar> BAVecFunc;
   typedef BAVecFunc::Index Index;
