@@ -3,7 +3,7 @@
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
-#include "hs_sfm/utility/cam_type.hpp"
+#include "hs_sfm/utility/camera_type.hpp"
 
 namespace hs
 {
@@ -17,38 +17,40 @@ class MultipleViewVectorFunction
 {
 public:
   typedef _Scalar Scalar;
-  typedef EIGEN_VEC(Scalar, 3) XVec;
-  typedef EIGEN_VEC(Scalar, Eigen::Dynamic) YVec;
+  typedef EIGEN_VECTOR(Scalar, 3) XVector;
+  typedef EIGEN_VECTOR(Scalar, Eigen::Dynamic) YVector;
 
-  typedef hs::sfm::IntrinParam<Scalar> CameraIntrin;
-  typedef EIGEN_VECTOR(CameraIntrin) CameraIntrinContainer;
-  typedef hs::sfm::ExtrinParam<Scalar> CameraExtrin;
-  typedef EIGEN_VECTOR(CameraExtrin) CameraExtrinContainer;
+  typedef hs::sfm::CameraIntrinsicParams<Scalar> IntrinsicParams;
+  typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinsicParamsContainer;
+  typedef hs::sfm::CameraExtrinsicParams<Scalar> ExtrinsicParams;
+  typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinsicParamsContainer;
 
   typedef int Err;
 
-  typedef typename XVec::Index Index;
+  typedef typename XVector::Index Index;
   static const Index params_per_feature_ = 2;
   static const Index params_per_point_ = 3;
 
 private:
-  typedef typename CameraIntrinContainer::size_type SizeType;
-  typedef hs::sfm::CamFunc<Scalar> CameraFunction;
-  typedef typename CameraFunction::PMat PMatrix;
-  typedef EIGEN_VEC(Scalar, params_per_point_ + 1) HomogeneousPoint;
-  typedef EIGEN_VEC(Scalar, params_per_feature_ + 1) HomogeneousFeature;
+  typedef typename IntrinsicParamsContainer::size_type SizeType;
+  typedef hs::sfm::CameraFunctions<Scalar> Camera;
+  typedef typename Camera::ProjectionMatrix ProjectionMatrix;
+  typedef EIGEN_VECTOR(Scalar, params_per_point_ + 1) HomogeneousPoint;
+  typedef EIGEN_VECTOR(Scalar, params_per_feature_ + 1) HomogeneousFeature;
 
 public:
   MultipleViewVectorFunction(){}
 
-  MultipleViewVectorFunction(const CameraIntrinContainer& intrins,
-                             const CameraExtrinContainer& extrins)
-    : intrins_(intrins), extrins_(extrins) {}
+  MultipleViewVectorFunction(
+    const IntrinsicParamsContainer& intrinsic_params_set,
+    const ExtrinsicParamsContainer& extrinsic_params_set)
+    : intrinsic_params_set_(intrinsic_params_set),
+      extrinsic_params_set_(extrinsic_params_set) {}
 
-  Err operator()(const XVec& x, YVec& y) const
+  Err operator()(const XVector& x, YVector& y) const
   {
-    Index number_of_camera = Index(intrins_.size());
-    if (number_of_camera != Index(extrins_.size()))
+    Index number_of_camera = Index(intrinsic_params_set_.size());
+    if (number_of_camera != Index(extrinsic_params_set_.size()))
     {
       return -1;
     }
@@ -57,7 +59,9 @@ public:
 
     for (Index i = 0; i < number_of_camera; i++)
     {
-      PMatrix p_matrix = CameraFunction::getPMat(intrins_[i], extrins_[i]);
+      ProjectionMatrix p_matrix =
+        Camera::GetProjectionMatrix(intrinsic_params_set_[i],
+                                    extrinsic_params_set_[i]);
 
       HomogeneousFeature homogeneous_feature = 
         p_matrix.block(0, 0, 3, 3) * x + 
@@ -71,29 +75,31 @@ public:
     return 0;
   }
 
-  void SetIntrins(const CameraIntrinContainer& intrins)
+  void set_intrinsic_params_set(
+    const IntrinsicParamsContainer& intrinsic_params_set)
   {
-    intrins_ = intrins;
+    intrinsic_params_set_ = intrinsic_params_set;
   }
 
-  const CameraIntrinContainer& GetIntrins() const
+  const IntrinsicParamsContainer& intrinsic_params_set() const
   {
-    return intrins_;
+    return intrinsic_params_set_;
   }
 
-  void SetExtrins(const CameraExtrinContainer& extrins)
+  void set_extrinsic_params_set(
+    const ExtrinsicParamsContainer& extrinsic_params_set)
   {
-    extrins_ = extrins;
+    extrinsic_params_set_ = extrinsic_params_set;
   }
 
-  const CameraExtrinContainer& GetExtrins() const
+  const ExtrinsicParamsContainer& extrinsic_params_set() const
   {
-    return extrins_;
+    return extrinsic_params_set_;
   }
 
 private:
-  CameraIntrinContainer intrins_;
-  CameraExtrinContainer extrins_;
+  IntrinsicParamsContainer intrinsic_params_set_;
+  ExtrinsicParamsContainer extrinsic_params_set_;
 };
 
 }

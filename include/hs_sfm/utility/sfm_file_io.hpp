@@ -8,7 +8,7 @@
 
 #include "hs_sfm/utility/key_type.hpp"
 #include "hs_sfm/utility/match_type.hpp"
-#include "hs_sfm/utility/cam_type.hpp"
+#include "hs_sfm/utility/camera_type.hpp"
 #include "hs_sfm/utility/ransac_fit_plane.hpp"
 
 namespace hs
@@ -17,10 +17,10 @@ namespace fit
 {
 
 template <typename _Scalar>
-struct PtSetType<EIGEN_VEC(_Scalar, 3) >
+struct PointSetType<EIGEN_VECTOR(_Scalar, 3) >
 {
-  typedef EIGEN_VEC(_Scalar, 3) Pt;
-  typedef EIGEN_VECTOR(Pt) type;
+  typedef EIGEN_VECTOR(_Scalar, 3) Pt;
+  typedef EIGEN_STD_VECTOR(Pt) type;
 };
 
 }
@@ -32,24 +32,24 @@ template <typename _Scalar>
 struct LoadImageKeys
 {
   typedef _Scalar Scalar;
-  typedef ImageKeys<Scalar> ImgKeys;
+  typedef ImageKeys<Scalar> Keys;
   typedef int Err;
 
-  Err operator()(const std::string& keysPath,
-           ImgKeys& imgKeys) const
+  Err operator()(const std::string& keys_path,
+                 Keys& keys) const
   {
-    std::ifstream keyFile(keysPath.c_str(), std::ios::in);
-    if (!keyFile.is_open())
+    std::ifstream keys_file(keys_path.c_str(), std::ios::in);
+    if (!keys_file.is_open())
     {
       return -1;
     }
 
-    size_t keysNum;
-    keyFile>>keysNum;
-    imgKeys.resize(keysNum);
-    for (size_t i = 0; i < keysNum; i++)
+    size_t number_of_keys;
+    keys_file>>number_of_keys;
+    keys.resize(number_of_keys);
+    for (size_t i = 0; i < number_of_keys; i++)
     {
-      keyFile>>imgKeys[i][0]>>imgKeys[i][1];
+      keys_file>>keys[i][0]>>keys[i][1];
     }
 
     return 0;
@@ -60,26 +60,26 @@ template <typename _Scalar>
 struct SaveImageKeys
 {
   typedef _Scalar Scalar;
-  typedef ImageKeys<Scalar> ImgKeys;
+  typedef ImageKeys<Scalar> Keys;
   typedef int Err;
   
-  Err operator()(const std::string& keysPath, 
-           const ImgKeys& imgKeys) const
+  Err operator()(const std::string& keys_path, 
+                 const Keys& keys) const
   {
-    std::ofstream keyFile(keysPath.c_str(), std::ios::out);
-    if (!keyFile.is_open())
+    std::ofstream keys_file(keys_path.c_str(), std::ios::out);
+    if (!keys_file.is_open())
     {
       return -1;
     }
 
-    keyFile.setf(std::ios::fixed);
-    keyFile<<std::setprecision(6);
+    keys_file.setf(std::ios::fixed);
+    keys_file<<std::setprecision(6);
 
-    size_t imgKeysNum = imgKeys.size();
-    keyFile<<imgKeysNum<<'\n';
-    for (size_t i = 0; i < imgKeysNum; i++)
+    size_t number_of_keys = keys.size();
+    keys_file<<number_of_keys<<'\n';
+    for (size_t i = 0; i < number_of_keys; i++)
     {
-      keyFile<<imgKeys[i][0]<<' '<<imgKeys[i][1]<<'\n';
+      keys_file<<keys[i][0]<<' '<<keys[i][1]<<'\n';
     }
 
     return 0;
@@ -88,46 +88,46 @@ struct SaveImageKeys
 
 struct LoadMatches
 {
-  typedef hs::sfm::ImgPair ImgPair;
+  typedef hs::sfm::ImagePair ImagePair;
   typedef hs::sfm::KeyPair KeyPair;
   typedef hs::sfm::KeyPairContainer KeyPairContainer;
   typedef hs::sfm::MatchContainer MatchContainer;
   typedef int Err;
-  Err operator()(const std::string& matchesPath,
-           MatchContainer& matches) const
+  Err operator()(const std::string& matches_path,
+                 MatchContainer& matches) const
   {
-    std::ifstream matchesFile(matchesPath.c_str(), std::ios::in);
-    if (!matchesFile.is_open())
+    std::ifstream matches_file(matches_path.c_str(), std::ios::in);
+    if (!matches_file.is_open())
     {
       return -1;
     }
 
     matches.clear();
-    while (!matchesFile.eof())
+    while (!matches_file.eof())
     {
       char buf[512];
-      matchesFile.getline(buf, 512);
+      matches_file.getline(buf, 512);
       if (buf[0] == 0)
       {
         break;
       }
       std::stringstream ss(buf);
-      ImgPair imgPair;
-      ss>>imgPair.first>>imgPair.second;
-      size_t keyPairNum;
-      matchesFile.getline(buf, 512);
+      ImagePair image_pair;
+      ss>>image_pair.first>>image_pair.second;
+      size_t number_of_image_pairs;
+      matches_file.getline(buf, 512);
       ss.clear();
       ss.str(buf);
-      ss>>keyPairNum;
-      KeyPairContainer keyPairs(keyPairNum);
-      for (size_t i = 0; i < keyPairNum; i++)
+      ss>>number_of_image_pairs;
+      KeyPairContainer key_pairs(number_of_image_pairs);
+      for (size_t i = 0; i < number_of_image_pairs; i++)
       {
-        matchesFile.getline(buf, 512);
+        matches_file.getline(buf, 512);
         ss.clear();
         ss.str(buf);
-        ss>>keyPairs[i].first>>keyPairs[i].second;
+        ss>>key_pairs[i].first>>key_pairs[i].second;
       }
-      matches[imgPair] = keyPairs;
+      matches[image_pair] = key_pairs;
     }
 
     return 0;
@@ -138,103 +138,104 @@ struct SaveMatches
 {
   typedef hs::sfm::MatchContainer Matches;
   typedef int Err;
-  Err operator()(const std::string& matchesPath,
-           const Matches& matches) const
+  Err operator()(const std::string& matches_path,
+                 const Matches& matches) const
   {
-    std::ofstream matchesFile(matchesPath.c_str(), std::ios::out);
-    if (!matchesFile.is_open())
+    std::ofstream matches_file(matches_path.c_str(), std::ios::out);
+    if (!matches_file.is_open())
     {
       return -1;
     }
 
     Matches::const_iterator itr = matches.begin();
-    Matches::const_iterator itrEnd = matches.end();
-    for (; itr != itrEnd; ++itr)
+    Matches::const_iterator itr_end = matches.end();
+    for (; itr != itr_end; ++itr)
     {
-      matchesFile<<(itr->first).first<<" "<<(itr->first).second<<"\n";
-      size_t keyMatchesCnt = itr->second.size();
-      matchesFile<<keyMatchesCnt<<"\n";
-      for (size_t i = 0; i < keyMatchesCnt; i++)
+      matches_file<<(itr->first).first<<" "<<(itr->first).second<<"\n";
+      size_t number_of_key_matches = itr->second.size();
+      matches_file<<number_of_key_matches<<"\n";
+      for (size_t i = 0; i < number_of_key_matches; i++)
       {
-        matchesFile<<itr->second[i].first<<" "<<
-          itr->second[i].second<<"\n";
+        matches_file<<itr->second[i].first<<" "<<
+                      itr->second[i].second<<"\n";
       }
     }
 
-    matchesFile.close();
+    matches_file.close();
 
     return 0;
   }
 };
 
-template <typename _Scalar, typename _ImgDim>
+template <typename _Scalar, typename _ImageDimension>
 struct SaveXugFile
 {
   typedef _Scalar Scalar;
-  typedef _ImgDim ImgDim;
+  typedef _ImageDimension ImageDimension;
 
-  typedef IntrinParam<Scalar> Intrin;
-  typedef EIGEN_VECTOR(Intrin) IntrinContainer;
-  typedef ExtrinParam<Scalar> Extrin;
-  typedef typename Extrin::Pos Pos;
-  typedef typename Extrin::Rot Rot;
-  typedef EIGEN_VECTOR(Extrin) ExtrinContainer;
-  typedef ImageParam<ImgDim> Image;
-  typedef EIGEN_VECTOR(Image) ImageContainer;
-  typedef EIGEN_VEC(Scalar, 3) Pt3D;
-  typedef EIGEN_VECTOR(Pt3D) Pt3DContainer;
-  typedef ImageKeys<Scalar> ImgKeys;
-  typedef EIGEN_VECTOR(ImgKeys) ImgKeysContainer;
+  typedef CameraIntrinsicParams<Scalar> IntrinsicParams;
+  typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinContainer;
+  typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;
+  typedef typename ExtrinsicParams::Position Position;
+  typedef typename ExtrinsicParams::Rotation Rotation;
+  typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinContainer;
+  typedef ImageParams<ImageDimension> Image;
+  typedef EIGEN_STD_VECTOR(Image) ImageContainer;
+  typedef EIGEN_VECTOR(Scalar, 3) Point3D;
+  typedef EIGEN_STD_VECTOR(Point3D) Point3DContainer;
+  typedef ImageKeys<Scalar> Keys;
+  typedef EIGEN_STD_VECTOR(Keys) KeysContainer;
   typedef std::vector<std::pair<size_t, size_t> > Track;
   typedef std::vector<Track> TrackContainer;
-  typedef RansacFitPlane<Pt3D> PlaneFitter;
+  typedef RansacFitPlane<Point3D> PlaneFitter;
   typedef typename PlaneFitter::Plane Plane;
-  typedef EIGEN_MAT(Scalar, 3, 3) Mat33;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
 
   typedef int Err;
   
-  Err operator() (const std::string& xugPath,
-          const IntrinContainer& intrins, 
-          const ExtrinContainer& extrins,
-          const ImageContainer& images,
-          const Pt3DContainer& pts,
-          Scalar fitThd = Scalar(0.05)) const
+  Err operator() (const std::string& xug_path,
+                  const IntrinContainer& intrinsic_params_set, 
+                  const ExtrinContainer& extrinsic_params_set,
+                  const ImageContainer& images,
+                  const Point3DContainer& points,
+                  Scalar fit_threshold = Scalar(0.05)) const
   {
-    size_t camNum = intrins.size();
-    if (camNum != extrins.size() || camNum != images.size())
+    size_t number_of_cameras = intrinsic_params_set.size();
+    if (number_of_cameras != extrinsic_params_set.size() ||
+        number_of_cameras != images.size())
     {
       return -1;
     }
-    size_t ptsNum = pts.size();
+    size_t number_of_points = points.size();
 
-    std::ofstream xugFile(xugPath.c_str(), std::ios::out);
-    if (!xugFile.is_open())
+    std::ofstream xug_file(xug_path.c_str(), std::ios::out);
+    if (!xug_file.is_open())
     {
       return -1;
     }
-    xugFile<<"# Bundle file v0.3\n"; 
-    xugFile<<camNum<<' '<<ptsNum<<'\n';
+    xug_file<<"# Bundle file v0.3\n"; 
+    xug_file<<number_of_cameras<<' '<<number_of_points<<'\n';
 
     //通过点云拟合场景平面
-    PlaneFitter fit;
-    Plane pln;
-    if (fit(pts, pln, fitThd) != 0) return -1;
-    xugFile<<pln[0]<<' '<<pln[1]<<' '<<pln[2]<<' '<<pln[3]<<'\n';
-    for (size_t i = 0; i < camNum; i++)
+    PlaneFitter fitter;
+    Plane plane;
+    if (fitter(points, plane, fit_threshold) != 0) return -1;
+    xug_file<<plane[0]<<' '<<plane[1]<<' '<<plane[2]<<' '<<plane[3]<<'\n';
+    for (size_t i = 0; i < number_of_cameras; i++)
     {
-      xugFile<<images[i].m_path<<'\n';
-      xugFile<<"0 0 0 0\n";
-      Pos c = extrins[i].m_c;
-      Mat33 R = extrins[i].m_r;
+      xug_file<<images[i].m_path<<'\n';
+      xug_file<<"0 0 0 0\n";
+      Position c = extrinsic_params_set[i].position();
+      Matrix33 R = extrinsic_params_set[i].rotation();
       //计算相机方向的四个顶点
-      Scalar dist = std::abs(c.dot(pln.segment(0, 3)) + pln[3]) /
-              pln.segment(0, 3).norm();
-      Scalar depth = dist * 0.1;
+      Scalar distance = std::abs(c.dot(plane.segment(0, 3)) +
+                                 plane[3]) / plane.segment(0, 3).norm();
+      Scalar depth = distance * 0.1;
       Scalar w = Scalar(images[i].m_width) / 
-             intrins[i].m_focalLength * depth * Scalar(0.5);
+             intrinsic_params_set[i].focal_length() * depth * Scalar(0.5);
       Scalar h = Scalar(images[i].m_height) /
-             intrins[i].m_focalLength * depth * Scalar(0.5);
-      Pos corner[4];
+             intrinsic_params_set[i].focal_length() * depth * Scalar(0.5);
+      Position corner[4];
       corner[0] << -w, -h, -depth;
       corner[1] <<  w, -h, -depth;
       corner[2] <<  w,  h, -depth;
@@ -242,23 +243,23 @@ struct SaveXugFile
       for (int j = 0; j < 4; j++)
       {
         corner[j] = R.inverse() * corner[j] + c;
-        xugFile<<corner[j][0]<<' '<<corner[j][1]<<' '<<corner[j][2]
+        xug_file<<corner[j][0]<<' '<<corner[j][1]<<' '<<corner[j][2]
              <<'\n';
       }
-      xugFile<<images[i].m_width<<' '<<images[i].m_height<<'\n';
-      xugFile<<intrins[i].m_focalLength<<" 0 0\n";
-      xugFile<<R(0, 0)<<" "<<R(0, 1)<<" "<<R(0, 2)<<'\n'
-           <<R(1, 0)<<" "<<R(1, 1)<<" "<<R(1, 2)<<'\n'
-           <<R(2, 0)<<" "<<R(2, 1)<<" "<<R(2, 2)<<'\n';
-      xugFile<<c[0]<<" "<<c[1]<<" "<<c[2]<<'\n';
+      xug_file<<images[i].m_width<<' '<<images[i].m_height<<'\n';
+      xug_file<<intrinsic_params_set[i].focal_length()<<" 0 0\n";
+      xug_file<<R(0, 0)<<" "<<R(0, 1)<<" "<<R(0, 2)<<'\n'
+              <<R(1, 0)<<" "<<R(1, 1)<<" "<<R(1, 2)<<'\n'
+              <<R(2, 0)<<" "<<R(2, 1)<<" "<<R(2, 2)<<'\n';
+      xug_file<<c[0]<<" "<<c[1]<<" "<<c[2]<<'\n';
     }
 
     //输出点云
-    for (size_t i = 0; i < ptsNum; i++)
+    for (size_t i = 0; i < number_of_points; i++)
     {
-      xugFile<<pts[i][0]<<' '<<pts[i][1]<<' '<<pts[i][2]<<'\n';
-      xugFile<<"255 255 0\n";
-      xugFile<<"0\n";
+      xug_file<<points[i][0]<<' '<<points[i][1]<<' '<<points[i][2]<<'\n';
+      xug_file<<"255 255 0\n";
+      xug_file<<"0\n";
     }
 
     return 0;

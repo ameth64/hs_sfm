@@ -13,120 +13,130 @@ class TestRansacFitPlannar
 {
 public:
   typedef _Scalar Scalar;
-  typedef EIGEN_VEC(Scalar, 3) Pt;
-  EIGEN_BASE_DEF(Scalar);
+  typedef EIGEN_VECTOR(Scalar, 2) Vector2;
+  typedef EIGEN_VECTOR(Scalar, 3) Vector3;
+  typedef EIGEN_VECTOR(Scalar, 4) Vector4;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
+  typedef Vector3 Point;
 
   /**
    *  测试ransac拟合三维点平面。
    *  平面真值为xy平面作相似变换后的平面。
    */
-  static int testRansacFitPlannar(const Mat33& rot,
-               const Vec3& trans,
-               Scalar scale,
-               const Vec2& min,
-               const Vec2& max,
-               Scalar sigma,
-               Scalar outlierRatio,
-               Scalar outlierThd,
-               size_t ptsNum)
+  static int Test(const Matrix33& rotation,
+                  const Vector3& translate,
+                  Scalar scale,
+                  const Vector2& min,
+                  const Vector2& max,
+                  Scalar sigma,
+                  Scalar outlier_ratio,
+                  Scalar outlier_threshold,
+                  size_t number_of_points)
   {
-    Mat33 cov = Mat33::Identity();
-    cov *= sigma;
-    std::vector<Pt> pts;
-    for (size_t i = 0; i < ptsNum; i++)
+    Matrix33 covariance = Matrix33::Identity();
+    covariance *= sigma;
+    std::vector<Point> points;
+    for (size_t i = 0; i < number_of_points; i++)
     {
-      Vec2 plannarPt;
-      hs::math::random::UniformRandomVar<Scalar, 2>::uniformRandomVar(min, max, 
-                              plannarPt);
+      Vector2 planar_point;
+      hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
+        min, max, planar_point);
 
-      Vec3 mean;
-      mean << plannarPt[0],
-          plannarPt[1],
-          0;
-      Vec3 pt;
-      hs::math::random::NormalRandomVar<Scalar, 3>::normRandomVar(mean, cov, pt);
+      Vector3 mean;
+      mean << planar_point[0],
+              planar_point[1],
+              0;
+      Vector3 point;
+      hs::math::random::NormalRandomVar<Scalar, 3>::Generate(
+        mean, covariance, point);
 
-      Scalar rnd;
-      hs::math::random::UniformRandomVar<Scalar, 1>::uniformRandomVar(Scalar(0),
-                                Scalar(1),
-                                rnd);
-      if (rnd < outlierRatio)
+      Scalar random;
+      hs::math::random::UniformRandomVar<Scalar, 1>::Generate(
+        Scalar(0), Scalar(1), random);
+      if (random < outlier_ratio)
       {
         Scalar outlier;
-        hs::math::random::UniformRandomVar<Scalar, 1>::uniformRandomVar(
-          outlierThd, outlierThd * 3, outlier);
+        hs::math::random::UniformRandomVar<Scalar, 1>::Generate(
+          outlier_threshold, outlier_threshold * 3, outlier);
 
-        pt[0] += outlier;
-        pt[1] += outlier;
-        pt[2] += outlier;
+        point[0] += outlier;
+        point[1] += outlier;
+        point[2] += outlier;
       }
 
-      pt = rot * pt * scale + trans;
+      point = rotation * point * scale + translate;
 
-      Pt p;
-      p[0] = pt[0];
-      p[1] = pt[1];
-      p[2] = pt[2];
-      pts.push_back(p);
+      Point p;
+      p[0] = point[0];
+      p[1] = point[1];
+      p[2] = point[2];
+      points.push_back(p);
     }
 
-    Vec4 pln;
-    hs::sfm::RansacFitPlane<Pt> ransacFit;
-    if (ransacFit(pts, pln, outlierThd) != 0) return -1;
+    Vector4 plane;
+    hs::sfm::RansacFitPlane<Point> ransac_fitter;
+    if (ransac_fitter(points, plane, outlier_threshold) != 0) return -1;
 
-    size_t outlierNum = 0;
-    for (size_t i = 0; i < ptsNum; i++)
+    size_t number_of_outliers = 0;
+    for (size_t i = 0; i < number_of_points; i++)
     {
-      Vec4 hPt;
-      hPt << pts[i][0],
-           pts[i][1],
-           pts[i][2],
-           1;
-      Scalar dist = hPt.dot(pln) / pln.segment(0, 3).norm();
-      if (dist > outlierThd * scale)
+      Vector4 point_homogeneous;
+      point_homogeneous << points[i][0],
+                           points[i][1],
+                           points[i][2],
+                           1;
+      Scalar distance = point_homogeneous.dot(plane) /
+                        plane.segment(0, 3).norm();
+      if (distance > outlier_threshold * scale)
       {
-        outlierNum++;
+        number_of_outliers++;
       }
     }
 
-    return Scalar(outlierNum) / Scalar(ptsNum) < outlierRatio * 2 ? 0 : -1;
+    Scalar statistical_outliers_ratio =
+      Scalar(number_of_outliers) / Scalar(number_of_points);
+
+    return statistical_outliers_ratio < outlier_ratio * 2 ? 0 : -1;
   }
 };
 
 TEST(TestRansacFitPlannar, SimpleTest)
 {
   typedef double Scalar;
-  EIGEN_BASE_DEF(Scalar);
+  typedef EIGEN_VECTOR(Scalar, 2) Vector2;
+  typedef EIGEN_VECTOR(Scalar, 3) Vector3;
+  typedef EIGEN_VECTOR(Scalar, 4) Vector4;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
 
-  Mat33 rot = Mat33::Identity();
-  Vec3 trans;
-  trans << 0,
-       0,
-       10;
+  Matrix33 rotation = Matrix33::Identity();
+  Vector3 translate;
+  translate << 0,
+               0,
+               10;
   Scalar scale = 5.0;
 
-  Vec2 min;
+  Vector2 min;
   min << -10,
-       -10;
-  Vec2 max;
+         -10;
+  Vector2 max;
   max << 10,
-       10;
+         10;
 
   Scalar sigma = 1.0;
-  Scalar outlierRatio = 0.2;
-  Scalar outlierThd = 5;
-  size_t ptsNum = 100;
+  Scalar outlier_ratio = 0.2;
+  Scalar outlier_threshold = 5;
+  size_t number_of_points = 100;
 
   ASSERT_EQ(0, TestRansacFitPlannar<Scalar>::
-    testRansacFitPlannar(rot, 
-               trans,
-               scale,
-               min,
-               max,
-               sigma,
-               outlierRatio,
-               outlierThd,
-               ptsNum));
+    Test(rotation, 
+         translate,
+         scale,
+         min,
+         max,
+         sigma,
+         outlier_ratio,
+         outlier_threshold,
+         number_of_points));
 }
 
 }

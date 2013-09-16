@@ -8,27 +8,27 @@ namespace
 {
 
 template <typename Loader, typename Saver, typename Data>
-int testIO(const std::string& path)
+int TestIO(const std::string& path)
 {
   Data data;
   Loader loader;
   Saver saver;
   if (loader(path, data) != 0) return -1;
-  std::string pathDup(path);
-  size_t pos = pathDup.rfind('.');
+  std::string path_duplicate(path);
+  size_t pos = path_duplicate.rfind('.');
   if (pos == std::string::npos)
   {
-    pathDup += "_dup";
+    path_duplicate += "_dup";
   }
   else
   {
-    pathDup.insert(pos, "_dup");
+    path_duplicate.insert(pos, "_dup");
   }
-  if (saver(pathDup, data) != 0) return -1;
-  Data dataDup;
-  if (loader(pathDup, dataDup) != 0) return -1;
+  if (saver(path_duplicate, data) != 0) return -1;
+  Data data_duplicate;
+  if (loader(path_duplicate, data_duplicate) != 0) return -1;
 
-  if (data == dataDup)
+  if (data == data_duplicate)
   {
     return 0;
   }
@@ -49,41 +49,41 @@ public:
   typedef hs::sfm::LoadMatches LoadMatches;
   typedef hs::sfm::SaveMatches SaveMatches;
   typedef LoadMatches::KeyPair KeyPair;
-  typedef LoadMatches::ImgPair ImgPair;
+  typedef LoadMatches::ImagePair ImagePair;
   typedef LoadMatches::KeyPairContainer KeyPairContainer;
   typedef LoadMatches::MatchContainer MatchContainer;
 
-  typedef typename LoadImgKeys::ImgKeys ImgKeys;
+  typedef typename LoadImgKeys::Keys ImgKeys;
 
   typedef int Err;
 
-  TestSFMFileIO(const std::string& keyPath,
-          const std::string& matchesPath) 
-    : m_keyPath(keyPath), 
-      m_matchesPath(matchesPath) {}
+  TestSFMFileIO(const std::string& key_path,
+                const std::string& matches_path) 
+    : key_path_(key_path), 
+      matches_path_(matches_path) {}
 
-  Err testImgKeysIO() const
+  Err TestImgKeysIO() const
   {
-    return testIO<LoadImgKeys, SaveImgKeys, ImgKeys>
-      (m_keyPath);
+    return TestIO<LoadImgKeys, SaveImgKeys, ImgKeys>
+      (key_path_);
   }
 
-  Err testMatchesIO()
+  Err TestMatchesIO()
   {
-    return testIO<LoadMatches, SaveMatches, MatchContainer>
-      (m_matchesPath);
+    return TestIO<LoadMatches, SaveMatches, MatchContainer>
+      (matches_path_);
   }
 
   Err test()
   {
-    if (testImgKeysIO() != 0) return -1;
-    if (testMatchesIO() != 0) return -1;
+    if (TestImgKeysIO() != 0) return -1;
+    if (TestMatchesIO() != 0) return -1;
 
     return 0;
   }
 
-  std::string m_keyPath;
-  std::string m_matchesPath;
+  std::string key_path_;
+  std::string matches_path_;
 };
 
 TEST(TestSFMFileIO, SimpleTest)

@@ -3,8 +3,8 @@
 
 #include "hs_optimizor/nllso/levenberg_marquardt.hpp"
 
-#include "hs_sfm/bundle_adjustment/ba_naive_nllso_meta.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_nllso_meta_levenberg_marquardt.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_vector_function.hpp"
 
 namespace hs
 {
@@ -17,18 +17,17 @@ template <typename _VectorFunction>
 class BANaiveLevenbergMarquardtOptimizor;
 
 template <typename _Scalar>
-class BANaiveLevenbergMarquardtOptimizor<BANaiveVecFunc<_Scalar> >
+class BANaiveLevenbergMarquardtOptimizor<BANaiveVectorFunction<_Scalar> >
 {
 public:
   typedef _Scalar Scalar;
   typedef int Err;
-  typedef BANaiveVecFunc<_Scalar> VectorFunction;
+  typedef BANaiveVectorFunction<_Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
   typedef hs::optimizor::nllso::LevenbergMarquardt<VectorFunction> Optimizor;
-  typedef typename Optimizor::XVec XVector;
-  typedef typename Optimizor::YVec YVector;
-  typedef typename Optimizor::YCovInv YCovarianceInverse;
-  typedef typename Optimizor::YCovInv YCovInv;
+  typedef typename Optimizor::XVector XVector;
+  typedef typename Optimizor::YVector YVector;
+  typedef typename Optimizor::YCovarianceInverse YCovarianceInverse;
 
   BANaiveLevenbergMarquardtOptimizor(const XVector& initial_x)
     : initial_x_(initial_x), optimizor_() {}
@@ -45,7 +44,7 @@ public:
                   const YCovarianceInverse& y_covariance_inverse,
                   XVector& optimized_x) const
   {
-    Index x_size = vector_function.getXSize();
+    Index x_size = vector_function.GetXSize();
     if (initial_x_.rows() != x_size)
     {
       return -1;

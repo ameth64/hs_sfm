@@ -10,10 +10,10 @@ namespace sfm
 {
 
 typedef std::vector<std::vector<int> > MatchGuide;
-typedef std::pair<size_t, size_t> ImgPair;
+typedef std::pair<size_t, size_t> ImagePair;
 typedef std::pair<size_t, size_t> KeyPair;
 typedef std::vector<KeyPair> KeyPairContainer;
-typedef std::map<ImgPair, KeyPairContainer> MatchContainer;
+typedef std::map<ImagePair, KeyPairContainer> MatchContainer;
 
 }
 }

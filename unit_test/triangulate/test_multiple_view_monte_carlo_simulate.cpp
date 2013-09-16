@@ -32,6 +32,8 @@ public:
     XVectorOptimizor;
   typedef typename Simulator::ResidualsCalculator
     ResidualsCalculator;
+  typedef typename Simulator::MahalanobisDistanceCalculator
+    MahalanobisDistanceCalculator;
   typedef typename Simulator::XVector XVector;
   typedef typename Simulator::YVector YVector;
   typedef typename Simulator::YCovarianceInverse YCovarianceInverse;
@@ -61,7 +63,7 @@ public:
     XVector near_x = true_x;
     XCovariance x_covariance = XCovariance::Identity();
     x_covariance *= point_stddev * point_stddev;
-    if (NoisedXVectorGenerator::normRandomVar(true_x, x_covariance, near_x))
+    if (NoisedXVectorGenerator::Generate(true_x, x_covariance, near_x))
     {
       std::cout<<"normal random variant generation failed!\n";
       return -1;
@@ -72,6 +74,7 @@ public:
     NoisedYVectorGenerator noised_y_generator;
     AnalyticXCovarianceCalculator analytic_x_covariance_calculator;
     ResidualsCalculator residuals_calculator;
+    MahalanobisDistanceCalculator mahalanobis_distance_calculator;
     YCovarianceInverse y_covariance_inverse =
       YCovarianceInverse::Identity(true_y.rows(), true_y.rows());
     y_covariance_inverse /= feature_stddev * feature_stddev;
@@ -84,6 +87,7 @@ public:
     if (simulator(vector_function,
                   x_optimizor,
                   residuals_calculator,
+                  mahalanobis_distance_calculator,
                   noised_y_generator,
                   analytic_x_covariance_calculator,
                   true_y,
@@ -147,37 +151,42 @@ TEST(TestMultipleViewMonteCarloSimulate, SimpleTest)
           DataGenerator;
   typedef TestMultipleViewMonteCarloSimulate<Scalar> Test;
   typedef Test::VectorFunction VectorFunction;
-  typedef VectorFunction::XVec XVec;
-  typedef VectorFunction::YVec YVec;
+  typedef VectorFunction::XVector XVector;
+  typedef VectorFunction::YVector YVector;
 
-  Scalar f = 0.019;
-  size_t strip_num = 10;
-  size_t cams_num_in_strip = 10;
+  Scalar focal_length_in_metre = 0.019;
+  size_t number_of_strips = 10;
+  size_t number_of_cameras_in_strip = 10;
   Scalar ground_resolution = 0.1;
-  ImgDim img_width = 6000;
-  ImgDim img_height = 4000;
+  ImgDim image_width = 6000;
+  ImgDim image_height = 4000;
   Scalar pixel_size = 0.0000039;
-  Scalar lateral_overlap = 0.6;
-  Scalar longitudinal_overlap = 0.8;
+  Scalar lateral_overlap_ratio = 0.6;
+  Scalar longitudinal_overlap_ratio = 0.8;
   Scalar scene_max_height = 50;
-  Scalar cam_height_stddev = 5;
-  Scalar cam_plannar_stddev = 5;
-  Scalar cam_rot_stddev = 1;
-  Scalar nw_angle = 60;
+  Scalar camera_height_stddev = 5;
+  Scalar camera_planar_stddev = 5;
+  Scalar camera_rotation_stddev = 1;
+  Scalar north_west_angle = 60;
 
   VectorFunction vector_function;
-  XVec x;
-  YVec y;
+  XVector x;
+  YVector y;
 
-  DataGenerator data_generator(f, strip_num, cams_num_in_strip,
-                               ground_resolution, img_width, img_height,
-                               pixel_size, lateral_overlap,
-                               longitudinal_overlap,
+  DataGenerator data_generator(focal_length_in_metre,
+                               number_of_strips,
+                               number_of_cameras_in_strip,
+                               ground_resolution,
+                               image_width,
+                               image_height,
+                               pixel_size,
+                               lateral_overlap_ratio,
+                               longitudinal_overlap_ratio,
                                scene_max_height,
-                               cam_height_stddev,
-                               cam_plannar_stddev,
-                               cam_rot_stddev,
-                               nw_angle);
+                               camera_height_stddev,
+                               camera_planar_stddev,
+                               camera_rotation_stddev,
+                               north_west_angle);
   ASSERT_EQ(0, data_generator(vector_function, x, y));
   ASSERT_EQ(0, Test::Test(vector_function, x, 2.0, 2.0, 100));
 }

@@ -3,7 +3,8 @@
 
 #include "hs_math/random/normal_random_var.hpp"
 
-#include "hs_sfm/bundle_adjustment/ba_naive_feat_cov_inv.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_vector_function.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_feature_covariance_inverse.hpp"
 
 namespace hs
 {
@@ -18,11 +19,11 @@ class BANaiveNoisedYGenerator
 public:
   typedef int Err;
   typedef _Scalar Scalar;
-  typedef BANaiveVecFunc<Scalar> VectorFunction;
-  typedef typename VectorFunction::YVec YVector;
-  typedef BANaiveFeatCovInv<Scalar> YCovarianceInverse;
+  typedef BANaiveVectorFunction<Scalar> VectorFunction;
+  typedef typename VectorFunction::YVector YVector;
+  typedef BANaiveFeatureCovarianceInverse<Scalar> YCovarianceInverse;
 
-  typedef EIGEN_VEC(Scalar, 2) Vec2;
+  typedef EIGEN_VECTOR(Scalar, 2) Vector2;
 
   Err operator()(const YVector& true_y,
                  const YCovarianceInverse& y_covariance_inverse,
@@ -32,10 +33,10 @@ public:
     noised_y.resize(true_y.rows());
     for (size_t i = 0; i < number_of_features; i++)
     {
-      Vec2 mean = true_y.segment(i * 2, 2);
-      Vec2 noised_segment;
-      hs::math::random::NormalRandomVar<Scalar, 2>::normRandomVar(
-        mean, y_covariance_inverse.m_blocks[i].inverse(), noised_segment);
+      Vector2 mean = true_y.segment(i * 2, 2);
+      Vector2 noised_segment;
+      hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
+        mean, y_covariance_inverse.blocks[i].inverse(), noised_segment);
       noised_y.segment(i * 2, 2) = noised_segment;
     }
 

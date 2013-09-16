@@ -1,11 +1,11 @@
-#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_XCOV_CALCULATOR_HPP_
-#define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_XCOV_CALCULATOR_HPP_
+#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_ANALYTICAL_X_COVARIANCE_CALCULATOR_HPP_
+#define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_ANALYTICAL_X_COVARIANCE_CALCULATOR_HPP_
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
-#include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_builder.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_analytical_jacobian_matrix_calculator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_vector_function.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_normal_equation_builder.hpp"
 
 namespace hs
 {
@@ -15,26 +15,29 @@ namespace ba
 {
 
 template <typename _VectorFunction>
-class BANaiveXCovCalculator;
+class BANaiveAnalyticalXCovarianceCalculator;
 
 template <typename _Scalar>
-class BANaiveXCovCalculator<BANaiveVecFunc<_Scalar> >
+class BANaiveAnalyticalXCovarianceCalculator<BANaiveVectorFunction<_Scalar> >
 {
 public:
   typedef _Scalar Scalar;
-  typedef BANaiveVecFunc<Scalar> VectorFunction;
+  typedef BANaiveVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
-  typedef typename VectorFunction::XVec XVector;
-  typedef typename VectorFunction::YVec YVecctor;
+  typedef typename VectorFunction::XVector XVector;
+  typedef typename VectorFunction::YVector YVecctor;
 
-  typedef BANaiveAnalyticJacobian<VectorFunction> Jacobian;
-  typedef typename Jacobian::Jac JacobianMatrix;
+  typedef BANaiveAnalyticalJacobianMatrixCalculator<VectorFunction>
+          JacobianMatrixCalculator;
+  typedef typename JacobianMatrixCalculator::JacobianMatrix JacobianMatrix;
 
   typedef BANaiveNormalEquationBuilder<Scalar> NormalEquationBuilder;
-  typedef typename NormalEquationBuilder::NormalMat NormalMatrix;
-  typedef typename NormalEquationBuilder::YCovInv YCovarianceInverse;
+  typedef typename NormalEquationBuilder::NormalMatrix NormalMatrix;
+  typedef typename NormalEquationBuilder::YCovarianceInverse
+                   YCovarianceInverse;
 
-  typedef EIGEN_MAT(Scalar, Eigen::Dynamic, Eigen::Dynamic) DenseNormalMatrix;
+  typedef EIGEN_MATRIX(Scalar, Eigen::Dynamic, Eigen::Dynamic)
+          DenseNormalMatrix;
   typedef DenseNormalMatrix XCovariance;
 
   typedef int Err;
@@ -44,7 +47,7 @@ public:
                  const YCovarianceInverse& y_covariance_inverse,
                  XCovariance& x_covariance) const
   {
-    Jacobian jacobian;
+    JacobianMatrixCalculator jacobian;
     JacobianMatrix jacobian_matrix;
     if (jacobian(vector_function, optimized_x, jacobian_matrix) != 0)
     {
@@ -76,7 +79,7 @@ public:
                                             Eigen::ComputeThinU |
                                             Eigen::ComputeThinV);
     DenseNormalMatrix D = DenseNormalMatrix::Zero(x_size, x_size);
-    EIGEN_VEC(Scalar, Eigen::Dynamic) d = svd.singularValues();
+    EIGEN_VECTOR(Scalar, Eigen::Dynamic) d = svd.singularValues();
     const Scalar precision = Scalar(1e-6);
     for (Index i = 0; i < x_size; i++)
     {

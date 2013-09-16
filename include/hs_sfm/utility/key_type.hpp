@@ -16,26 +16,26 @@ class ImageKeys
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   typedef _Scalar Scalar;
-  typedef EIGEN_VEC(Scalar, 2) Key;
+  typedef EIGEN_VECTOR(Scalar, 2) Key;
   typedef size_t KeyId;
-  typedef EIGEN_VECTOR(Key) KeysContainer;
+  typedef EIGEN_STD_VECTOR(Key) KeysContainer;
 
   ImageKeys() {}
-  ImageKeys(const KeysContainer& keys) : m_keys(keys) {}
-  ImageKeys(size_t size) : m_keys(size) {}
+  ImageKeys(const KeysContainer& keys) : keys_(keys) {}
+  ImageKeys(size_t size) : keys_(size) {}
 
-  void resize(size_t s) {m_keys.resize(s);}
-  size_t size() const {return m_keys.size();}
-  void clear() {m_keys.swap(KeysContainer());}
-  Key operator [] (KeyId i) const {return m_keys[i];}
-  Key& operator [] (KeyId i) {return m_keys[i];}
-  bool operator == (const ImageKeys& imgKeys)
+  void resize(size_t s) {keys_.resize(s);}
+  size_t size() const {return keys_.size();}
+  void clear() {keys_.swap(KeysContainer());}
+  Key operator [] (KeyId i) const {return keys_[i];}
+  Key& operator [] (KeyId i) {return keys_[i];}
+  bool operator == (const ImageKeys& image_keys)
   {
-    return m_keys == imgKeys.m_keys;
+    return keys_ == image_keys.keys_;
   }
 
 private:
-  KeysContainer m_keys;
+  KeysContainer keys_;
 };
 
 }

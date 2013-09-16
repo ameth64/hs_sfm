@@ -2,15 +2,16 @@
 
 #include <gtest/gtest.h>
 
-#include "hs_math/linear_algebra/latraits/vec_eigen.hpp"
+#include "hs_math/linear_algebra/latraits/vector_eigen.hpp"
 #include "hs_math/linear_algebra/lafunc/arithmetic_eigen.hpp"
-#include "hs_math/fdjac/ffd_sparse_jac.hpp"
+#include "hs_math/fdjac/forward_finite_difference_sparse_jacobian_matrix_calculator.hpp"
 
-#include "hs_sfm/bundle_adjustment/ba_naive_analytic_jac.hpp"
-//#include "hs_sfm/bundle_adjustment/ba_naive_ffd_jac.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_analytical_jacobian_matrix_calculator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_forward_finite_difference_jacobian_matrix_calculator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_noised_y_generator.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
 
-#include "hs_sfm/bundle_adjustment/ba_naive_nllso_normal_equation_builder.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_normal_equation_builder.hpp"
 
 namespace
 {
@@ -22,101 +23,133 @@ public:
   typedef _Scalar Scalar;
   typedef int Err;
 
-  typedef hs::sfm::ba::BANaiveVecFunc<Scalar> BAVecFunc;
-  typedef typename BAVecFunc::XVec XVec;
-  typedef typename BAVecFunc::YVec YVec;
-  typedef typename BAVecFunc::Index Index;
+  typedef hs::sfm::ba::BANaiveVectorFunction<Scalar> VectorFunction;
+  typedef typename VectorFunction::XVector XVector;
+  typedef typename VectorFunction::YVector YVector;
+  typedef typename VectorFunction::Index Index;
   typedef hs::sfm::ba::BANaiveNormalEquationBuilder<Scalar>
           NormalEquationBuilder;
-  typedef typename NormalEquationBuilder::YCovInv YCovInv;
-  typedef typename NormalEquationBuilder::NormalMat NormalMat;
-  typedef typename NormalEquationBuilder::BVec BVec;
-  typedef typename NormalEquationBuilder::ResidualsCalc ResidualsCalc;
-  typedef typename ResidualsCalc::Residuals Residuals;
+  typedef typename NormalEquationBuilder::YCovarianceInverse YCovarianceInverse;
+  typedef typename NormalEquationBuilder::NormalMatrix NormalMatrix;
+  typedef typename NormalEquationBuilder::Gradient Gradient;
+  typedef typename NormalEquationBuilder::Residuals Residuals;
 
-  typedef hs::math::fdjac::FwdFiniteDiffSparseJacobian<BAVecFunc> FFDJacobian;
-  typedef typename FFDJacobian::Jac FFDJac;
-  typedef hs::sfm::ba::BANaiveAnalyticJacobian<BAVecFunc> BAAnalyticJacobian;
-  typedef typename BAAnalyticJacobian::Jac BAAnalyticJac;
+  typedef
+    hs::math::fdjac::ForwardFiniteDifferenceSparseJacobianMatrixCalculator<
+      VectorFunction> FFDJacobianMatrixCalculator;
+  typedef typename FFDJacobianMatrixCalculator::JacobianMatrix
+                   FFDJacobianMatrix;
+  typedef
+    hs::sfm::ba::BANaiveForwardFiniteDifferenceJacobianMatrixCalculator<
+      VectorFunction> BAFFDJacobianMatrixCalculator;
+  typedef typename BAFFDJacobianMatrixCalculator::JacobianMatrix
+                   BAFFDJacobianMatrix;
+  typedef
+    hs::sfm::ba::BANaiveAnalyticalJacobianMatrixCalculator<
+      VectorFunction> BAAnalyticJacobianMatrixCalculator;
+  typedef typename BAAnalyticJacobianMatrixCalculator::JacobianMatrix
+                   BAAnalyticJacobianMatrix;
 
-  typedef EIGEN_MAT(Scalar, Eigen::Dynamic, Eigen::Dynamic)
-          MatXX;
-  typedef EIGEN_MAT(Scalar, 2, 2) Mat22;
+  typedef hs::sfm::ba::BANaiveNoisedYGenerator<_Scalar> NoisedYGenerator;
 
-  static Err Test(const BAVecFunc& f, const XVec& x, const Mat22& feat_cov)
+  typedef EIGEN_MATRIX(Scalar, Eigen::Dynamic, Eigen::Dynamic)
+          MatrixXX;
+  typedef EIGEN_MATRIX(Scalar, 2, 2) Matrix22;
+
+  static Err Test(const VectorFunction& vector_function,
+                  const XVector& x,
+                  const Matrix22& feature_covariance)
   {
     Err result = 0;
 
-    YVec y;
-    if (f(x, y) != 0)
+    YVector y;
+    if (vector_function(x, y) != 0)
     {
       std::cout<<"Fail to call vector function.\n";
       return -1;
     }
 
-    Index feat_num = f.getFeatNum();
-    MatXX dense_y_cov, dense_y_cov_inv;
-    YCovInv y_cov_inv;
-    if (GenFeatCovInv(feat_cov, feat_num,
-                      dense_y_cov, dense_y_cov_inv,
-                      y_cov_inv) != 0)
+    Index number_of_features = vector_function.number_of_features();
+    MatrixXX dense_y_covariance_inverse;
+    YCovarianceInverse y_covariance_inverse;
+    if (GenerateFeatureCovaianceInverse(
+          feature_covariance, number_of_features,
+          dense_y_covariance_inverse,
+          y_covariance_inverse) != 0)
     {
-      std::cout<<"GenFeatCovInv Failed.\n";
+      std::cout<<"GenerateFeatureCovaianceInverse Failed.\n";
       return -1;
     }
 
-    YVec noised_y = y;
-    if (GenNoisedYVec(dense_y_cov, noised_y) != 0)
+    YVector noised_y;
+    NoisedYGenerator noised_y_generator;
+    if (noised_y_generator(y, y_covariance_inverse, noised_y) != 0)
     {
-      std::cout<<"GenNoisedYVec Failed.\n";
+      std::cout<<"noised y generator failed.\n";
       return -1;
     }
 
-    FFDJacobian ffd_jac(Scalar(1e-6), Scalar(1e-10), Scalar(1e-12));
-    BAAnalyticJacobian ba_analytic_jac;
+    FFDJacobianMatrixCalculator ffd_jacobian_matrix_calculator(
+      Scalar(1e-6), Scalar(1e-10), Scalar(1e-12));
+    BAAnalyticJacobianMatrixCalculator ba_analytical_jacobian_matrix_calculator;
+    BAFFDJacobianMatrixCalculator ba_ffd_jacobian_matrix_calculator(
+      Scalar(1e-6), Scalar(1e-10));
 
-    FFDJac ffd_j;
-    BAAnalyticJac ba_analytic_j;
+    FFDJacobianMatrix ffd_jacobian_matrix;
+    BAAnalyticJacobianMatrix ba_analytical_jacobian_matrix;
+    BAFFDJacobianMatrix ba_ffd_jacobian_matrix;
 
-    if (ffd_jac(f, x, ffd_j) != 0)
+    if (ffd_jacobian_matrix_calculator(vector_function, x,
+                                       ffd_jacobian_matrix) != 0)
     {
-      std::cout<<"ffd_jac failed.\n";
+      std::cout<<"ffd_jacobian_matrix_calculator failed.\n";
       return -1;
     }
 
-    if (ba_analytic_jac(f, x, ba_analytic_j) != 0)
+    if (ba_analytical_jacobian_matrix_calculator(
+      vector_function, x, ba_analytical_jacobian_matrix) != 0)
     {
-      std::cout<<"ba_analytic_jac failed.\n";
+      std::cout<<"ba_analytical_jacobian_matrix_calculator failed.\n";
       return -1;
     }
 
-    ResidualsCalc residuals_calc;
-    Residuals r = residuals_calc(noised_y, y);
+    if (ba_ffd_jacobian_matrix_calculator(
+      vector_function, x, ba_ffd_jacobian_matrix) != 0)
+    {
+      std::cout<<"ba_ffd_jacobian_matrix_calculator failed.\n";
+      return -1;
+    }
 
-    NormalMat N;
-    BVec b;
+    Residuals residuals = y - noised_y;
+
+    NormalMatrix ba_ffd_normal_matrix;
+    Gradient ba_ffd_gradient;
     NormalEquationBuilder builder;
-    if (builder(ba_analytic_j, r, y_cov_inv, N, b) != 0)
+    if (builder(ba_ffd_jacobian_matrix,
+                residuals,
+                y_covariance_inverse,
+                ba_ffd_normal_matrix,
+                ba_ffd_gradient) != 0)
     {
       std::cout<<"builder failed.\n";
       return -1;
     }
 
-    MatXX dense_N;
-    Index x_size = f.getXSize();
-    dense_N.resize(x_size, x_size);
-    dense_N = ffd_j.transpose() * dense_y_cov_inv * ffd_j;
+    MatrixXX dense_normal_matrix;
+    Index x_size = vector_function.GetXSize();
+    dense_normal_matrix.resize(x_size, x_size);
+    dense_normal_matrix = ffd_jacobian_matrix.transpose() *
+                          dense_y_covariance_inverse *
+                          ffd_jacobian_matrix;
 
-    EIGEN_MAT(Scalar, 6, 6) a = dense_N.template block<6, 6>(0, 0);
-
-    const Scalar threshold = Scalar(4e-3);
+    const Scalar threshold = Scalar(1e-8);
     for (Index i = 0; i < x_size; i++)
     {
       for (Index j = 0; j < x_size; j++)
       {
-        Scalar dense_value = dense_N.coeff(i, j);
-        Scalar analytic_value = N.coeff(i, j);
-        Scalar err = dense_value - analytic_value;
+        Scalar dense_value = dense_normal_matrix.coeff(i, j);
+        Scalar analytical_value = ba_ffd_normal_matrix.coeff(i, j);
+        Scalar err = dense_value - analytical_value;
         if (dense_value != Scalar(0))
         {
           err /= dense_value;
@@ -124,8 +157,10 @@ public:
         err = std::abs(err);
         if (err > threshold)
         {
-          std::cout<<"dense_N["<<i<<", "<<j<<"]:"<<dense_value<<" .\n";
-          std::cout<<"N["<<i<<", "<<j<<"]:"<<analytic_value<<" .\n";
+          std::cout<<"dense_normal_matrix["<<i<<", "<<j<<"]:"
+                   <<dense_value<<" .\n";
+          std::cout<<"ba_ffd_normal_matrix["<<i<<", "<<j<<"]:"
+                   <<analytical_value<<" .\n";
           result = -1;
         }
       }
@@ -135,88 +170,86 @@ public:
   }
 
 private:
-  static Err GenFeatCovInv(const Mat22& feat_cov,
-                           Index feat_num,
-                           MatXX& dense_y_cov,
-                           MatXX& dense_y_cov_inv,
-                           YCovInv& y_cov_inv)
+  static Err GenerateFeatureCovaianceInverse(
+    const Matrix22& feature_covariance,
+    Index number_of_features,
+    MatrixXX& dense_y_covariance_inverse,
+    YCovarianceInverse& y_covariance_inverse)
   {
-    y_cov_inv.m_blocks.clear();
-    dense_y_cov_inv.resize(feat_num * BAVecFunc::m_paramsPerFeat,
-                           feat_num * BAVecFunc::m_paramsPerFeat);
-    dense_y_cov_inv.setZero();
-    dense_y_cov.resize(feat_num * BAVecFunc::m_paramsPerFeat,
-                       feat_num * BAVecFunc::m_paramsPerFeat);
-    dense_y_cov.setZero();
-    for (Index i = 0; i < feat_num; i++)
+    y_covariance_inverse.blocks.clear();
+    dense_y_covariance_inverse.resize(
+      number_of_features * VectorFunction::params_per_feature_,
+      number_of_features * VectorFunction::params_per_feature_);
+    dense_y_covariance_inverse.setZero();
+    for (Index i = 0; i < number_of_features; i++)
     {
-      dense_y_cov.template block<BAVecFunc::m_paramsPerFeat,
-                                 BAVecFunc::m_paramsPerFeat>(
-        i * BAVecFunc::m_paramsPerFeat,
-        i * BAVecFunc::m_paramsPerFeat) = feat_cov;
-      dense_y_cov_inv.template block<BAVecFunc::m_paramsPerFeat,
-                                     BAVecFunc::m_paramsPerFeat>(
-        i * BAVecFunc::m_paramsPerFeat,
-        i * BAVecFunc::m_paramsPerFeat) = feat_cov.inverse();
-      y_cov_inv.m_blocks.push_back(feat_cov.inverse());
+      dense_y_covariance_inverse.template block<
+        VectorFunction::params_per_feature_,
+        VectorFunction::params_per_feature_>(
+        i * VectorFunction::params_per_feature_,
+        i * VectorFunction::params_per_feature_) = feature_covariance.inverse();
+      y_covariance_inverse.blocks.push_back(feature_covariance.inverse());
     }
 
     return 0;
-  }
-
-  static Err GenNoisedYVec(const MatXX& dense_y_cov,
-                           YVec& y)
-  {
-    YVec mean = y;
-    return hs::math::random::NormalRandomVar<Scalar, Eigen::Dynamic>::normRandomVar(
-      mean, dense_y_cov, y);
   }
 };
 
 TEST(TestBANaiveNLLSONormalEquationBuilder, SmallDataTest)
 {
   typedef double Scalar;
-  typedef size_t ImgDim;
+  typedef size_t ImageDimension;
 
-  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImageDimension>
+    DataGenerator;
   typedef TestBANaiveNLLSONormalEquationBuilder<Scalar> Test;
-  typedef Test::Mat22 Mat22;
-  typedef Test::BAVecFunc BAVecFunc;
-  typedef BAVecFunc::XVec XVec;
-  typedef BAVecFunc::YVec YVec;
+  typedef Test::Matrix22 Matrix22;
+  typedef Test::VectorFunction VectorFunction;
+  typedef VectorFunction::XVector XVector;
+  typedef VectorFunction::YVector YVector;
 
-  Scalar f = 0.006;
-  size_t strip_num = 1;
-  size_t cams_num_in_strip = 4;
-  Scalar grd_res = 0.1;
-  ImgDim img_w = 6000;
-  ImgDim img_h = 4000;
-  Scalar pix_size = 0.00000203311408298266;
-  size_t pts_num = 10;
-  Scalar lateral_overlap = 0.99;
-  Scalar longitudinal_overlap = 0.99;
+  Scalar focal_length_in_metre = 0.019;
+  size_t number_of_strips = 3;
+  size_t number_of_cameras_in_strip = 3;
+  Scalar ground_resolution = 0.1;
+  ImageDimension image_width = 6000;
+  ImageDimension image_height = 4000;
+  Scalar pixel_size = 0.0000039;
+  size_t number_of_points = 30;
+  Scalar lateral_overlap_ratio = 0.6;
+  Scalar longitudinal_overlap_ratio = 0.8;
   Scalar scene_max_height = 50;
-  Scalar cam_height_dev = 0.01;
-  Scalar cam_plannar_dev = 0.01;
-  Scalar cam_rot_dev = 0.01;
-  Scalar nw_angle = 60;
+  Scalar camera_height_stddev = 5;
+  Scalar camera_planar_stddev = 5;
+  Scalar camera_rotation_stddev = 1;
+  Scalar north_west_angle = 60;
 
-  BAVecFunc ba_vec_func;
-  XVec x;
-  YVec y;
+  VectorFunction vector_function;
+  XVector x;
+  YVector y;
 
-  DataGen data_gen(f, strip_num, cams_num_in_strip, grd_res,
-    img_w, img_h, pix_size, pts_num,
-    lateral_overlap, longitudinal_overlap,
-    scene_max_height,
-    cam_height_dev, cam_plannar_dev, cam_rot_dev, nw_angle);
-  ASSERT_EQ(0, data_gen(ba_vec_func, x, y));
-  Scalar f_in_pix = f / pix_size;
+  DataGenerator data_generator(focal_length_in_metre,
+                               number_of_strips,
+                               number_of_cameras_in_strip,
+                               ground_resolution,
+                               image_width,
+                               image_height,
+                               pixel_size,
+                               number_of_points,
+                               lateral_overlap_ratio,
+                               longitudinal_overlap_ratio,
+                               scene_max_height,
+                               camera_height_stddev,
+                               camera_planar_stddev,
+                               camera_rotation_stddev,
+                               north_west_angle);
+  ASSERT_EQ(0, data_generator(vector_function, x, y));
+  Scalar focal_length_in_pixel = data_generator.GetFocalLengthInPixel();
 
-  Mat22 feat_cov = Mat22::Identity();
-  feat_cov *= Scalar(1) / (f_in_pix * f_in_pix);
+  Matrix22 feature_covariance = Matrix22::Identity();
+  feature_covariance /= focal_length_in_pixel * focal_length_in_pixel;
 
-  ASSERT_EQ(0, Test::Test(ba_vec_func, x, feat_cov));
+  ASSERT_EQ(0, Test::Test(vector_function, x, feature_covariance));
 }
 
 }

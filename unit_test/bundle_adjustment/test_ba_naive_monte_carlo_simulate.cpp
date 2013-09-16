@@ -4,7 +4,7 @@
 
 #include "hs_test_utility/test_monte_carlo/normal_mle_simulator.hpp"
 
-#include "hs_sfm/bundle_adjustment/ba_naive_vec_func.hpp"
+#include "hs_sfm/bundle_adjustment/ba_naive_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
 #include "hs_sfm/bundle_adjustment/ba_naive_noised_x_generator.hpp"
 
@@ -19,10 +19,12 @@ class TestBANaiveMonteCarloSimulate
 public:
   typedef _Scalar Scalar;
   typedef int Err;
-  typedef hs::sfm::ba::BANaiveVecFunc<Scalar> VectorFunction;
+  typedef hs::sfm::ba::BANaiveVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
-  typedef hs::sfm::ba::BANaiveAnalyticJacobian<VectorFunction> Jacobian;
-  typedef typename Jacobian::Jac JacobianMatrix;
+  typedef
+    hs::sfm::ba::BANaiveForwardFiniteDifferenceJacobianMatrixCalculator<
+      VectorFunction> JacobianMatrixCalculator;
+  typedef typename JacobianMatrixCalculator::JacobianMatrix JacobianMatrix;
   typedef hs::test::mc::NormalMLESimulator<VectorFunction> Simulator;
   typedef typename Simulator::NoisedYVectorGenerator
     NoisedYVectorGenerator;
@@ -34,6 +36,8 @@ public:
     XVectorOptimizor;
   typedef typename Simulator::ResidualsCalculator
     ResidualsCalculator;
+  typedef typename Simulator::MahalanobisDistanceCalculator
+    MahalanobisDistanceCalculator;
   typedef typename Simulator::XVector XVector;
   typedef typename Simulator::YVector YVector;
   typedef typename Simulator::YCovarianceInverse YCovarianceInverse;
@@ -42,10 +46,10 @@ public:
   typedef hs::sfm::ba::BANaiveNoisedXGenerator<Scalar>
     NoisedXVecotrGenerator;
 
-  typedef EIGEN_MAT(Scalar, 2, 2) Matrix22;
-  typedef EIGEN_MAT(Scalar, 3, 3) Matrix33;
-  typedef EIGEN_MAT(Scalar, Eigen::Dynamic, Eigen::Dynamic) MatrixXX;
-  typedef EIGEN_VEC(Scalar, 3) Vector3;
+  typedef EIGEN_MATRIX(Scalar, 2, 2) Matrix22;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
+  typedef EIGEN_MATRIX(Scalar, Eigen::Dynamic, Eigen::Dynamic) MatrixXX;
+  typedef EIGEN_VECTOR(Scalar, 3) Vector3;
 
   static Err Test(const VectorFunction& vector_function,
                   const XVector& true_x,
@@ -98,12 +102,14 @@ public:
 
     ResidualsCalculator residuals_calculator;
 
-    Index number_of_feature = vector_function.getFeatNum();
+    MahalanobisDistanceCalculator mahalanobis_distance_calculator;
+
+    Index number_of_feature = vector_function.number_of_features();
     YCovarianceInverse y_covariance_inverse;
     Matrix22 feature_covariance = Matrix22::Zero();
     feature_covariance(0, 0) = feature_stddev * feature_stddev;
     feature_covariance(1, 1) = feature_stddev * feature_stddev;
-    if (GenFeatCovInv(feature_covariance, number_of_feature,
+    if (GenerateFeatureCovarianceInverse(feature_covariance, number_of_feature,
                       y_covariance_inverse) != 0)
     {
       std::cout<<"GenFeatCovInv Failed.\n";
@@ -119,6 +125,7 @@ public:
     if (simulator(vector_function,
                   x_optimizor,
                   residuals_calculator,
+                  mahalanobis_distance_calculator,
                   noised_y_generator,
                   analytic_x_covariance_calculator,
                   true_y,
@@ -136,15 +143,15 @@ public:
     residual_mean = std::sqrt(residual_mean / Scalar(true_y.rows()));
 
     //计算本质参数数
-    Jacobian jacobian;
+    JacobianMatrixCalculator jacobian;
     JacobianMatrix jacobian_matrix;
     if (jacobian(vector_function, true_x, jacobian_matrix) != 0)
     {
       std::cout<<"jacobian failed!\n";
       return -1;
     }
-    Index x_size = vector_function.getXSize();
-    Index y_size = vector_function.getYSize();
+    Index x_size = vector_function.GetXSize();
+    Index y_size = vector_function.GetYSize();
     MatrixXX dense_jacobian_matrix(y_size, x_size);
     for (Index i = 0; i < y_size; i++)
     {
@@ -159,48 +166,49 @@ public:
     Scalar expected_residual_mean =
       std::sqrt(Scalar(1) - Scalar(rank) / Scalar(y_size));
 
-    if (std::abs(residual_mean - expected_residual_mean) > 1e-1)
+    Err result = 0;
+    if (std::abs(residual_mean - expected_residual_mean) > 5e-2)
     {
       std::cout<<"residual mean too large\n";
       std::cout<<"expected residual mean:"<<expected_residual_mean<<"\n";
       std::cout<<"residual mean:"<<residual_mean<<"\n";
-      return -1;
+      result = -1;
     }
 
-    const Scalar threshold = Scalar(1e-2);
-    Err result = 0;
-    for (Index i = 0; i < analytic_x_covariance.rows(); i++)
-    {
-      for (Index j = 0; j < analytic_x_covariance.cols(); j++)
-      {
-        Scalar analytic_value = analytic_x_covariance(i, j);
-        Scalar statistical_value = statistical_x_covariance(i, j);
-        Scalar error = std::abs(analytic_value - statistical_value);
-        if (error > threshold)
-        {
-          std::cout<<"difference between analytic value statistical value "
-                     "is to large!\n";
-          std::cout<<"analytic_x_covariance["<<i<<", "<<j<<"]="
-                   <<analytic_value<<" \n";
-          std::cout<<"statistical_x_covariance["<<i<<", "<<j<<"]="
-                   <<statistical_value<<" \n";
-          result = -1;
-        }
-      }
-    }
+    //const Scalar threshold = Scalar(1e-2);
+    //for (Index i = 0; i < analytic_x_covariance.rows(); i++)
+    //{
+    //  for (Index j = 0; j < analytic_x_covariance.cols(); j++)
+    //  {
+    //    Scalar analytic_value = analytic_x_covariance(i, j);
+    //    Scalar statistical_value = statistical_x_covariance(i, j);
+    //    Scalar error = std::abs(analytic_value - statistical_value);
+    //    if (error > threshold)
+    //    {
+    //      std::cout<<"difference between analytic value statistical value "
+    //                 "is to large!\n";
+    //      std::cout<<"analytic_x_covariance["<<i<<", "<<j<<"]="
+    //               <<analytic_value<<" \n";
+    //      std::cout<<"statistical_x_covariance["<<i<<", "<<j<<"]="
+    //               <<statistical_value<<" \n";
+    //      result = -1;
+    //    }
+    //  }
+    //}
 
     return result;
   }
 
 private:
-  static Err GenFeatCovInv(const Matrix22& feat_cov,
-                           Index number_of_feature,
-                           YCovarianceInverse& y_cov_inv)
+  static Err GenerateFeatureCovarianceInverse(
+    const Matrix22& feature_covariance,
+    Index number_of_feature,
+    YCovarianceInverse& y_covariance_inverse)
   {
-    y_cov_inv.m_blocks.clear();
+    y_covariance_inverse.blocks.clear();
     for (Index i = 0; i < number_of_feature; i++)
     {
-      y_cov_inv.m_blocks.push_back(feat_cov.inverse());
+      y_covariance_inverse.blocks.push_back(feature_covariance.inverse());
     }
 
     return 0;
@@ -211,46 +219,58 @@ private:
 TEST(TestBANaiveMonteCarloSimulate, SmallDataTest)
 {
   typedef double Scalar;
-  typedef size_t ImgDim;
+  typedef size_t ImageDimension;
 
-  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim> DataGen;
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImageDimension>
+          DataGenerator;
   typedef TestBANaiveMonteCarloSimulate<Scalar> Test;
   typedef Test::Matrix22 Matrix22;
   typedef Test::VectorFunction VectorFunction;
   typedef Test::XVector XVector;
   typedef Test::YVector YVector;
 
-  Scalar f = 0.006;
-  size_t strip_num = 3;
-  size_t cams_num_in_strip = 3;
-  Scalar grd_res = 0.1;
-  ImgDim img_w = 6000;
-  ImgDim img_h = 4000;
-  Scalar pix_size = 0.00000203311408298266;
-  size_t pts_num = 50;
-  Scalar lateral_overlap = 0.7;
-  Scalar longitudinal_overlap = 0.8;
+  Scalar focal_length_in_metre = 0.019;
+  size_t number_of_strips = 3;
+  size_t number_of_cameras_in_strip = 3;
+  Scalar ground_resolution = 0.1;
+  ImageDimension image_width = 6000;
+  ImageDimension image_height = 4000;
+  Scalar pixel_size = 0.0000039;
+  size_t number_of_points = 50;
+  Scalar lateral_overlap_ratio = 0.6;
+  Scalar longitudinal_overlap_ratio = 0.8;
   Scalar scene_max_height = 50;
-  Scalar cam_height_dev = 5;
-  Scalar cam_plannar_dev = 5;
-  Scalar cam_rot_dev = 5;
-  Scalar nw_angle = 60;
+  Scalar camera_height_stddev = 5;
+  Scalar camera_planar_stddev = 5;
+  Scalar camera_rotation_stddev = 1;
+  Scalar north_west_angle = 60;
 
-  VectorFunction ba_vec_func;
+  VectorFunction vector_function;
   XVector x;
   YVector y;
 
-  DataGen data_gen(f, strip_num, cams_num_in_strip, grd_res,
-    img_w, img_h, pix_size, pts_num,
-    lateral_overlap, longitudinal_overlap,
-    scene_max_height,
-    cam_height_dev, cam_plannar_dev, cam_rot_dev, nw_angle);
-  ASSERT_EQ(0, data_gen(ba_vec_func, x, y));
-  Scalar f_in_pix = f / pix_size;
+  DataGenerator data_generator(focal_length_in_metre,
+                               number_of_strips,
+                               number_of_cameras_in_strip,
+                               ground_resolution,
+                               image_width,
+                               image_height,
+                               pixel_size,
+                               number_of_points,
+                               lateral_overlap_ratio,
+                               longitudinal_overlap_ratio,
+                               scene_max_height,
+                               camera_height_stddev,
+                               camera_planar_stddev,
+                               camera_rotation_stddev,
+                               north_west_angle);
+  ASSERT_EQ(0, data_generator(vector_function, x, y));
+  Scalar focal_length_in_pixel = focal_length_in_metre / pixel_size;
 
-  ASSERT_EQ(0, Test::Test(ba_vec_func, x, Scalar(1) / f_in_pix,
-                          0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                          0.1, 0.1, 0.1,
+  ASSERT_EQ(0, Test::Test(vector_function, x, 
+                          Scalar(1) / focal_length_in_pixel,
+                          1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                          1.0, 1.0, 1.0,
                           100));
 }
 

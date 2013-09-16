@@ -1,44 +1,12 @@
 ﻿#ifndef _HS_SFM_TRIANGULATE_MULTIPLE_VIEW_LEVERNBERG_MARQUARDT_OPTIMIZOR_HPP_
 #define _HS_SFM_TRIANGULATE_MULTIPLE_VIEW_LEVERNBERG_MARQUARDT_OPTIMIZOR_HPP_
 
-#include "hs_math/linear_algebra/lafunc/arithmetic.hpp"
-#include "hs_math/linear_algebra/lafunc/arithmetic_eigen.hpp"
-#include "hs_math/linear_algebra/latraits/mat_eigen.hpp"
-#include "hs_math/linear_algebra/latraits/vec_eigen.hpp"
-#include "hs_math/fdjac/ffd_jac.hpp"
-#include "hs_optimizor/nllso/meta_fwd.hpp"
-#include "hs_optimizor/nllso/meta_eigen.hpp"
+#include "hs_optimizor/nllso/meta_eigen_levenberg_marquardt.hpp"
 #include "hs_optimizor/nllso/levenberg_marquardt.hpp"
 
-#include "hs_sfm/utility/cam_type.hpp"
+#include "hs_sfm/utility/camera_type.hpp"
 #include "hs_sfm/triangulate/multiple_view_vector_function.hpp"
-#include "hs_sfm/triangulate/multiple_view_residuals.hpp"
 #include "hs_sfm/triangulate/multiple_view_dlt.hpp"
-
-namespace hs
-{
-namespace optimizor
-{
-namespace nllso
-{
-
-template <typename _Scalar>
-struct JacobiType<hs::sfm::triangulate::MultipleViewVectorFunction<_Scalar> >
-{
-  typedef hs::math::fdjac::FwdFiniteDiffJacobian<
-            hs::sfm::triangulate::MultipleViewVectorFunction<_Scalar> > type;
-};
-
-template <typename _Scalar>
-struct ResidualType<hs::sfm::triangulate::MultipleViewVectorFunction<_Scalar> >
-{
-  typedef hs::sfm::triangulate::MultipleViewResidualsCalculator<
-            hs::sfm::triangulate::MultipleViewVectorFunction<_Scalar> > type;
-};
-
-}
-}
-}
 
 namespace hs
 {
@@ -59,14 +27,15 @@ public:
   typedef int Err;
   typedef MultipleViewVectorFunction<Scalar> VectorFunction;
   typedef hs::optimizor::nllso::LevenbergMarquardt<VectorFunction> Optimizor;
-  typedef typename Optimizor::XVec XVector;
-  typedef typename Optimizor::YVec YVector;
-  typedef typename Optimizor::YCovInv YCovarianceInverse;
-  typedef typename Optimizor::YCovInv YCovInv;
+  typedef typename Optimizor::XVector XVector;
+  typedef typename Optimizor::YVector YVector;
+  typedef typename Optimizor::YCovarianceInverse YCovarianceInverse;
 
 private:
-  typedef typename VectorFunction::CameraIntrinContainer CameraIntrinContainer;
-  typedef typename VectorFunction::CameraExtrinContainer CameraExtrinContainer;
+  typedef typename VectorFunction::IntrinsicParamsContainer
+                   IntrinsicParamsContainer;
+  typedef typename VectorFunction::ExtrinsicParamsContainer
+                   ExtrinsicParamsContainer;
   typedef typename XVector::Index Index;
 
   typedef MultipleViewDLT<Scalar> Initializor;
@@ -75,7 +44,7 @@ private:
   typedef typename Initializor::HomogeneousKey HomogeneousKey;
   typedef typename Initializor::HomogeneousKeyContainer
           HomogeneousKeyContainer;
-  typedef hs::sfm::CamFunc<Scalar> CameraFunction;
+  typedef hs::sfm::CameraFunctions<Scalar> Camera;
 
 public:
   Err operator()(const VectorFunction& vector_function,
@@ -83,8 +52,10 @@ public:
                  const YCovarianceInverse& y_covariance_inverse,
                  XVector& optimized_x) const
   {
-    const CameraIntrinContainer& intrins = vector_function.GetIntrins();
-    const CameraExtrinContainer& extrins = vector_function.GetExtrins();
+    const IntrinsicParamsContainer& intrins =
+      vector_function.intrinsic_params_set();
+    const ExtrinsicParamsContainer& extrins =
+      vector_function.extrinsic_params_set();
     Index number_of_views = intrins.size();
     if (number_of_views != extrins.size())
     {
@@ -95,7 +66,7 @@ public:
     HomogeneousKeyContainer homogeneous_keys;
     for (Index i = 0; i < number_of_views; i++)
     {
-      PMatrix pmatrix = CameraFunction::getPMat(intrins[i], extrins[i]);
+      PMatrix pmatrix = Camera::GetProjectionMatrix(intrins[i], extrins[i]);
       pmatrices.push_back(pmatrix);
       HomogeneousKey homogeneous_key;
       homogeneous_key.segment(0, VectorFunction::params_per_feature_) = 

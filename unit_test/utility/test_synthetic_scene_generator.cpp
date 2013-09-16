@@ -7,168 +7,185 @@ namespace
 {
 
 template <typename _Scalar>
-struct PtsPrjCamResidual
+struct PointsProjectToCameraResidual
 {
   typedef _Scalar Scalar;
-  typedef hs::sfm::IntrinParam<Scalar> Intrin;
-  typedef EIGEN_VECTOR(Intrin) IntrinContainer;
-  typedef hs::sfm::ExtrinParam<Scalar> Extrin;
-  typedef EIGEN_VECTOR(Extrin) ExtrinContainer;
+  typedef hs::sfm::CameraIntrinsicParams<Scalar> IntrinsicParams;
+  typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinsicParamsContainer;
+  typedef hs::sfm::CameraExtrinsicParams<Scalar> ExtrinsicParams;
+  typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinsicParamsContainer;
   typedef hs::sfm::ImageKeys<Scalar> ImgKeys;
-  typedef EIGEN_VECTOR(ImgKeys) ImgKeysContainer;
-  typedef EIGEN_VEC(Scalar, 3) Pt3D;
-  typedef EIGEN_VEC(Scalar, 2) Key;
-  typedef Pt3D KeyH;
-  typedef EIGEN_VECTOR(Pt3D) Pt3DContainer;
+  typedef EIGEN_STD_VECTOR(ImgKeys) ImgKeysContainer;
+  typedef EIGEN_VECTOR(Scalar, 3) Point3D;
+  typedef EIGEN_VECTOR(Scalar, 2) Key;
+  typedef Point3D KeyHomogeneous;
+  typedef EIGEN_STD_VECTOR(Point3D) Point3DContainer;
   typedef std::vector<std::pair<size_t, size_t> > Track;
   typedef std::vector<Track> TrackContainer;
-  typedef hs::sfm::CamFunc<Scalar> Cam;
-  typedef typename Cam::PMat PMat;
+  typedef hs::sfm::CameraFunctions<Scalar> Camera;
+  typedef typename Camera::ProjectionMatrix ProjectionMatrix;
 
-  Scalar operator()(const IntrinContainer& intrins,
-            const ExtrinContainer& extrins,
-            const Pt3DContainer& pts,
-            const ImgKeysContainer& imgKeysSet,
-            const TrackContainer& tracks) const
+  Scalar operator()(const IntrinsicParamsContainer& intrinsic_params_set,
+                    const ExtrinsicParamsContainer& extrinsic_params_set,
+                    const Point3DContainer& points,
+                    const ImgKeysContainer& img_keys_set,
+                    const TrackContainer& tracks) const
   {
-    size_t ptsNum = pts.size();
-    size_t camNum = intrins.size();
-    if (intrins.size() != camNum || imgKeysSet.size() != camNum ||
-      tracks.size() != ptsNum)
+    size_t number_of_points = points.size();
+    size_t number_of_cameras = intrinsic_params_set.size();
+    if (intrinsic_params_set.size() != number_of_cameras || img_keys_set.size() != number_of_cameras ||
+      tracks.size() != number_of_points)
     {
       return Scalar(-1);
     }
 
-    Scalar sumDist = Scalar(0);
-    size_t measureNum = 0;
-    for (size_t i = 0; i < ptsNum; i++)
+    Scalar distance_sum = Scalar(0);
+    size_t number_of_measures = 0;
+    for (size_t i = 0; i < number_of_points; i++)
     {
-      size_t viewSize = tracks[i].size();
-      measureNum += viewSize;
-      for (size_t j = 0; j < viewSize; j++)
+      size_t number_of_views = tracks[i].size();
+      number_of_measures += number_of_views;
+      for (size_t j = 0; j < number_of_views; j++)
       {
-        size_t imgId = tracks[i][j].first;
-        size_t keyId = tracks[i][j].second;
+        size_t img_id = tracks[i][j].first;
+        size_t key_id = tracks[i][j].second;
 
-        Key key = imgKeysSet[imgId][keyId];
+        Key key = img_keys_set[img_id][key_id];
 
-        PMat P = Cam::getPMat(intrins[imgId], extrins[imgId]);
-        KeyH keyH = P.block(0, 0, 3, 3) * pts[i] + 
-               P.block(0, 3, 3, 1);
-        keyH /= keyH(2);
+        ProjectionMatrix P =
+          Camera::GetProjectionMatrix(intrinsic_params_set[img_id],
+                                      extrinsic_params_set[img_id]);
+        KeyHomogeneous key_homogeneous = P.block(0, 0, 3, 3) * points[i] + 
+                                         P.block(0, 3, 3, 1);
+        key_homogeneous /= key_homogeneous(2);
 
-        Scalar dist = (keyH.segment(0, 2) - key).squaredNorm();
-        sumDist += dist;
+        Scalar distance = (key_homogeneous.segment(0, 2) - key).squaredNorm();
+        distance_sum += distance;
       }
     }
 
-    Scalar resd = sqrt(sumDist / Scalar(measureNum) / Scalar(2));
+    Scalar residual =
+      sqrt(distance_sum / Scalar(number_of_measures) / Scalar(2));
 
-    return resd;
+    return residual;
   }
 };
 
 TEST(TestSyntheticSceneGenerator, SimpleTest)
 {
   typedef double Scalar;
-  typedef size_t ImgDim;
+  typedef size_t ImageDimension;
 
-  typedef hs::sfm::SceneGenerator<Scalar, ImgDim> SceneGen;
-  typedef hs::sfm::KeysGenerator<Scalar, ImgDim> KeysGen;
+  typedef hs::sfm::SceneGenerator<Scalar, ImageDimension> SceneGen;
+  typedef hs::sfm::KeysGenerator<Scalar, ImageDimension> KeysGen;
   typedef hs::sfm::MatchGenerator MatchesGen;
   typedef hs::sfm::NoiseImageKeys<Scalar> NoiseImgKeys;
   typedef hs::sfm::NoiseExtrin<Scalar> NoiseExtr;
 
-  typedef SceneGen::Intrin Intrin;
-  typedef SceneGen::Extrin Extrin;
-  typedef SceneGen::IntrinContainer IntrinContainer;
-  typedef SceneGen::ExtrinContainer ExtrinContainer;
+  typedef SceneGen::IntrinsicParams IntrinsicParams;
+  typedef SceneGen::ExtrinsicParams ExtrinsicParams;
+  typedef SceneGen::IntrinsicParamsContainer IntrinsicParamsContainer;
+  typedef SceneGen::ExtrinsicParamsContainer ExtrinsicParamsContainer;
   typedef SceneGen::ImageContainer ImageContainer;
-  typedef SceneGen::Pt3DContainer Pt3DContainer;
+  typedef SceneGen::Point3DContainer Point3DContainer;
 
-  typedef KeysGen::ImgKeys ImgKeys;
-  typedef KeysGen::ImgKeysContainer ImgKeysContainer;
+  typedef KeysGen::Keys ImgKeys;
+  typedef KeysGen::KeysContainer ImgKeysContainer;
   typedef KeysGen::TrackContainer TrackContainer;
-  typedef KeysGen::CamViewContainer CamViewContainer;
+  typedef KeysGen::CameraViewContainer CameraViewContainer;
 
   typedef hs::sfm::MatchContainer MatchContainer;
 
-  typedef NoiseImgKeys::Cov KeyCov;
+  typedef NoiseImgKeys::Covariance KeyCovariance;
 
-  typedef NoiseExtr::Cov ExtrinCov;
+  typedef NoiseExtr::Covariance ExtrinCovariance;
 
-  typedef std::pair<size_t, size_t> CamPairKey;
-  typedef EIGEN_MAP(CamPairKey, Extrin) CamPairContainer;
+  typedef std::pair<size_t, size_t> CameraPairKey;
+  typedef EIGEN_STD_MAP(CameraPairKey, ExtrinsicParams) CameraPairContainer;
 
-  typedef PtsPrjCamResidual<Scalar> Residual;
+  typedef PointsProjectToCameraResidual<Scalar> Residual;
 
-  Scalar f = 0.006;
-  size_t stripNum = 15;
-  size_t camsNumInStrip = 20;
-  Scalar grdRes = 0.1;
-  ImgDim imgW = 3648;
-  ImgDim imgH = 2736;
-  Scalar pixSize = 0.00000203311408298266;
-  size_t ptsNum = 2000;
-  Scalar lateralOverlap = 0.6;
-  Scalar longitudinalOverlap = 0.8;
-  Scalar sceneMaxHeight = 50;
-  Scalar camHeightDev = 2;
-  Scalar camPlannarDev = 2;
-  Scalar camRotDev = 10;
-  Scalar nwAngle = 60;
+  Scalar focal_length_in_metre = 0.006;
+  size_t number_of_strips = 15;
+  size_t number_of_cameras_in_strip = 20;
+  Scalar ground_resolution = 0.1;
+  ImageDimension image_width = 3648;
+  ImageDimension image_height = 2736;
+  Scalar pixel_size = 0.00000203311408298266;
+  size_t number_of_points = 2000;
+  Scalar lateral_overlap_ratio = 0.6;
+  Scalar longitudinal_overlap_ratio = 0.8;
+  Scalar scene_max_height = 50;
+  Scalar camera_height_stddev = 2;
+  Scalar camera_planar_stddev = 2;
+  Scalar camera_rotation_stddev = 10;
+  Scalar north_west_angle = 60;
 
-  SceneGen sceneGen(f, stripNum, camsNumInStrip, grdRes, 
-            imgW, imgH, pixSize, ptsNum,
-            lateralOverlap, longitudinalOverlap,
-            sceneMaxHeight,
-            camHeightDev, camPlannarDev, camRotDev, nwAngle);
+  SceneGen scene_generator(focal_length_in_metre,
+                           number_of_strips,
+                           number_of_cameras_in_strip,
+                           ground_resolution, 
+                           image_width,
+                           image_height,
+                           pixel_size,
+                           number_of_points,
+                           lateral_overlap_ratio,
+                           longitudinal_overlap_ratio,
+                           scene_max_height,
+                           camera_height_stddev,
+                           camera_planar_stddev,
+                           camera_rotation_stddev,
+                           north_west_angle);
 
-  IntrinContainer intrins;
-  ExtrinContainer extrins;
+  IntrinsicParamsContainer intrinsic_params_set;
+  ExtrinsicParamsContainer extrinsic_params_set;
   ImageContainer images;
-  Pt3DContainer pts;
-  sceneGen(intrins, extrins, images, pts);
+  Point3DContainer points;
+  scene_generator(intrinsic_params_set, extrinsic_params_set, images, points);
   //保存文件方便可视化观察
-  //sfm::SaveXugFile<Scalar, ImgDim> saver;
+  //sfm::SaveXugFile<Scalar, ImageDimension> saver;
   //saver("TestSyntheticSceneGenerator/SimpleTest/test.xug",
-  //    intrins, extrins, images, pts, 10);
+  //    intrinsic_params_set, extrinsic_params_set, images, points, 10);
 
-  KeysGen keysGen(imgW, imgH);
-  ImgKeysContainer imgKeysSet;
+  KeysGen keys_generator(image_width, image_height);
+  ImgKeysContainer image_keys_set;
   TrackContainer tracks;
-  CamViewContainer camViews;
-  keysGen(intrins, extrins, pts, imgKeysSet, tracks, camViews);
+  CameraViewContainer camera_views;
+  keys_generator(intrinsic_params_set,
+                 extrinsic_params_set, points,
+                 image_keys_set,
+                 tracks,
+                 camera_views);
 
-  MatchesGen mathesGen;
+  MatchesGen matches_generator;
   MatchContainer matches;
-  mathesGen(tracks, matches);
+  matches_generator(tracks, matches);
 
   //特征点加入噪声
-  ImgKeysContainer noisedImgKeysSet = imgKeysSet;
-  size_t numCam = noisedImgKeysSet.size();
-  KeyCov keyCov = KeyCov::Identity();
-  NoiseImgKeys noiseImgKeys(keyCov);
-  for (size_t i = 0; i < numCam; i++)
+  ImgKeysContainer noised_image_keys_set = image_keys_set;
+  size_t number_of_cameras = noised_image_keys_set.size();
+  KeyCovariance key_covariance = KeyCovariance::Identity();
+  NoiseImgKeys noise_image_keys(key_covariance);
+  for (size_t i = 0; i < number_of_cameras; i++)
   {
-    noiseImgKeys(noisedImgKeysSet[i]);
+    noise_image_keys(noised_image_keys_set[i]);
   }
 
   //外参数加入噪声，作为POS信息
-  ExtrinContainer priorExtrins = extrins;
-  ExtrinCov covR = ExtrinCov::Identity();
-  covR *= Scalar(5) / 180 * Scalar(M_PI);
-  ExtrinCov covC = ExtrinCov::Identity();
-  covC *= Scalar(10);
-  NoiseExtr noiseExtr(covR, covC);
-  for (size_t i = 0; i < numCam; i++)
+  ExtrinsicParamsContainer prior_extrinsic_params_set = extrinsic_params_set;
+  ExtrinCovariance rotation_covariance = ExtrinCovariance::Identity();
+  rotation_covariance *= Scalar(5) / 180 * Scalar(M_PI);
+  ExtrinCovariance position_covariance = ExtrinCovariance::Identity();
+  position_covariance *= Scalar(10);
+  NoiseExtr noise_extr(rotation_covariance, position_covariance);
+  for (size_t i = 0; i < number_of_cameras; i++)
   {
-    noiseExtr(priorExtrins[i]);
+    noise_extr(prior_extrinsic_params_set[i]);
   }
 
   //保存文件方便可视化观察
   //saver("TestSyntheticSceneGenerator/SimpleTest/test_noise.xug",
-  //  intrins, priorExtrins, images, pts, 10);
+  //  intrinsic_params_set, prior_extrinsic_params_set, images, points, 10);
 
 }
 

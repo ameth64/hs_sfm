@@ -20,36 +20,39 @@ class TestBANaiveGroundTruth
 public:
   typedef _Scalar Scalar;
   typedef int Err;
-  typedef size_t ImgDim;
+  typedef size_t ImageDimension;
 
 private:
-  typedef hs::sfm::ba::BANaiveVecFunc<Scalar> VectorFunction;
-  typedef typename VectorFunction::XVec XVector;
-  typedef typename VectorFunction::YVec YVector;
+  typedef hs::sfm::ba::BANaiveVectorFunction<Scalar> VectorFunction;
+  typedef typename VectorFunction::XVector XVector;
+  typedef typename VectorFunction::YVector YVector;
   typedef typename VectorFunction::Index Index;
+  typedef YVector Residuals;
   typedef hs::sfm::ba::BANaiveLevenbergMarquardtOptimizor<VectorFunction>
           Optimizor;
-  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImgDim>
+  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImageDimension>
           DataGenerator;
-  typedef typename DataGenerator::Intrin Intrin;
-  typedef typename DataGenerator::IntrinContainer IntrinContainer;
-  typedef typename DataGenerator::Extrin Extrin;
-  typedef typename DataGenerator::ExtrinContainer ExtrinContainer;
-  typedef typename DataGenerator::Pt3DContainer Pt3DContainer;
-  typedef typename DataGenerator::ImgKeysContainer
-          ImageKeysContainer;
+  typedef typename DataGenerator::IntrinsicParams IntrinsicParams;
+  typedef typename DataGenerator::IntrinsicParamsContainer
+                   IntrinsicParamsContainer;
+  typedef typename DataGenerator::ExtrinsicParams ExtrinsicParams;
+  typedef typename DataGenerator::ExtrinsicParamsContainer
+                   ExtrinsicParamsContainer;
+  typedef typename DataGenerator::Point3DContainer Point3DContainer;
+  typedef typename DataGenerator::KeysContainer
+          KeysContainer;
   typedef typename DataGenerator::TrackContainer
           TrackContainer;
-  typedef EIGEN_MAT(Scalar, 2, 2) Matrix22;
-  typedef EIGEN_MAT(Scalar, 3, 3) Matrix33;
-  typedef EIGEN_VEC(Scalar, 3) Vector3;
+  typedef EIGEN_MATRIX(Scalar, 2, 2) Matrix22;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
+  typedef EIGEN_VECTOR(Scalar, 3) Vector3;
   typedef hs::sfm::ba::BANaiveNoisedXGenerator<Scalar> NoisedXGenerator;
   typedef hs::sfm::ba::BANaiveNoisedYGenerator<Scalar> NoisedYGenerator;
   typedef typename NoisedYGenerator::YCovarianceInverse YCovarianceInverse;
   typedef hs::sfm::triangulate::MultipleViewVectorFunction<Scalar>
           TriangulateVectorFunction;
-  typedef typename TriangulateVectorFunction::XVec TriangulateXVector;
-  typedef typename TriangulateVectorFunction::YVec TriangulateYVector;
+  typedef typename TriangulateVectorFunction::XVector TriangulateXVector;
+  typedef typename TriangulateVectorFunction::YVector TriangulateYVector;
   typedef hs::sfm::triangulate::MultipleViewLevenbergMarquardtOptimizor<
             TriangulateVectorFunction>
           TriangulateOptimizor;
@@ -58,13 +61,16 @@ private:
 
 public:
 
-  TestBANaiveGroundTruth(Scalar f, size_t strip_num,
-                         size_t cams_num_in_strip, Scalar ground_resolution,
-                         ImgDim image_width, ImgDim image_height,
-                         Scalar pix_size,
-                         size_t pts_num,
-                         Scalar lateral_overlap,
-                         Scalar longitudinal_overlap,
+  TestBANaiveGroundTruth(Scalar focal_length_in_metre,
+                         size_t number_of_strips,
+                         size_t number_of_cameras_in_strip,
+                         Scalar ground_resolution,
+                         ImageDimension image_width,
+                         ImageDimension image_height,
+                         Scalar pixel_size,
+                         size_t number_of_points,
+                         Scalar lateral_overlap_ratio,
+                         Scalar longitudinal_overlap_ratio,
                          Scalar scene_max_height,
                          Scalar camera_height_stddev,
                          Scalar camera_plannar_stddev,
@@ -82,11 +88,21 @@ public:
                          Scalar point_z_stddev,
                          size_t number_of_gcp,
                          Scalar gcp_image_stddev)
-    : data_generator_(f, strip_num, cams_num_in_strip, ground_resolution,
-                      image_width, image_height, pix_size, pts_num,
-                      lateral_overlap, longitudinal_overlap, scene_max_height,
-                      camera_height_stddev, camera_plannar_stddev,
-                      camera_rotation_stddev, north_west_angle),
+    : data_generator_(focal_length_in_metre,
+                      number_of_strips,
+                      number_of_cameras_in_strip,
+                      ground_resolution,
+                      image_width,
+                      image_height,
+                      pixel_size,
+                      number_of_points,
+                      lateral_overlap_ratio,
+                      longitudinal_overlap_ratio,
+                      scene_max_height,
+                      camera_height_stddev,
+                      camera_plannar_stddev,
+                      camera_rotation_stddev,
+                      north_west_angle),
       feature_stddev_(feature_stddev),
       number_of_gcp_(number_of_gcp),
       gcp_image_stddev_(gcp_image_stddev),
@@ -132,8 +148,8 @@ public:
 
 
     YCovarianceInverse y_covariance_inverse;
-    GenerateYCovarianceInverse(true_y.rows() / VectorFunction::m_paramsPerFeat,
-                               y_covariance_inverse);
+    GenerateYCovarianceInverse(
+      true_y.rows() / VectorFunction::params_per_feature_, y_covariance_inverse);
     NoisedYGenerator noised_y_generator;
     YVector near_y;
     if (noised_y_generator(true_y, y_covariance_inverse, near_y) != 0)
@@ -141,6 +157,11 @@ public:
       std::cout<<"noised y vector generator failed!\n";
       return -1;
     }
+
+    Scalar mean_reprojection_error_before =
+      CalculateMeanReprojectionError(vector_function, near_x, near_y);
+    std::cout<<"mean reprojection error before optimizing:"
+             <<mean_reprojection_error_before<<"\n";
     
     Optimizor optimizor(near_x, 100,
                         Scalar(1e-6),
@@ -154,14 +175,19 @@ public:
       return -1;
     }
 
+    Scalar mean_reprojection_error_after =
+      CalculateMeanReprojectionError(vector_function, optimized_x, near_y);
+    std::cout<<"mean reprojection error after optimizing:"
+             <<mean_reprojection_error_after<<"\n";
+
     //generate gcps
-    Pt3DContainer gcp_points;
-    ImageKeysContainer gcp_image_keys_set;
+    Point3DContainer gcp_points;
+    KeysContainer gcp_image_keys_set;
     TrackContainer gcp_tracks;
-    if (data_generator_.genGCPs(number_of_gcp_, vector_function, true_x,
-                                gcp_points,
-                                gcp_image_keys_set,
-                                gcp_tracks) != 0)
+    if (data_generator_.GenerateGCPs(number_of_gcp_, vector_function, true_x,
+                                     gcp_points,
+                                     gcp_image_keys_set,
+                                     gcp_tracks) != 0)
     {
       std::cout<<"generating gcps fails!\n";
       return -1;
@@ -169,14 +195,15 @@ public:
 
     //check accuracy by gcps;
     size_t number_of_gcp_tracks = gcp_tracks.size();
-    EIGEN_VECTOR(Vector3) differences;
+    EIGEN_STD_VECTOR(Vector3) differences;
     for (size_t i = 0; i < number_of_gcp_tracks; i++)
     {
       size_t number_of_views = gcp_tracks[i].size();
       if (number_of_views >= 3)
       {
-        IntrinContainer intrins(number_of_views, data_generator_.getFInPix());
-        ExtrinContainer extrins(number_of_views);
+        IntrinsicParamsContainer intrins(
+          number_of_views, data_generator_.GetFocalLengthInPixel());
+        ExtrinsicParamsContainer extrins(number_of_views);
         Index triangulate_y_size = 
           number_of_views * TriangulateVectorFunction::params_per_feature_;
         TriangulateYVector true_triangulate_y(triangulate_y_size);
@@ -184,15 +211,15 @@ public:
         {
           size_t camera_id = gcp_tracks[i][j].first;
           size_t key_id = gcp_tracks[i][j].second;
-          extrins[j].m_r[0] = 
-            optimized_x[camera_id * VectorFunction::m_paramsPerCam + 0];
-          extrins[j].m_r[1] = 
-            optimized_x[camera_id * VectorFunction::m_paramsPerCam + 1];
-          extrins[j].m_r[2] = 
-            optimized_x[camera_id * VectorFunction::m_paramsPerCam + 2];
+          extrins[j].rotation()[0] = 
+            optimized_x[camera_id * VectorFunction::params_per_camera_ + 0];
+          extrins[j].rotation()[1] = 
+            optimized_x[camera_id * VectorFunction::params_per_camera_ + 1];
+          extrins[j].rotation()[2] = 
+            optimized_x[camera_id * VectorFunction::params_per_camera_ + 2];
           Vector3 t = optimized_x.segment(
-                        camera_id * VectorFunction::m_paramsPerCam + 3, 3);
-          extrins[j].m_c = -(extrins[j].m_r.inverse() * t);
+                        camera_id * VectorFunction::params_per_camera_ + 3, 3);
+          extrins[j].position() = -(extrins[j].rotation().Inverse() * t);
 
           true_triangulate_y.segment(
             j * TriangulateVectorFunction::params_per_feature_,
@@ -213,9 +240,9 @@ public:
         triangulate_y_covariance_inverse /= 
           gcp_image_stddev_ * gcp_image_stddev_;
         TriangulateYVector noised_triangulate_y;
-        hs::math::random::NormalRandomVar<Scalar, Eigen::Dynamic>::
-          normRandomVar(true_triangulate_y, triangulate_y_covariance,
-                        noised_triangulate_y);
+        hs::math::random::NormalRandomVar<Scalar, Eigen::Dynamic>::Generate(
+          true_triangulate_y, triangulate_y_covariance,
+          noised_triangulate_y);
 
         TriangulateOptimizor triangulate_optimizor;
         TriangulateXVector estimated_pt;
@@ -262,13 +289,42 @@ private:
     Index number_of_feature, YCovarianceInverse& y_covariance_inverse) const
   {
     Matrix22 feature_covariance_inverse = Matrix22::Identity();
-    Scalar stddev = feature_stddev_ / data_generator_.getFInPix();
+    Scalar stddev = feature_stddev_ / data_generator_.GetFocalLengthInPixel();
     feature_covariance_inverse /= stddev * stddev;
-    y_covariance_inverse.m_blocks.clear();
+    y_covariance_inverse.blocks.clear();
     for (Index i = 0; i < number_of_feature; i++)
     {
-      y_covariance_inverse.m_blocks.push_back(feature_covariance_inverse);
+      y_covariance_inverse.blocks.push_back(feature_covariance_inverse);
     }
+  }
+
+  Scalar CalculateMeanReprojectionError(const VectorFunction& vector_function,
+                                        const XVector& x,
+                                        const YVector& y) const
+  {
+    YVector noised_y;
+    vector_function(x, noised_y);
+    if (vector_function(x, noised_y) != 0)
+    {
+      std::cout<<"vector function failed!\n";
+      return Scalar(0);
+    }
+    Residuals residuals = y - noised_y;
+
+    Index number_of_feature = vector_function.number_of_features();
+    Scalar mean_reprojection_error = Scalar(0);
+    for (Index i = 0; i < number_of_feature; i++)
+    {
+      EIGEN_VECTOR(Scalar, 2) residual =
+        residuals.segment(i * VectorFunction::params_per_feature_,
+                          VectorFunction::params_per_feature_);
+      Scalar reprojection_error = residual.norm();
+      mean_reprojection_error += reprojection_error;
+    }
+    mean_reprojection_error /= Scalar(number_of_feature) / 
+                               data_generator_.GetFocalLengthInPixel();
+
+    return mean_reprojection_error;
   }
 
 private:
@@ -292,44 +348,55 @@ TEST(TestBANaiveGroundTruth, DoubleTest)
   typedef double Scalar;
 
   typedef TestBANaiveGroundTruth<Scalar> Test;
-  typedef Test::ImgDim ImgDim;
+  typedef Test::ImageDimension ImageDimension;
 
-  Scalar f = 0.019;
-  size_t strip_num = 5;
-  size_t cams_num_in_strip = 30;
+  Scalar focal_length_in_metre = 0.019;
+  size_t number_of_strips = 5;
+  size_t number_of_cameras_in_strip = 20;
   Scalar ground_resolution = 0.1;
-  ImgDim image_width = 6000;
-  ImgDim image_height = 4000;
-  Scalar pix_size = 0.0000039;
-  size_t pts_num = 10000;
-  Scalar lateral_overlap = 0.7;
-  Scalar longitudinal_overlap = 0.8;
+  ImageDimension image_width = 6000;
+  ImageDimension image_height = 4000;
+  Scalar pixel_size = 0.0000039;
+  size_t number_of_points = 2000;
+  Scalar lateral_overlap_ratio = 0.7;
+  Scalar longitudinal_overlap_ratio = 0.8;
   Scalar scene_max_height = 100;
   Scalar camera_height_stddev = 5;
   Scalar camera_plannar_stddev = 5;
   Scalar camera_rotation_stddev = 5;
   Scalar north_west_angle = 60; 
 
-  Scalar camera_x_rotation_stddev = 0.1;
-  Scalar camera_y_rotation_stddev = 0.1;
-  Scalar camera_z_rotation_stddev = 0.1;
-  Scalar camera_x_pos_stddev = 0.1;
-  Scalar camera_y_pos_stddev = 0.1;
-  Scalar camera_z_pos_stddev = 0.1;
-  Scalar point_x_stddev = 0.1;
-  Scalar point_y_stddev = 0.1;
-  Scalar point_z_stddev = 0.1;
+  Scalar camera_x_rotation_stddev = 1;
+  Scalar camera_y_rotation_stddev = 1;
+  Scalar camera_z_rotation_stddev = 1;
+  Scalar camera_x_pos_stddev = 1;
+  Scalar camera_y_pos_stddev = 1;
+  Scalar camera_z_pos_stddev = 1;
+  Scalar point_x_stddev = 1;
+  Scalar point_y_stddev = 1;
+  Scalar point_z_stddev = 1;
 
   Scalar feature_stddev = 1.0;
 
   size_t number_of_gcp = 100;
   Scalar gcp_image_stddev = 2.0;
 
-  Test test(f, strip_num, cams_num_in_strip, ground_resolution,
-            image_width, image_height, pix_size, pts_num,
-            lateral_overlap, longitudinal_overlap, scene_max_height,
-            camera_height_stddev, camera_plannar_stddev,
-            camera_rotation_stddev, north_west_angle,
+  Test test(focal_length_in_metre,
+            number_of_strips,
+            number_of_cameras_in_strip,
+            ground_resolution,
+            image_width,
+            image_height,
+            pixel_size,
+            number_of_points,
+            lateral_overlap_ratio,
+            longitudinal_overlap_ratio,
+            scene_max_height,
+            camera_height_stddev,
+            camera_plannar_stddev,
+            camera_rotation_stddev,
+            north_west_angle,
+            feature_stddev, 
             camera_x_rotation_stddev,
             camera_y_rotation_stddev,
             camera_z_rotation_stddev,
@@ -339,7 +406,7 @@ TEST(TestBANaiveGroundTruth, DoubleTest)
             point_x_stddev,
             point_y_stddev,
             point_z_stddev,
-            feature_stddev, number_of_gcp, gcp_image_stddev);
+            number_of_gcp, gcp_image_stddev);
 
   ASSERT_EQ(0, test());
 

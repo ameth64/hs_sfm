@@ -15,13 +15,13 @@ class MultipleViewDLT
 {
 public:
   typedef _Scalar Scalar;
-  typedef EIGEN_MAT(Scalar, 3, 4) PMatrix;
-  typedef EIGEN_VECTOR(PMatrix) PMatrixContainer;
-  typedef EIGEN_VEC(Scalar, 3) HomogeneousKey;
-  typedef EIGEN_VECTOR(HomogeneousKey) HomogeneousKeyContainer;
-  typedef EIGEN_VEC(Scalar, 3) Point;
-  typedef EIGEN_VEC(Scalar, 4) HomogeneousPoint;
-  typedef EIGEN_MAT(Scalar, Eigen::Dynamic, 4) AMatrix;
+  typedef EIGEN_MATRIX(Scalar, 3, 4) PMatrix;
+  typedef EIGEN_STD_VECTOR(PMatrix) PMatrixContainer;
+  typedef EIGEN_VECTOR(Scalar, 3) HomogeneousKey;
+  typedef EIGEN_STD_VECTOR(HomogeneousKey) HomogeneousKeyContainer;
+  typedef EIGEN_VECTOR(Scalar, 3) Point;
+  typedef EIGEN_VECTOR(Scalar, 4) HomogeneousPoint;
+  typedef EIGEN_MATRIX(Scalar, Eigen::Dynamic, 4) AMatrix;
   typedef typename PMatrix::Index Index;
 
   typedef int Err;

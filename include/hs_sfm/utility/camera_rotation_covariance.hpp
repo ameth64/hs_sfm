@@ -3,7 +3,7 @@
 
 #include "hs_math/geometry/euler_angles.hpp"
 #include "hs_math/geometry/rotation.hpp"
-#include "hs_math/fdjac/ffd_jac.hpp"
+#include "hs_math/fdjac/forward_finite_difference_jacobian_matrix_calculator.hpp"
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
 namespace hs
@@ -17,23 +17,23 @@ class CameraRotaionCovarianceCalculator
 public:
   typedef _Scalar Scalar;
   typedef int Err;
-  typedef hs::math::geometry::Rot3D<Scalar> GeneralRotation;
+  typedef hs::math::geometry::Rotation3D<Scalar> GeneralRotation;
   typedef hs::math::geometry::EulerAngles<Scalar> EulerAnglesRotation;
 
-  typedef EIGEN_VEC(Scalar, 3) Vector3;
-  typedef EIGEN_MAT(Scalar, 3, 3) Matrix33;
+  typedef EIGEN_VECTOR(Scalar, 3) Vector3;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
   typedef typename Vector3::Index Index;
 
   struct GeneralToEulerAnglesVectorFunction
   {
-    typedef EIGEN_VEC(Scalar, 3) XVec;
-    typedef EIGEN_VEC(Scalar, 3) YVec;
+    typedef EIGEN_VECTOR(Scalar, 3) XVector;
+    typedef EIGEN_VECTOR(Scalar, 3) YVector;
 
-    Err operator()(const XVec& x, YVec& y) const
+    Err operator()(const XVector& x, YVector& y) const
     {
       Matrix33 ortho_matrix = GeneralRotation(x);
       EulerAnglesRotation euler_angles;
-      euler_angles.template fromOrthoRotMat<2, 1, -3, 1>(ortho_matrix);
+      euler_angles.template FromOrthoRotMat<2, 1, -3, 1>(ortho_matrix);
       y[0] = euler_angles[0];
       y[1] = euler_angles[1];
       y[2] = euler_angles[2];
@@ -44,14 +44,14 @@ public:
 
   struct EulerAnglesToGeneralVectorFunction
   {
-    typedef EIGEN_VEC(Scalar, 3) XVec;
-    typedef EIGEN_VEC(Scalar, 3) YVec;
+    typedef EIGEN_VECTOR(Scalar, 3) XVector;
+    typedef EIGEN_VECTOR(Scalar, 3) YVector;
 
-    Err operator()(const XVec& x, YVec& y) const
+    Err operator()(const XVector& x, YVector& y) const
     {
       EulerAnglesRotation euler_angles(x[0], x[1], x[2]);
       Matrix33 ortho_matrix = 
-        euler_angles.template toOrthoRotMat<2, 1, -3, 1>();
+        euler_angles.template ToOrthoRotMat<2, 1, -3, 1>();
       GeneralRotation general_rotation(ortho_matrix);
       y[0] = general_rotation[0];
       y[1] = general_rotation[1];
@@ -61,9 +61,9 @@ public:
     }
   };
 
-  typedef hs::math::fdjac::FwdFiniteDiffJacobian<
-    EulerAnglesToGeneralVectorFunction> Jacobian;
-  typedef typename Jacobian::Jac JacobianMatrix;
+  typedef hs::math::fdjac::ForwardFiniteDifferenceJacobianMatrixCalculator<
+    EulerAnglesToGeneralVectorFunction> JacobianMatrixCalculator;
+  typedef typename JacobianMatrixCalculator::JacobianMatrix JacobianMatrix;
 
   Err operator()(const Vector3& cameram_rotation,
                  Scalar x_rotation_stddev,
@@ -79,7 +79,7 @@ public:
     }
 
     EulerAnglesToGeneralVectorFunction euler_angles_to_general;
-    Jacobian jacobian;
+    JacobianMatrixCalculator jacobian;
     JacobianMatrix jacobian_matrix;
     if (jacobian(euler_angles_to_general, x, jacobian_matrix) != 0)
     {

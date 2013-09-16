@@ -41,7 +41,7 @@ hslib_add_library(${UTILITY_NAME} ${HSPRJ_NAME} ${UTILITY_SOURCES})
 
 set(UTILITY_UTEST_SOURCES
   "unit_test/test_main.cpp"
-  "unit_test/utility/test_cam_type.cpp"
+  "unit_test/utility/test_camera_type.cpp"
   "unit_test/utility/test_ransac_fit_plane.cpp"
   "unit_test/utility/test_sfm_file_io.cpp"
   "unit_test/utility/test_synthetic_scene_generator.cpp"
