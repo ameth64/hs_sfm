@@ -65,7 +65,7 @@ public:
 
   Scalar focal_length() const
   {
-    return focal_length_
+    return focal_length_;
   }
 
   Scalar skew() const
