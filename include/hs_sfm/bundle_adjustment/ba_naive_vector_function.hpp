@@ -136,24 +136,24 @@ public:
 
   Err operator() (const XVector& x, YVector& y) const
   {
-    Index xSize = x.rows();
-    if (xSize != GetXSize()) return -1;
+    Index x_size = x.rows();
+    if (x_size != GetXSize()) return -1;
     if (number_of_features_ != Index(feature_maps_.size())) return -1;
-    Index ySize = GetYSize();
-    y.resize(ySize);
+    Index y_size = GetYSize();
+    y.resize(y_size);
 
-    Index camParamSize = GetCameraParamsSize();
+    Index camera_params_size = GetCameraParamsSize();
 
     for (Index i = 0; i < number_of_features_; i++)
     {
-      Index camId = feature_maps_[i].first;
-      Index ptId = feature_maps_[i].second;
+      Index camera_id = feature_maps_[i].first;
+      Index point_id = feature_maps_[i].second;
 
-      Vector3 p = x.segment(camParamSize + ptId * params_per_point_,
-               params_per_point_);
+      Vector3 p = x.segment(camera_params_size + point_id * params_per_point_,
+                            params_per_point_);
 
-      Vector3 r = x.segment(camId * params_per_camera_, 3);
-      Vector3 t = x.segment(camId * params_per_camera_ + 3, 3);
+      Vector3 r = x.segment(camera_id * params_per_camera_, 3);
+      Vector3 t = x.segment(camera_id * params_per_camera_ + 3, 3);
 
       Vector2 feat;
       PointProjectToFeature(r, t, p, feat);

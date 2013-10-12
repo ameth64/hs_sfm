@@ -5,6 +5,9 @@
 #include "hs_math/geometry/rotation.hpp"
 #include "hs_math/fdjac/forward_finite_difference_jacobian_matrix_calculator.hpp"
 #include "hs_math/linear_algebra/eigen_macro.hpp"
+#include "hs_math/linear_algebra/latraits/vector_eigen.hpp"
+#include "hs_math/linear_algebra/latraits/matrix_eigen.hpp"
+#include "hs_math/linear_algebra/lafunc/arithmetic_eigen.hpp"
 
 namespace hs
 {

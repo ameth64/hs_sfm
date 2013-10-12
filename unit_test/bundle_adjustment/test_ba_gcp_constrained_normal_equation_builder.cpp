@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 
 #include <gtest/gtest.h>
 
@@ -6,28 +6,28 @@
 #include "hs_math/linear_algebra/lafunc/arithmetic_eigen.hpp"
 #include "hs_math/fdjac/forward_finite_difference_sparse_jacobian_matrix_calculator.hpp"
 
-#include "hs_sfm/bundle_adjustment/ba_naive_analytical_jacobian_matrix_calculator.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_forward_finite_difference_jacobian_matrix_calculator.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_noised_y_generator.hpp"
-#include "hs_sfm/bundle_adjustment/ba_naive_synthetic_data_generator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_gcp_constrained_analytical_jacobian_matrix_calculator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_gcp_constrained_forward_finite_difference_jacobian_matrix_calculator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_gcp_constrained_noised_y_generator.hpp"
+#include "hs_sfm/bundle_adjustment/ba_gcp_constrained_synthetic_data_generator.hpp"
 
-#include "hs_sfm/bundle_adjustment/ba_naive_normal_equation_builder.hpp"
+#include "hs_sfm/bundle_adjustment/ba_gcp_constrained_normal_equation_builder.hpp"
 
 namespace
 {
 
 template <typename _Scalar>
-class TestBANaiveNLLSONormalEquationBuilder
+class TestBAGCPConstrainedNormalEquationBuilder
 {
 public:
   typedef _Scalar Scalar;
   typedef int Err;
 
-  typedef hs::sfm::ba::BANaiveVectorFunction<Scalar> VectorFunction;
+  typedef hs::sfm::ba::BAGCPConstrainedVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::XVector XVector;
   typedef typename VectorFunction::YVector YVector;
   typedef typename VectorFunction::Index Index;
-  typedef hs::sfm::ba::BANaiveNormalEquationBuilder<Scalar>
+  typedef hs::sfm::ba::BAGCPConstrainedNormalEquationBuilder<Scalar>
           NormalEquationBuilder;
   typedef typename NormalEquationBuilder::YCovarianceInverse YCovarianceInverse;
   typedef typename NormalEquationBuilder::NormalMatrix NormalMatrix;
@@ -39,27 +39,31 @@ public:
       VectorFunction> FFDJacobianMatrixCalculator;
   typedef typename FFDJacobianMatrixCalculator::JacobianMatrix
                    FFDJacobianMatrix;
+
   typedef
-    hs::sfm::ba::BANaiveForwardFiniteDifferenceJacobianMatrixCalculator<
+    hs::sfm::ba::BAGCPConstrainedForwardFiniteDifferenceJacobianMatrixCalculator<
       VectorFunction> BAFFDJacobianMatrixCalculator;
   typedef typename BAFFDJacobianMatrixCalculator::JacobianMatrix
                    BAFFDJacobianMatrix;
   typedef
-    hs::sfm::ba::BANaiveAnalyticalJacobianMatrixCalculator<
+    hs::sfm::ba::BAGCPConstrainedAnalyticalJacobianMatrixCalculator<
       VectorFunction> BAAnalyticJacobianMatrixCalculator;
   typedef typename BAAnalyticJacobianMatrixCalculator::JacobianMatrix
                    BAAnalyticJacobianMatrix;
 
-  typedef hs::sfm::ba::BANaiveNoisedYGenerator<_Scalar> NoisedYGenerator;
+  typedef hs::sfm::ba::BAGCPConstrainedNoisedYGenerator<Scalar> NoisedYGenerator;
 
-  typedef EIGEN_MATRIX(Scalar, Eigen::Dynamic, Eigen::Dynamic)
-          MatrixXX;
+private:
+  typedef EIGEN_MATRIX(Scalar, Eigen::Dynamic, Eigen::Dynamic) MatrixXX;
   typedef EIGEN_VECTOR(Scalar, Eigen::Dynamic) VectorX;
   typedef EIGEN_MATRIX(Scalar, 2, 2) Matrix22;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
 
+public:
   static Err Test(const VectorFunction& vector_function,
                   const XVector& x,
-                  const Matrix22& feature_covariance)
+                  const Matrix22& feature_covariance,
+                  const Matrix33& gcp_covariance)
   {
     Err result = 0;
 
@@ -71,14 +75,18 @@ public:
     }
 
     Index number_of_features = vector_function.number_of_features();
+    Index number_of_gcps = vector_function.number_of_gcps();
     MatrixXX dense_y_covariance_inverse;
     YCovarianceInverse y_covariance_inverse;
-    if (GenerateFeatureCovaianceInverse(
-          feature_covariance, number_of_features,
+    if (GenerateYCovarianceInverse(
+          feature_covariance,
+          gcp_covariance,
+          number_of_features,
+          number_of_gcps,
           dense_y_covariance_inverse,
           y_covariance_inverse) != 0)
     {
-      std::cout<<"GenerateFeatureCovaianceInverse Failed.\n";
+      std::cout<<"GenerateYCovaianceInverse Failed.\n";
       return -1;
     }
 
@@ -184,9 +192,9 @@ public:
       if (err > threshold)
       {
         std::cout<<"dense_gradient["<<i<<"]:"
-                  <<dense_value<<" .\n";
+                 <<dense_value<<" .\n";
         std::cout<<"ba_ffd_gradient["<<i<<"]:"
-                  <<ba_ffd_value<<" .\n";
+                 <<ba_ffd_value<<" .\n";
         result = -1;
       }
     }
@@ -195,16 +203,20 @@ public:
   }
 
 private:
-  static Err GenerateFeatureCovaianceInverse(
+  static Err GenerateYCovarianceInverse(
     const Matrix22& feature_covariance,
+    const Matrix33& gcp_covariance,
     Index number_of_features,
+    Index number_of_gcps,
     MatrixXX& dense_y_covariance_inverse,
     YCovarianceInverse& y_covariance_inverse)
   {
-    y_covariance_inverse.blocks.clear();
-    dense_y_covariance_inverse.resize(
-      number_of_features * VectorFunction::params_per_feature_,
-      number_of_features * VectorFunction::params_per_feature_);
+    y_covariance_inverse.naive_y_covariance_inverse.blocks.clear();
+    Index feature_size =
+      number_of_features * VectorFunction::params_per_feature_;
+    Index y_size = feature_size +
+                   number_of_gcps * VectorFunction::params_per_point_;
+    dense_y_covariance_inverse.resize(y_size, y_size);
     dense_y_covariance_inverse.setZero();
     for (Index i = 0; i < number_of_features; i++)
     {
@@ -213,22 +225,35 @@ private:
         VectorFunction::params_per_feature_>(
         i * VectorFunction::params_per_feature_,
         i * VectorFunction::params_per_feature_) = feature_covariance.inverse();
-      y_covariance_inverse.blocks.push_back(feature_covariance.inverse());
+      y_covariance_inverse.naive_y_covariance_inverse.blocks.push_back(
+        feature_covariance.inverse());
+    }
+    for (Index i = 0; i < number_of_gcps; i++)
+    {
+      dense_y_covariance_inverse.template block<
+        VectorFunction::params_per_point_,
+        VectorFunction::params_per_point_>(
+        feature_size + i * VectorFunction::params_per_point_,
+        feature_size + i * VectorFunction::params_per_point_) = 
+          gcp_covariance.inverse();
+      y_covariance_inverse.gcp_blocks.push_back(gcp_covariance.inverse());
     }
 
     return 0;
   }
 };
 
-TEST(TestBANaiveNLLSONormalEquationBuilder, SmallDataTest)
+TEST(TestBAGCPConstrainedNormalEquationBuilder, SmallDataTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
 
-  typedef hs::sfm::ba::BANaiveSyntheticDataGenerator<Scalar, ImageDimension>
+  typedef
+    hs::sfm::ba::BAGCPConstrainedSyntheticDataGenerator<Scalar, ImageDimension>
     DataGenerator;
-  typedef TestBANaiveNLLSONormalEquationBuilder<Scalar> Test;
-  typedef Test::Matrix22 Matrix22;
+  typedef TestBAGCPConstrainedNormalEquationBuilder<Scalar> Test;
+  typedef EIGEN_MATRIX(Scalar, 2, 2) Matrix22;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
   typedef Test::VectorFunction VectorFunction;
   typedef VectorFunction::XVector XVector;
   typedef VectorFunction::YVector YVector;
@@ -248,6 +273,7 @@ TEST(TestBANaiveNLLSONormalEquationBuilder, SmallDataTest)
   Scalar camera_planar_stddev = 5;
   Scalar camera_rotation_stddev = 1;
   Scalar north_west_angle = 60;
+  size_t number_of_gcps = 5;
 
   VectorFunction vector_function;
   XVector x;
@@ -267,14 +293,20 @@ TEST(TestBANaiveNLLSONormalEquationBuilder, SmallDataTest)
                                camera_height_stddev,
                                camera_planar_stddev,
                                camera_rotation_stddev,
-                               north_west_angle);
+                               north_west_angle,
+                               number_of_gcps);
+
   ASSERT_EQ(0, data_generator(vector_function, x, y));
   Scalar focal_length_in_pixel = data_generator.GetFocalLengthInPixel();
 
   Matrix22 feature_covariance = Matrix22::Identity();
   feature_covariance /= focal_length_in_pixel * focal_length_in_pixel;
 
-  ASSERT_EQ(0, Test::Test(vector_function, x, feature_covariance));
+  Matrix33 gcp_covariance = Matrix33::Identity();
+  gcp_covariance *= Scalar(2);
+
+  ASSERT_EQ(0, Test::Test(vector_function, x,
+                          feature_covariance, gcp_covariance));
 }
 
 }
