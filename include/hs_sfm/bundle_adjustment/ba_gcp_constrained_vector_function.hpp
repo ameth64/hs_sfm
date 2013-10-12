@@ -32,6 +32,7 @@ public:
   using Base::GetYSize;
   using Base::feature_maps;
   using Base::number_of_features;
+  using Base::PointProjectToFeature;
 
 private:
   typedef typename Base::Vector2 Vector2;
