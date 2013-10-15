@@ -174,13 +174,23 @@ public:
 
     //轴角旋转加上平移
     Scalar theta = rotation.norm();
-    Vector3 normalized_rotation = rotation / theta;
-    Vector3 feature_homogeneous =
-      cos(theta) * point +
-      sin(theta) * normalized_rotation.cross(point) +
-      (1 - cos(theta)) * point.dot(normalized_rotation) * normalized_rotation + translation;
-    feature_homogeneous /= feature_homogeneous[2];
-    feature = feature_homogeneous.segment(0, 2);
+    if (theta == Scalar(0))
+    {
+      Vector3 feature_homogeneous = point + translation;
+      feature_homogeneous /= feature_homogeneous[2];
+      feature = feature_homogeneous.segment(0, 2);
+    }
+    else
+    {
+      Vector3 normalized_rotation = rotation / theta;
+      Vector3 feature_homogeneous =
+        cos(theta) * point +
+        sin(theta) * normalized_rotation.cross(point) +
+        (1 - cos(theta)) * point.dot(normalized_rotation) *
+        normalized_rotation + translation;
+      feature_homogeneous /= feature_homogeneous[2];
+      feature = feature_homogeneous.segment(0, 2);
+    }
 
     return 0;
   }

@@ -88,7 +88,7 @@ public:
   Err operator() (VectorFunction& vector_function,
                   XVector& x, YVector& y) const
   {
-    //Copy 从ba_naive_synthetic_data_generator.hpp拷贝了大量代码过来
+    //从ba_naive_synthetic_data_generator.hpp拷贝了大量代码过来
     //TODO:这里应该要有更合适的设计才对！
     IntrinsicParamsContainer intrinsic_params_set;
     ExtrinsicParamsContainer extrinsic_params_set;
