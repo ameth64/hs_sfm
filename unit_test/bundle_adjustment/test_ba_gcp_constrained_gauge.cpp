@@ -651,13 +651,13 @@ TEST(TestBAGCPConstrainedGauge, DoubleTest)
   typedef Test::ImageDimension ImageDimension;
 
   Scalar focal_length_in_metre = 0.019;
-  size_t number_of_strips = 5;
+  size_t number_of_strips = 7;
   size_t number_of_cameras_in_strip = 20;
   Scalar ground_resolution = 0.1;
   ImageDimension image_width = 6000;
   ImageDimension image_height = 4000;
   Scalar pixel_size = 0.0000039;
-  size_t number_of_points = 2000;
+  size_t number_of_points = 3000;
   Scalar lateral_overlap_ratio = 0.7;
   Scalar longitudinal_overlap_ratio = 0.8;
   Scalar scene_max_height = 100;
@@ -665,7 +665,7 @@ TEST(TestBAGCPConstrainedGauge, DoubleTest)
   Scalar camera_plannar_stddev = 5;
   Scalar camera_rotation_stddev = 5;
   Scalar north_west_angle = 60; 
-  size_t number_of_gcps = 5;
+  size_t number_of_gcps = 10;
 
   Scalar gcp_planar_stddev = 0.05;
   Scalar gcp_height_stddev = 0.1;
