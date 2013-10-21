@@ -2,7 +2,7 @@
 #define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_SYNTHETIC_DATA_GENERATOR_HPP_
 
 #include "hs_sfm/bundle_adjustment/ba_naive_vector_function.hpp"
-#include "hs_sfm/utility/synthetic_scene_generator.hpp"
+#include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
 
 namespace hs
 {
@@ -35,9 +35,6 @@ public:
   typedef hs::sfm::KeysGenerator<Scalar, ImageDimension> KeysGenerator;
   typedef typename KeysGenerator::Keys Keys;
   typedef typename KeysGenerator::KeysContainer KeysContainer;
-  typedef typename KeysGenerator::Track Track;
-  typedef typename KeysGenerator::TrackContainer TrackContainer;
-  typedef typename KeysGenerator::CameraViewContainer CameraViewContainer;
 
   typedef BANaiveVectorFunction<Scalar> BAVectorFunction;
   typedef typename BAVectorFunction::Index Index;

@@ -50,7 +50,6 @@ private:
                    ExtrinsicParamsContainer;
   typedef typename DataGenerator::Point3DContainer Point3DContainer;
   typedef typename DataGenerator::KeysContainer KeysContainer;
-  typedef typename DataGenerator::TrackContainer TrackContainer;
   typedef EIGEN_MATRIX(Scalar, 2, 2) Matrix22;
   typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
   typedef EIGEN_MATRIX(Scalar, 4, 4) Matrix44;

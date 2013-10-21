@@ -41,8 +41,6 @@ private:
   typedef typename DataGenerator::Point3DContainer Point3DContainer;
   typedef typename DataGenerator::KeysContainer
           KeysContainer;
-  typedef typename DataGenerator::TrackContainer
-          TrackContainer;
   typedef EIGEN_MATRIX(Scalar, 2, 2) Matrix22;
   typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
@@ -183,7 +181,7 @@ public:
     //generate gcps
     Point3DContainer gcp_points;
     KeysContainer gcp_image_keys_set;
-    TrackContainer gcp_tracks;
+    hs::sfm::TrackContainer gcp_tracks;
     if (data_generator_.GenerateGCPs(number_of_gcp_, vector_function, true_x,
                                      gcp_points,
                                      gcp_image_keys_set,

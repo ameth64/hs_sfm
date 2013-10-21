@@ -6,10 +6,10 @@
 #include <fstream>
 #include <iomanip>
 
-#include "hs_sfm/utility/key_type.hpp"
-#include "hs_sfm/utility/match_type.hpp"
-#include "hs_sfm/utility/camera_type.hpp"
-#include "hs_sfm/utility/ransac_fit_plane.hpp"
+#include "hs_sfm/sfm_utility/key_type.hpp"
+#include "hs_sfm/sfm_utility/match_type.hpp"
+#include "hs_sfm/sfm_utility/camera_type.hpp"
+#include "hs_sfm/sfm_utility/ransac_fit_plane.hpp"
 
 namespace hs
 {

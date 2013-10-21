@@ -1,6 +1,6 @@
 ﻿#include <gtest/gtest.h>
 
-#include "hs_sfm/utility/camera_type.hpp"
+#include "hs_sfm/sfm_utility/camera_type.hpp"
 
 namespace
 {

@@ -4,7 +4,7 @@
 #include "hs_optimizor/nllso/meta_eigen_levenberg_marquardt.hpp"
 #include "hs_optimizor/nllso/levenberg_marquardt.hpp"
 
-#include "hs_sfm/utility/camera_type.hpp"
+#include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/triangulate/multiple_view_vector_function.hpp"
 #include "hs_sfm/triangulate/multiple_view_dlt.hpp"
 

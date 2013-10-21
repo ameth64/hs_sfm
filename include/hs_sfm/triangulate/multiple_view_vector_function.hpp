@@ -3,7 +3,7 @@
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
-#include "hs_sfm/utility/camera_type.hpp"
+#include "hs_sfm/sfm_utility/camera_type.hpp"
 
 namespace hs
 {

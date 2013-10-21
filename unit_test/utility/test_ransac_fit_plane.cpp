@@ -3,7 +3,7 @@
 #include "hs_math/random/normal_random_var.hpp"
 #include "hs_math/random/uniform_random_var.hpp"
 
-#include "hs_sfm/utility/ransac_fit_plane.hpp"
+#include "hs_sfm/sfm_utility/ransac_fit_plane.hpp"
 
 namespace
 {

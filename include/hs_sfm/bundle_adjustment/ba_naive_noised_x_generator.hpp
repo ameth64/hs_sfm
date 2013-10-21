@@ -3,7 +3,7 @@
 
 #include "hs_math/random/normal_random_var.hpp"
 
-#include "hs_sfm/utility/camera_rotation_covariance.hpp"
+#include "hs_sfm/sfm_utility/camera_rotation_covariance.hpp"
 
 #include "hs_sfm/bundle_adjustment/ba_naive_vector_function.hpp"
 

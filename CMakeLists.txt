@@ -36,7 +36,7 @@ hslib_add_dep(${BA_NAME}_utest
 hslib_post_build(${BA_NAME}_utest)
 
 #utility
-set(UTILITY_NAME "utility")
+set(UTILITY_NAME "sfm_utility")
 set(UTILITY_SOURCES
   )
 hslib_add_library(${UTILITY_NAME} ${HSPRJ_NAME} ${UTILITY_SOURCES})
@@ -76,3 +76,80 @@ hslib_add_dep(${TRIANGULATE_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   HS_DEPS hs_math HEADONLY)
 hslib_post_build(${TRIANGULATE_NAME}_utest)
+
+#incremental
+set(INCREMENTAL_NAME "incremental")
+set(INCREMENTAL_SOURCES
+  )
+hslib_add_library(${INCREMENTAL_NAME} ${HSPRJ_NAME} ${INCREMENTAL_SOURCES})
+
+set(INCREMENTAL_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  "unit_test/incremental/test_incremental.cpp"
+  )
+hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
+hslib_add_dep(${INCREMENTAL_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  HS_DEPS hs_math HEADONLY)
+hslib_post_build(${INCREMENTAL_NAME}_utest)
+
+#essential
+set(ESSENTIAL_NAME "essential")
+set(ESSENTIAL_SOURCES
+  )
+hslib_add_library(${ESSENTIAL_NAME} ${HSPRJ_NAME} ${ESSENTIAL_SOURCES})
+
+set(ESSENTIAL_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  )
+hslib_add_utest(${ESSENTIAL_NAME} SOURCES ${ESSENTIAL_UTEST_SOURCES})
+hslib_add_dep(${ESSENTIAL_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  HS_DEPS hs_math HEADONLY)
+hslib_post_build(${ESSENTIAL_NAME}_utest)
+
+#fundamental
+set(FUNDAMENTAL_NAME "fundamental")
+set(FUNDAMENTAL_SOURCES
+  )
+hslib_add_library(${FUNDAMENTAL_NAME} ${HSPRJ_NAME} ${FUNDAMENTAL_SOURCES})
+
+set(FUNDAMENTAL_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  )
+hslib_add_utest(${FUNDAMENTAL_NAME} SOURCES ${FUNDAMENTAL_UTEST_SOURCES})
+hslib_add_dep(${FUNDAMENTAL_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  HS_DEPS hs_math HEADONLY)
+hslib_post_build(${FUNDAMENTAL_NAME}_utest)
+
+#homography
+set(HOMOGRAPHY_NAME "homography")
+set(HOMOGRAPHY_SOURCES
+  )
+hslib_add_library(${HOMOGRAPHY_NAME} ${HSPRJ_NAME} ${HOMOGRAPHY_SOURCES})
+
+set(HOMOGRAPHY_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  "unit_test/homography/test_homography2d_vector_function.cpp"
+  )
+hslib_add_utest(${HOMOGRAPHY_NAME} SOURCES ${HOMOGRAPHY_UTEST_SOURCES})
+hslib_add_dep(${HOMOGRAPHY_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  HS_DEPS hs_math HEADONLY)
+hslib_post_build(${HOMOGRAPHY_NAME}_utest)
+
+#projective
+set(PROJECTIVE_NAME "projective")
+set(PROJECTIVE_SOURCES
+  )
+hslib_add_library(${PROJECTIVE_NAME} ${HSPRJ_NAME} ${PROJECTIVE_SOURCES})
+
+set(PROJECTIVE_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  )
+hslib_add_utest(${PROJECTIVE_NAME} SOURCES ${PROJECTIVE_UTEST_SOURCES})
+hslib_add_dep(${PROJECTIVE_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  HS_DEPS hs_math HEADONLY)
+hslib_post_build(${PROJECTIVE_NAME}_utest)

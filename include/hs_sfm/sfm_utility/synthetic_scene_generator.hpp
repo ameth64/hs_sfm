@@ -6,10 +6,10 @@
 
 #include "hs_math/geometry/euler_angles.hpp"
 
-#include "hs_sfm/utility/camera_type.hpp"
-#include "hs_sfm/utility/key_type.hpp"
-#include "hs_sfm/utility/match_type.hpp"
-#include "hs_sfm/utility/sfm_file_io.hpp"
+#include "hs_sfm/sfm_utility/camera_type.hpp"
+#include "hs_sfm/sfm_utility/key_type.hpp"
+#include "hs_sfm/sfm_utility/match_type.hpp"
+#include "hs_sfm/sfm_utility/sfm_file_io.hpp"
 
 namespace hs
 {
@@ -54,7 +54,8 @@ SceneGenerator(Scalar focal_length_in_metre,
      : focal_length_in_metre_(focal_length_in_metre),
        number_of_strips_(number_of_strips),
        number_of_cameras_in_strip_(number_of_cameras_in_strip), 
-       ground_resolution_(ground_resolution), image_width_(image_width), image_height_(image_height),
+       ground_resolution_(ground_resolution),
+       image_width_(image_width), image_height_(image_height),
        pixel_size_(pixel_size),
        number_of_points_(number_of_points),
        lateral_overlap_ratio_(lateral_overlap_ratio),
@@ -121,13 +122,46 @@ void GenerateScenePoints(size_t number_of_points,
   Point3D max_point;
   max_point << scene_x_dimension * 0.5,
                scene_y_dimension * 0.5,
-               scene_z_dimension * 0.5;
-  Point3D min_point = -max_point;
+               scene_z_dimension;
+  Point3D min_point;
+  min_point << -scene_z_dimension * 0.5,
+               -scene_y_dimension * 0.5,
+               0;
 
   for (size_t i = 0; i < number_of_points; i++)
   {
     hs::math::random::UniformRandomVar<Scalar, 3>::Generate(
       min_point, max_point, points[i]);
+    points[i] = north_west_rotaion * points[i];
+  }
+}
+
+void GenerateScenePlanarPoints(size_t number_of_points,
+                               Scalar height,
+                               Point3DContainer& points) const
+{
+  points.resize(number_of_points);
+  Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
+  GetSceneDimensions(scene_x_dimension, scene_y_dimension, scene_z_dimension);
+
+  Scalar north_west_angle_radian = north_west_angle_ / 180 * Scalar(M_PI);
+  Matrix33 north_west_rotaion;
+  north_west_rotaion
+    << cos(north_west_angle_radian), -sin(north_west_angle_radian), 0,
+       sin(north_west_angle_radian),  cos(north_west_angle_radian), 0,
+       0, 0, 1;
+
+  EIGEN_VECTOR(Scalar, 2) max_planar_point;
+  max_planar_point << scene_x_dimension * 0.5,
+                      scene_y_dimension * 0.5;
+  EIGEN_VECTOR(Scalar, 2) min_planar_point = -max_planar_point;
+  for (size_t i = 0; i < number_of_points; i++)
+  {
+    EIGEN_VECTOR(Scalar, 2) planar_point;
+    hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
+      min_planar_point, max_planar_point, planar_point);
+    points[i].template segment<2>(0) = planar_point;
+    points[i][2] = height;
     points[i] = north_west_rotaion * points[i];
   }
 }
@@ -297,10 +331,6 @@ typedef CameraFunctions<Scalar> Camera;
 typedef typename Camera::ProjectionMatrix ProjectionMatrix;
 typedef ImageKeys<Scalar> Keys;
 typedef EIGEN_STD_VECTOR(Keys) KeysContainer;
-typedef std::vector<std::pair<size_t, size_t> > Track;
-typedef std::vector<Track> TrackContainer;
-typedef std::vector<std::pair<size_t, size_t> > CameraView;
-typedef std::vector<CameraView> CameraViewContainer;
 
 typedef int Err;
 

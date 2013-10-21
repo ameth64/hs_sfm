@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "hs_sfm/utility/synthetic_scene_generator.hpp"
+#include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
 #include "hs_sfm/triangulate/multiple_view_vector_function.hpp"
 
 namespace hs

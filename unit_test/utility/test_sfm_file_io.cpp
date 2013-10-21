@@ -2,7 +2,7 @@
 
 #include "hs_test_utility/test_env/data_path.hpp"
 
-#include "hs_sfm/utility/sfm_file_io.hpp"
+#include "hs_sfm/sfm_utility/sfm_file_io.hpp"
 
 namespace
 {
