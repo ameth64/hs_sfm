@@ -395,12 +395,10 @@ ImageDimension image_height_;
 class MatchGenerator
 {
 public:
-typedef std::vector<std::pair<size_t, size_t> > Track;
-typedef std::vector<Track> TrackContainer;
 typedef int Err;
 
 Err operator()(const TrackContainer& tracks,
-               hs::sfm::MatchContainer& matches) const
+               MatchContainer& matches) const
 {
   using namespace hs::sfm;
   size_t number_of_tracks = tracks.size();

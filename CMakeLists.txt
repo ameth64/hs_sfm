@@ -116,6 +116,7 @@ hslib_add_library(${FUNDAMENTAL_NAME} ${HSPRJ_NAME} ${FUNDAMENTAL_SOURCES})
 
 set(FUNDAMENTAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
+  "unit_test/fundamental/test_linear_8_points_calculator.cpp"
   )
 hslib_add_utest(${FUNDAMENTAL_NAME} SOURCES ${FUNDAMENTAL_UTEST_SOURCES})
 hslib_add_dep(${FUNDAMENTAL_NAME}_utest
@@ -131,6 +132,7 @@ hslib_add_library(${HOMOGRAPHY_NAME} ${HSPRJ_NAME} ${HOMOGRAPHY_SOURCES})
 
 set(HOMOGRAPHY_UTEST_SOURCES
   "unit_test/test_main.cpp"
+  "unit_test/homography/test_homography2d_analytical_jacobian_matrix_calculator.cpp"
   "unit_test/homography/test_homography2d_vector_function.cpp"
   )
 hslib_add_utest(${HOMOGRAPHY_NAME} SOURCES ${HOMOGRAPHY_UTEST_SOURCES})
