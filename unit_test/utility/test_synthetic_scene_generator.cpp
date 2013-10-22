@@ -91,8 +91,6 @@ TEST(TestSyntheticSceneGenerator, SimpleTest)
 
   typedef KeysGen::Keys ImgKeys;
   typedef KeysGen::KeysContainer ImgKeysContainer;
-  typedef KeysGen::TrackContainer TrackContainer;
-  typedef KeysGen::CameraViewContainer CameraViewContainer;
 
   typedef hs::sfm::MatchContainer MatchContainer;
 
@@ -149,8 +147,8 @@ TEST(TestSyntheticSceneGenerator, SimpleTest)
 
   KeysGen keys_generator(image_width, image_height);
   ImgKeysContainer image_keys_set;
-  TrackContainer tracks;
-  CameraViewContainer camera_views;
+  hs::sfm::TrackContainer tracks;
+  hs::sfm::CameraViewContainer camera_views;
   keys_generator(intrinsic_params_set,
                  extrinsic_params_set, points,
                  image_keys_set,

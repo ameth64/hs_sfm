@@ -37,9 +37,6 @@ public:
   typedef hs::sfm::KeysGenerator<Scalar, ImageDimension> KeysGenerator;
   typedef typename KeysGenerator::Keys Keys;
   typedef typename KeysGenerator::KeysContainer KeysContainer;
-  typedef typename KeysGenerator::Track Track;
-  typedef typename KeysGenerator::TrackContainer TrackContainer;
-  typedef typename KeysGenerator::CameraViewContainer CameraViewContainer;
 
   typedef MultipleViewVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
@@ -97,8 +94,8 @@ public:
     }
 
     KeysContainer image_keys;
-    TrackContainer tracks;
-    CameraViewContainer camera_views;
+    hs::sfm::TrackContainer tracks;
+    hs::sfm::CameraViewContainer camera_views;
     if (keys_generator_(intrinsic_params_set, extrinsic_params_set, points,
                         image_keys, tracks, camera_views) != 0)
     {
