@@ -71,18 +71,39 @@ public:
       C(i, 8) = Scalar(1);
     }
 
-    Eigen::JacobiSVD<ConstraintMatrix> svd(C, Eigen::ComputeThinV);
-    FVector f_vector = svd.matrixV().col(8);
     FMatrix f_matrix_transformed_full_rank;
-    f_matrix_transformed_full_rank(0, 0) = f_vector[0];
-    f_matrix_transformed_full_rank(0, 1) = f_vector[1];
-    f_matrix_transformed_full_rank(0, 2) = f_vector[2];
-    f_matrix_transformed_full_rank(1, 0) = f_vector[3];
-    f_matrix_transformed_full_rank(1, 1) = f_vector[4];
-    f_matrix_transformed_full_rank(1, 2) = f_vector[5];
-    f_matrix_transformed_full_rank(2, 0) = f_vector[6];
-    f_matrix_transformed_full_rank(2, 1) = f_vector[7];
-    f_matrix_transformed_full_rank(2, 2) = f_vector[8];
+    if (number_of_keys > 8)
+    {
+      Eigen::JacobiSVD<ConstraintMatrix> svd(C, Eigen::ComputeThinV);
+      FVector f_vector = svd.matrixV().col(8);
+      f_matrix_transformed_full_rank(0, 0) = f_vector[0];
+      f_matrix_transformed_full_rank(0, 1) = f_vector[1];
+      f_matrix_transformed_full_rank(0, 2) = f_vector[2];
+      f_matrix_transformed_full_rank(1, 0) = f_vector[3];
+      f_matrix_transformed_full_rank(1, 1) = f_vector[4];
+      f_matrix_transformed_full_rank(1, 2) = f_vector[5];
+      f_matrix_transformed_full_rank(2, 0) = f_vector[6];
+      f_matrix_transformed_full_rank(2, 1) = f_vector[7];
+      f_matrix_transformed_full_rank(2, 2) = f_vector[8];
+    }
+    else
+    {
+      typedef EIGEN_MATRIX(Scalar, 8, 8) Matrix88;
+      typedef EIGEN_VECTOR(Scalar, 8) Vector8;
+      Matrix88 C_88 = C.template block<8, 8>(0, 0);
+      Vector8 rhs = Vector8::Constant(Scalar(-1));
+      Eigen::FullPivLU<Matrix88> lu(C_88);
+      Vector8 f_vector = lu.solve(rhs);
+      f_matrix_transformed_full_rank(0, 0) = f_vector[0];
+      f_matrix_transformed_full_rank(0, 1) = f_vector[1];
+      f_matrix_transformed_full_rank(0, 2) = f_vector[2];
+      f_matrix_transformed_full_rank(1, 0) = f_vector[3];
+      f_matrix_transformed_full_rank(1, 1) = f_vector[4];
+      f_matrix_transformed_full_rank(1, 2) = f_vector[5];
+      f_matrix_transformed_full_rank(2, 0) = f_vector[6];
+      f_matrix_transformed_full_rank(2, 1) = f_vector[7];
+      f_matrix_transformed_full_rank(2, 2) = Scalar(1);
+    }
 
     FMatrix f_matrix_transformed_rank2;
     NearestRank2Matrix(f_matrix_transformed_full_rank,
@@ -97,7 +118,7 @@ public:
 
 private:
   void GetKeysNormalTransform(const KeyContainer& keys,
-                     AffineMatrix& transform) const
+                              AffineMatrix& transform) const
   {
     size_t number_of_keys = keys.size();
     Key centroid = Key::Zero();
@@ -129,9 +150,9 @@ private:
   }
 
   inline void UnNormalizeFMatrix(const AffineMatrix& transform_left,
-                          const AffineMatrix& transform_right,
-                          const FMatrix& f_matrix_transformed,
-                          FMatrix& f_matrix) const
+                                 const AffineMatrix& transform_right,
+                                 const FMatrix& f_matrix_transformed,
+                                 FMatrix& f_matrix) const
   {
     f_matrix = transform_right.transpose() *
                f_matrix_transformed *

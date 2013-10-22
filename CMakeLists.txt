@@ -117,6 +117,7 @@ hslib_add_library(${FUNDAMENTAL_NAME} ${HSPRJ_NAME} ${FUNDAMENTAL_SOURCES})
 set(FUNDAMENTAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/fundamental/test_linear_8_points_calculator.cpp"
+  "unit_test/fundamental/test_linear_8_points_ransac_refiner.cpp"
   )
 hslib_add_utest(${FUNDAMENTAL_NAME} SOURCES ${FUNDAMENTAL_UTEST_SOURCES})
 hslib_add_dep(${FUNDAMENTAL_NAME}_utest
