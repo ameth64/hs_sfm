@@ -101,6 +101,8 @@ hslib_add_library(${ESSENTIAL_NAME} ${HSPRJ_NAME} ${ESSENTIAL_SOURCES})
 
 set(ESSENTIAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
+  "unit_test/essential/test_ematrix_5_points_calculator.cpp"
+  "unit_test/essential/test_ematrix_5_points_ransac_refiner.cpp"
   )
 hslib_add_utest(${ESSENTIAL_NAME} SOURCES ${ESSENTIAL_UTEST_SOURCES})
 hslib_add_dep(${ESSENTIAL_NAME}_utest

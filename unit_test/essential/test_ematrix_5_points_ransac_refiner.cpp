@@ -7,15 +7,14 @@
 #include "hs_math/random/uniform_random_var.hpp"
 
 #include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
-#include "hs_sfm/fundamental/linear_8_points_calculator.hpp"
 
-#include "hs_sfm/fundamental/linear_8_points_ransac_refiner.hpp"
+#include "hs_sfm/essential/ematrix_5_points_ransac_refiner.hpp"
 
 namespace
 {
 
 template <typename _Scalar, typename _ImageDimension>
-class TestLinear8PointsRansacRefiner
+class TestEMatrix5PointsRansacRefiner
 {
 public:
   typedef _Scalar Scalar;
@@ -25,6 +24,7 @@ public:
 private:
   typedef hs::sfm::SceneGenerator<Scalar, ImageDimension> SceneGenerator;
   typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
+  typedef typename IntrinsicParams::KMatrix KMatrix;
   typedef typename SceneGenerator::IntrinsicParamsContainer
                    IntrinsicParamsContainer;
   typedef typename SceneGenerator::ExtrinsicParams ExtrinsicParams;
@@ -39,19 +39,14 @@ private:
   typedef typename KeysGenerator::Keys Keys;
   typedef typename KeysGenerator::KeysContainer KeysContainer;
 
-  typedef hs::sfm::fundamental::Linear8PointsCalculator<Scalar> Calculator;
-  typedef typename Calculator::Key Key;
-  typedef typename Calculator::FMatrix FMatrix;
-  typedef EIGEN_VECTOR(Scalar, 3) HKey;
-  typedef EIGEN_VECTOR(Scalar, 3) HLine;
-
-  typedef hs::sfm::fundamental::Linear8PointsRansacRefiner<Scalar> Refiner;
-  typedef typename Refiner::KeyPair KeyPair;
-  typedef typename Refiner::KeyPairContainer KeyPairContainer;
+  typedef hs::sfm::essential::EMatrix5PointsRansacRefiner<Scalar> Refiner;
+  typedef typename Refiner::HKey HKey;
+  typedef typename Refiner::HKeyPair HKeyPair;
+  typedef typename Refiner::HKeyPairContainer HKeyPairContainer;
   typedef typename Refiner::IndexSet IndexSet;
 
 public:
-  TestLinear8PointsRansacRefiner(
+  TestEMatrix5PointsRansacRefiner(
     Scalar focal_length_in_metre,
     size_t number_of_strps,
     Scalar ground_resolution,
@@ -87,7 +82,7 @@ public:
       image_width_(image_width),
       image_height_(image_height){}
 
-  Err operator()()
+  Err operator() ()
   {
     //生成相机参数和三维点
     IntrinsicParamsContainer intrinsic_params_set;
@@ -116,63 +111,61 @@ public:
       return -1;
     }
 
-    //生成计算F矩阵所需的匹配点
-    KeyPairContainer key_pairs;
+    //生成计算E矩阵所需的匹配点，并加入高斯误差和野值
+    HKeyPairContainer key_pairs;
     size_t number_of_tracks = tracks.size();
-    for (size_t i = 0; i < number_of_tracks; i++)
-    {
-      if (tracks[i].size() == 2)
-      {
-        size_t key_left_id = tracks[i][0].second;
-        size_t key_right_id = tracks[i][1].second;
-        KeyPair key_pair;
-        key_pair.first = keys_set[0][key_left_id];
-        key_pair.second = keys_set[1][key_right_id];
-        key_pairs.push_back(key_pair);
-      }
-    }
-
-    //为匹配点加入高斯误差
-    size_t number_of_keys = key_pairs.size();
     EIGEN_MATRIX(Scalar, 2, 2) key_covariance;
     key_covariance.setIdentity();
     Scalar key_stddev = 2;
     key_covariance *= key_stddev * key_stddev;
-    for (size_t i = 0; i < number_of_keys; i++)
-    {
-      Key key_left_mean = key_pairs[i].first;
-      hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
-        key_left_mean, key_covariance, key_pairs[i].first);
-      Key key_right_mean = key_pairs[i].second;
-      hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
-        key_right_mean, key_covariance, key_pairs[i].second);
-    }
-
-    //为匹配点加入野值
-    Key max;
+    KMatrix K_left_inverse = intrinsic_params_set[0].GetKMatrix().inverse();
+    KMatrix K_right_inverse = intrinsic_params_set[1].GetKMatrix().inverse();
+    EIGEN_VECTOR(Scalar, 2) max;
     max << Scalar(image_width_) / (Scalar(2)),
            Scalar(image_height_) / (Scalar(2));
-    Key min = -max;
+    EIGEN_VECTOR(Scalar, 2) min = -max;
     std::set<size_t> true_outlier_indices;
-    for (size_t i = 0; i < number_of_keys; i++)
+    for (size_t i = 0; i < number_of_tracks; i++)
     {
-      Scalar random;
-      hs::math::random::UniformRandomVar<Scalar, 1>::Generate(
-        Scalar(0), Scalar(1), random);
-      if (random < outlier_ratio_)
+      if (tracks[i].size() == 2)
       {
-        hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
-          min, max, key_pairs[i].first);
-        hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
-          min, max, key_pairs[i].second);
-        true_outlier_indices.insert(i);
+        EIGEN_VECTOR(Scalar, 2) noised_key_left;
+        EIGEN_VECTOR(Scalar, 2) noised_key_right;
+        size_t key_left_id = tracks[i][0].second;
+        size_t key_right_id = tracks[i][1].second;
+        HKeyPair key_pair;
+        hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
+          keys_set[0][key_left_id], key_covariance, noised_key_left);
+        hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
+          keys_set[1][key_right_id], key_covariance, noised_key_right);
+
+        Scalar random;
+        hs::math::random::UniformRandomVar<Scalar, 1>::Generate(
+          Scalar(0), Scalar(1), random);
+        if (random < outlier_ratio_)
+        {
+          hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
+            min, max, noised_key_left);
+          hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
+            min, max, noised_key_right);
+          true_outlier_indices.insert(key_pairs.size());
+        }
+
+        key_pair.first.template segment<2>(0) = noised_key_left;
+        key_pair.second.template segment<2>(0) = noised_key_right;
+        key_pair.first[2] = Scalar(1);
+        key_pair.second[2] = Scalar(1);
+        key_pair.first = K_left_inverse * key_pair.first;
+        key_pair.second = K_right_inverse * key_pair.second;
+        key_pairs.push_back(key_pair);
       }
     }
 
     Refiner refiner;
-    KeyPairContainer refined_key_pairs;
+    HKeyPairContainer refined_key_pairs;
     IndexSet estimated_inlier_indices;
-    if (refiner(key_pairs, key_stddev * 2 * 4,
+    if (refiner(key_pairs,
+                key_stddev * 2 * 4 / scene_generator_.GetFocalLengthInPixel(),
                 refined_key_pairs, estimated_inlier_indices) != 0)
     {
       std::cout<<"refiner failed!\n";
@@ -215,11 +208,11 @@ private:
   ImageDimension image_height_;
 };
 
-TEST(TestLinear8PointsRansacRefiner, SimpleTest)
+TEST(TestEMatrix5PointsRansacRefiner, SimpleTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
-  typedef TestLinear8PointsRansacRefiner<Scalar, ImageDimension> Test;
+  typedef TestEMatrix5PointsRansacRefiner<Scalar, ImageDimension> Test;
 
   Scalar focal_length_in_metre = 0.019;
   size_t number_of_strips = 1;

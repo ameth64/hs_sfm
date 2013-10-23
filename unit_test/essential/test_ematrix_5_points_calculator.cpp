@@ -1,21 +1,18 @@
 #include <iostream>
-#include <set>
 
 #include <gtest/gtest.h>
 
 #include "hs_math/random/normal_random_var.hpp"
-#include "hs_math/random/uniform_random_var.hpp"
 
 #include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
-#include "hs_sfm/fundamental/linear_8_points_calculator.hpp"
 
-#include "hs_sfm/fundamental/linear_8_points_ransac_refiner.hpp"
+#include "hs_sfm/essential/ematrix_5_points_calculator.hpp"
 
 namespace
 {
 
 template <typename _Scalar, typename _ImageDimension>
-class TestLinear8PointsRansacRefiner
+class TestEMatrix5PointsCalculator
 {
 public:
   typedef _Scalar Scalar;
@@ -25,6 +22,7 @@ public:
 private:
   typedef hs::sfm::SceneGenerator<Scalar, ImageDimension> SceneGenerator;
   typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
+  typedef typename IntrinsicParams::KMatrix KMatrix;
   typedef typename SceneGenerator::IntrinsicParamsContainer
                    IntrinsicParamsContainer;
   typedef typename SceneGenerator::ExtrinsicParams ExtrinsicParams;
@@ -39,19 +37,18 @@ private:
   typedef typename KeysGenerator::Keys Keys;
   typedef typename KeysGenerator::KeysContainer KeysContainer;
 
-  typedef hs::sfm::fundamental::Linear8PointsCalculator<Scalar> Calculator;
-  typedef typename Calculator::Key Key;
-  typedef typename Calculator::FMatrix FMatrix;
-  typedef EIGEN_VECTOR(Scalar, 3) HKey;
+  typedef hs::sfm::essential::EMatrix5PointsCalculator<Scalar> Calculator;
+  typedef typename Calculator::EMatrix EMatrix;
+  typedef typename Calculator::EMatrixHypotheses EMatrixHypotheses;
+  typedef typename Calculator::HKey HKey;
+  typedef typename Calculator::HKeyPair HKeyPair;
+  typedef typename Calculator::HKeyPairContainer HKeyPairContainer;
+
+private:
   typedef EIGEN_VECTOR(Scalar, 3) HLine;
 
-  typedef hs::sfm::fundamental::Linear8PointsRansacRefiner<Scalar> Refiner;
-  typedef typename Refiner::KeyPair KeyPair;
-  typedef typename Refiner::KeyPairContainer KeyPairContainer;
-  typedef typename Refiner::IndexSet IndexSet;
-
 public:
-  TestLinear8PointsRansacRefiner(
+  TestEMatrix5PointsCalculator(
     Scalar focal_length_in_metre,
     size_t number_of_strps,
     Scalar ground_resolution,
@@ -65,8 +62,7 @@ public:
     Scalar camera_height_stddev,
     Scalar camera_plannar_stddev,
     Scalar camera_rot_stddev,
-    Scalar north_west_angle,
-    Scalar outlier_ratio)
+    Scalar north_west_angle)
     : scene_generator_(focal_length_in_metre,
                        number_of_strps,
                        number_of_strps > 1 ? 1 : 2,
@@ -82,12 +78,9 @@ public:
                        camera_plannar_stddev,
                        camera_rot_stddev,
                        north_west_angle),
-      keys_generator_(image_width, image_height),
-      outlier_ratio_(outlier_ratio),
-      image_width_(image_width),
-      image_height_(image_height){}
+      keys_generator_(image_width, image_height) {}
 
-  Err operator()()
+  Err operator() ()
   {
     //生成相机参数和三维点
     IntrinsicParamsContainer intrinsic_params_set;
@@ -116,83 +109,67 @@ public:
       return -1;
     }
 
-    //生成计算F矩阵所需的匹配点
-    KeyPairContainer key_pairs;
+    //生成计算E矩阵所需的匹配点，并加入高斯误差
+    HKeyPairContainer key_pairs;
     size_t number_of_tracks = tracks.size();
-    for (size_t i = 0; i < number_of_tracks; i++)
-    {
-      if (tracks[i].size() == 2)
-      {
-        size_t key_left_id = tracks[i][0].second;
-        size_t key_right_id = tracks[i][1].second;
-        KeyPair key_pair;
-        key_pair.first = keys_set[0][key_left_id];
-        key_pair.second = keys_set[1][key_right_id];
-        key_pairs.push_back(key_pair);
-      }
-    }
-
-    //为匹配点加入高斯误差
-    size_t number_of_keys = key_pairs.size();
     EIGEN_MATRIX(Scalar, 2, 2) key_covariance;
     key_covariance.setIdentity();
     Scalar key_stddev = 2;
     key_covariance *= key_stddev * key_stddev;
-    for (size_t i = 0; i < number_of_keys; i++)
+    KMatrix K_left_inverse = intrinsic_params_set[0].GetKMatrix().inverse();
+    KMatrix K_right_inverse = intrinsic_params_set[1].GetKMatrix().inverse();
+    for (size_t i = 0; i < number_of_tracks; i++)
     {
-      Key key_left_mean = key_pairs[i].first;
-      hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
-        key_left_mean, key_covariance, key_pairs[i].first);
-      Key key_right_mean = key_pairs[i].second;
-      hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
-        key_right_mean, key_covariance, key_pairs[i].second);
-    }
-
-    //为匹配点加入野值
-    Key max;
-    max << Scalar(image_width_) / (Scalar(2)),
-           Scalar(image_height_) / (Scalar(2));
-    Key min = -max;
-    std::set<size_t> true_outlier_indices;
-    for (size_t i = 0; i < number_of_keys; i++)
-    {
-      Scalar random;
-      hs::math::random::UniformRandomVar<Scalar, 1>::Generate(
-        Scalar(0), Scalar(1), random);
-      if (random < outlier_ratio_)
+      if (tracks[i].size() == 2)
       {
-        hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
-          min, max, key_pairs[i].first);
-        hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
-          min, max, key_pairs[i].second);
-        true_outlier_indices.insert(i);
+        EIGEN_VECTOR(Scalar, 2) noised_key;
+        size_t key_left_id = tracks[i][0].second;
+        size_t key_right_id = tracks[i][1].second;
+        HKeyPair key_pair;
+        hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
+          keys_set[0][key_left_id], key_covariance, noised_key);
+          key_pair.first.template segment<2>(0) = noised_key;
+        hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
+          keys_set[1][key_right_id], key_covariance, noised_key);
+          key_pair.second.template segment<2>(0) = noised_key;
+        key_pair.first[2] = Scalar(1);
+        key_pair.second[2] = Scalar(1);
+        key_pair.first = K_left_inverse * key_pair.first;
+        key_pair.second = K_right_inverse * key_pair.second;
+        key_pairs.push_back(key_pair);
       }
     }
 
-    Refiner refiner;
-    KeyPairContainer refined_key_pairs;
-    IndexSet estimated_inlier_indices;
-    if (refiner(key_pairs, key_stddev * 2 * 4,
-                refined_key_pairs, estimated_inlier_indices) != 0)
+    //计算E矩阵
+    Calculator calculator;
+    EMatrix e_matrix;
+    if (calculator(key_pairs, e_matrix) != 0)
     {
-      std::cout<<"refiner failed!\n";
+      std::cout<<"calculator failed!\n";
       return -1;
     }
 
-    //统计被错误作为内点的数量
-    size_t number_of_estimated_inliers = estimated_inlier_indices.size();
-    size_t number_of_false_inliers = 0;
-    for (size_t i = 0; i < number_of_estimated_inliers; i++)
+    //检查对极线误差
+    Scalar mean_error = Scalar(0);
+    size_t number_of_key_pairs = key_pairs.size();
+    Scalar focal_length_in_pix = scene_generator_.GetFocalLengthInPixel();
+    for (size_t i = 0; i < number_of_key_pairs; i++)
     {
-      if (true_outlier_indices.find(estimated_inlier_indices[i]) !=
-          true_outlier_indices.end())
-      {
-        number_of_false_inliers++;
-      }
-    }
+      const HKey& hkey_left = key_pairs[i].first;
+      const HKey& hkey_right = key_pairs[i].second;
 
-    if (Scalar(number_of_false_inliers) /
-        Scalar(number_of_estimated_inliers) < 0.01)
+      HLine epiline_left = e_matrix * hkey_left;
+      HLine epiline_right = e_matrix.transpose() * hkey_right;
+      Scalar error_left = std::abs(hkey_right.dot(epiline_left)) /
+        epiline_left.segment(0, 2).norm() * focal_length_in_pix;
+      Scalar error_right = std::abs(hkey_left.dot(epiline_right)) /
+        epiline_right.segment(0, 2).norm() * focal_length_in_pix;
+      mean_error += error_left + error_right;
+    }
+    mean_error /= Scalar(number_of_key_pairs);
+
+    //TODO:该阈值设置较随意！应改善！
+    if (mean_error <= key_stddev * Scalar(2) + 1)
     {
       return 0;
     }
@@ -200,26 +177,19 @@ public:
     {
       return -1;
     }
-  }
 
-  void set_outlier_ratio(Scalar outlier_ratio)
-  {
-    outlier_ratio_ = outlier_ratio;
+    return 0;
   }
-
 private:
   SceneGenerator scene_generator_;
   KeysGenerator keys_generator_;
-  Scalar outlier_ratio_;
-  ImageDimension image_width_;
-  ImageDimension image_height_;
 };
 
-TEST(TestLinear8PointsRansacRefiner, SimpleTest)
+TEST(TestEMatrix5PointsCalculator, SimpleTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
-  typedef TestLinear8PointsRansacRefiner<Scalar, ImageDimension> Test;
+  typedef TestEMatrix5PointsCalculator<Scalar, ImageDimension> Test;
 
   Scalar focal_length_in_metre = 0.019;
   size_t number_of_strips = 1;
@@ -235,7 +205,6 @@ TEST(TestLinear8PointsRansacRefiner, SimpleTest)
   Scalar camera_plannar_stddev = 5;
   Scalar camera_rot_stddev = 1;
   Scalar north_west_angle = 60;
-  Scalar outlier_ration = 0.2;
 
   Test test(focal_length_in_metre,
             number_of_strips,
@@ -250,8 +219,7 @@ TEST(TestLinear8PointsRansacRefiner, SimpleTest)
             camera_height_stddev,
             camera_plannar_stddev,
             camera_rot_stddev,
-            north_west_angle,
-            outlier_ration);
+            north_west_angle);
 
   ASSERT_EQ(0, test());
 }
