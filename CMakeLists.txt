@@ -152,6 +152,8 @@ hslib_add_library(${PROJECTIVE_NAME} ${HSPRJ_NAME} ${PROJECTIVE_SOURCES})
 
 set(PROJECTIVE_UTEST_SOURCES
   "unit_test/test_main.cpp"
+  "unit_test/projective/test_pmatrix_dlt_calculator.cpp"
+  "unit_test/projective/test_pmatrix_dlt_ransac_refiner.cpp"
   )
 hslib_add_utest(${PROJECTIVE_NAME} SOURCES ${PROJECTIVE_UTEST_SOURCES})
 hslib_add_dep(${PROJECTIVE_NAME}_utest
