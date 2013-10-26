@@ -14,7 +14,7 @@ namespace sfm
 namespace incremental
 {
 
-template <typename _Scalar>
+template <typename _Scalar, typename _ImageDimension>
 class IncrementalSFM
 {
 public:
@@ -24,11 +24,16 @@ public:
   typedef EIGEN_STD_VECTOR(Keys) KeysContainer;
   typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;
   typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinsicParamsContainer;
+  typedef CameraIntrinsicParams<Scalar> IntrinsicParamsContainer;
   typedef EIGEN_VECTOR(Scalar, 3) Point3D;
   typedef EIGEN_STD_VECTOR(Point3D) Point3DContainer;
 
 public:
-  Err operator()() const
+  IncrementalSFM(const KeysContainer& image_keys_set,
+                 const )
+
+public:
+  Err operator() () const
   {
     return 0;
   }
