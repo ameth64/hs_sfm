@@ -141,16 +141,22 @@ public:
     }
 
     //计算由相对坐标系转换到绝对坐标系的相似变换七参数
-    Rotation rotation = extrinsic_params_set[0].rotation().Inverse();
+    typedef EIGEN_MATRIX(Scalar, 3, 3) RMatrix;
+    RMatrix rotation_absolute_0 = extrinsic_params_set[0].rotation();
+    rotation_absolute_0.row(0) *= -1;
+    rotation_absolute_0.row(1) *= -1;
+    RMatrix rotation = rotation_absolute_0.transpose();
     Position translate = extrinsic_params_set[0].position();
     Scalar scale = (extrinsic_params_set[1].position() - translate).norm();
 
-    const Rotation& rotation_absolute = extrinsic_params_set[1].rotation();
+    //计算真实相对外参数
+    RMatrix rotation_absolute_1 = extrinsic_params_set[1].rotation();
+    rotation_absolute_1.row(0) *= -1;
+    rotation_absolute_1.row(1) *= -1;
     const Position& position_absolute = extrinsic_params_set[1].position();
-    Rotation rotation_relative = rotation_absolute * rotation;
+    RMatrix rotation_relative = rotation_absolute_1 * rotation;
     Position position_relative = (position_absolute - translate) / scale;
-    position_relative = rotation.Inverse() * position_relative;
-    EIGEN_MATRIX(Scalar, 3, 3) rmatrix_relative = rotation_relative;
+    position_relative = rotation.transpose() * position_relative;
 
     //计算E矩阵
     EMatrixCalculator ematrix_calculator;
@@ -176,15 +182,15 @@ public:
     //检查相机外参数
     EIGEN_MATRIX(Scalar, 3, 3) rmatrix_relative_estimated =
       extrinsic_params_relative.rotation();
-    if (!rmatrix_relative_estimated.isApprox(rmatrix_relative, threshold))
+    if (!rmatrix_relative_estimated.isApprox(rotation_relative, threshold))
     {
       return -1;
     }
-    //if (!extrinsic_params_relative.position().isApprox(position_relative,
-    //                                                   threshold))
-    //{
-    //  return -1;
-    //}
+    if (!extrinsic_params_relative.position().isApprox(position_relative,
+      threshold))
+    {
+      return -1;
+    }
 
     //检查三维点
     size_t number_of_points = points_relative.size();

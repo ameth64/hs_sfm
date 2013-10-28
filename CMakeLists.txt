@@ -86,6 +86,7 @@ hslib_add_library(${INCREMENTAL_NAME} ${HSPRJ_NAME} ${INCREMENTAL_SOURCES})
 set(INCREMENTAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/incremental/test_incremental.cpp"
+  "unit_test/incremental/test_scene_spanner.cpp"
   )
 hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
 hslib_add_dep(${INCREMENTAL_NAME}_utest
@@ -103,6 +104,7 @@ set(ESSENTIAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/essential/test_ematrix_5_points_calculator.cpp"
   "unit_test/essential/test_ematrix_5_points_ransac_refiner.cpp"
+  "unit_test/essential/test_ematrix_extrinsic_params_points_calculator.cpp"
   )
 hslib_add_utest(${ESSENTIAL_NAME} SOURCES ${ESSENTIAL_UTEST_SOURCES})
 hslib_add_dep(${ESSENTIAL_NAME}_utest
