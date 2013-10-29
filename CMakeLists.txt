@@ -162,3 +162,21 @@ hslib_add_dep(${PROJECTIVE_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   HS_DEPS hs_math HEADONLY)
 hslib_post_build(${PROJECTIVE_NAME}_utest)
+
+#synthetic
+set(SYNTHETIC_NAME "synthetic")
+set(SYNTHETIC_SOURCES
+  )
+hslib_add_library(${SYNTHETIC_NAME} ${HSPRJ_NAME} ${SYNTHETIC_SOURCES})
+
+set(SYNTHETIC_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  "unit_test/synthetic/test_keyset_generator.cpp"
+  "unit_test/synthetic/test_relative_generator.cpp"
+  "unit_test/synthetic/test_scene_generator.cpp"
+  )
+hslib_add_utest(${SYNTHETIC_NAME} SOURCES ${SYNTHETIC_UTEST_SOURCES})
+hslib_add_dep(${SYNTHETIC_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  HS_DEPS hs_math HEADONLY)
+hslib_post_build(${SYNTHETIC_NAME}_utest)

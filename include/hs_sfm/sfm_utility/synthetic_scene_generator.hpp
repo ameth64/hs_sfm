@@ -1,6 +1,8 @@
 ﻿#ifndef _HS_SFM_UTILITY_SYNTHETIC_SCENE_GENERATOR_HPP_
 #define _HS_SFM_UTILITY_SYNTHETIC_SCENE_GENERATOR_HPP_
 
+#include <algorithm>
+
 #include "hs_math/random/normal_random_var.hpp"
 #include "hs_math/random/uniform_random_var.hpp"
 
@@ -20,376 +22,572 @@ template <typename _Scalar, typename _ImageDimension>
 class SceneGenerator
 {
 public:
-typedef _Scalar Scalar;
-typedef _ImageDimension ImageDimension;
-typedef CameraIntrinsicParams<Scalar> IntrinsicParams;
-typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinsicParamsContainer;
-typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;
-typedef typename ExtrinsicParams::Position Position;
-typedef typename ExtrinsicParams::Rotation Rotation;
-typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinsicParamsContainer;
-typedef ImageParams<ImageDimension> Image;
-typedef EIGEN_STD_VECTOR(Image) ImageContainer;
-typedef EIGEN_VECTOR(Scalar, 3) Point3D;
-typedef EIGEN_STD_VECTOR(Point3D) Point3DContainer;
-typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
+  typedef _Scalar Scalar;
+  typedef _ImageDimension ImageDimension;
+  typedef CameraIntrinsicParams<Scalar> IntrinsicParams;
+  typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinsicParamsContainer;
+  typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;
+  typedef typename ExtrinsicParams::Position Position;
+  typedef typename ExtrinsicParams::Rotation Rotation;
+  typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinsicParamsContainer;
+  typedef ImageParams<ImageDimension> Image;
+  typedef EIGEN_STD_VECTOR(Image) ImageContainer;
+  typedef EIGEN_VECTOR(Scalar, 3) Point3D;
+  typedef EIGEN_STD_VECTOR(Point3D) Point3DContainer;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
 
-typedef int Err;
+  typedef int Err;
 
-SceneGenerator(Scalar focal_length_in_metre,
-               size_t number_of_strips,
-               size_t number_of_cameras_in_strip,
-               Scalar ground_resolution,
-               ImageDimension image_width,
-               ImageDimension image_height,
-               Scalar pixel_size,
-               size_t number_of_points,
-               Scalar lateral_overlap_ratio,
-               Scalar longitudinal_overlap_ratio,
-               Scalar scene_max_height,
-               Scalar camera_height_stddev,
-               Scalar camera_planar_stddev,
-               Scalar camera_rotation_stddev,
-               Scalar north_west_angle)
-     : focal_length_in_metre_(focal_length_in_metre),
-       number_of_strips_(number_of_strips),
-       number_of_cameras_in_strip_(number_of_cameras_in_strip), 
-       ground_resolution_(ground_resolution),
-       image_width_(image_width), image_height_(image_height),
-       pixel_size_(pixel_size),
-       number_of_points_(number_of_points),
-       lateral_overlap_ratio_(lateral_overlap_ratio),
-       longitudinal_overlap_ratio_(longitudinal_overlap_ratio),
-       scene_max_height_(scene_max_height),
-       camera_height_stddev_(camera_height_stddev),
-       camera_planar_stddev_(camera_planar_stddev),
-       camera_rotation_stddev_(camera_rotation_stddev),
-       north_west_angle_(north_west_angle) {}
+  SceneGenerator(Scalar focal_length_in_metre,
+                 size_t number_of_strips,
+                 size_t number_of_cameras_in_strip,
+                 Scalar ground_resolution,
+                 ImageDimension image_width,
+                 ImageDimension image_height,
+                 Scalar pixel_size,
+                 size_t number_of_points,
+                 Scalar lateral_overlap_ratio,
+                 Scalar longitudinal_overlap_ratio,
+                 Scalar scene_max_height,
+                 Scalar camera_height_stddev,
+                 Scalar camera_planar_stddev,
+                 Scalar camera_rotation_stddev,
+                 Scalar north_west_angle)
+       : focal_length_in_metre_(focal_length_in_metre),
+         number_of_strips_(number_of_strips),
+         number_of_cameras_in_strip_(number_of_cameras_in_strip), 
+         ground_resolution_(ground_resolution),
+         image_width_(image_width), image_height_(image_height),
+         pixel_size_(pixel_size),
+         number_of_points_(number_of_points),
+         lateral_overlap_ratio_(lateral_overlap_ratio),
+         longitudinal_overlap_ratio_(longitudinal_overlap_ratio),
+         scene_max_height_(scene_max_height),
+         camera_height_stddev_(camera_height_stddev),
+         camera_planar_stddev_(camera_planar_stddev),
+         camera_rotation_stddev_(camera_rotation_stddev),
+         north_west_angle_(north_west_angle) {}
 
-Scalar GetFocalLengthInPixel() const
-{
-  return focal_length_in_metre_ / pixel_size_;
-}
-
-Err operator ()(IntrinsicParamsContainer& intrinsic_params_set,
-                ExtrinsicParamsContainer& extrinsic_params_set,
-                ImageContainer& images,
-                Point3DContainer& points) const
-{
-  GenerateSceneCameras(intrinsic_params_set, extrinsic_params_set, images);
-  GenerateScenePoints(number_of_points_, points);
-
-  return 0;
-}
-
-inline Scalar GetFlightHeight() const
-{
-  return focal_length_in_metre_ * ground_resolution_ / pixel_size_;
-}
-
-void GetSceneDimensions(Scalar& scene_x_dimension,
-                        Scalar& scene_y_dimension,
-                        Scalar& scene_z_dimension) const
-{
-  Scalar longitudinal_range_per_camera =
-    (1 - longitudinal_overlap_ratio_) * ground_resolution_ *
-    Scalar(image_height_);
-  Scalar lateral_range_per_camera = 
-    (1 - lateral_overlap_ratio_) * ground_resolution_ *
-    Scalar(image_width_);
-
-  scene_x_dimension = image_width_ * ground_resolution_ + 
-    lateral_range_per_camera * (number_of_strips_ - 1);
-  scene_y_dimension = image_height_ * ground_resolution_ +
-    longitudinal_range_per_camera * (number_of_cameras_in_strip_ - 1);
-  scene_z_dimension = scene_max_height_;
-}
-
-void GenerateScenePoints(size_t number_of_points,
-                         Point3DContainer& points) const
-{
-  points.resize(number_of_points);
-  Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
-  GetSceneDimensions(scene_x_dimension, scene_y_dimension, scene_z_dimension);
-
-  Scalar north_west_angle_radian = north_west_angle_ / 180 * Scalar(M_PI);
-  Matrix33 north_west_rotaion;
-  north_west_rotaion
-    << cos(north_west_angle_radian), -sin(north_west_angle_radian), 0,
-       sin(north_west_angle_radian),  cos(north_west_angle_radian), 0,
-       0, 0, 1;
-
-  Point3D max_point;
-  max_point << scene_x_dimension * 0.5,
-               scene_y_dimension * 0.5,
-               scene_z_dimension;
-  Point3D min_point;
-  min_point << -scene_z_dimension * 0.5,
-               -scene_y_dimension * 0.5,
-               0;
-
-  for (size_t i = 0; i < number_of_points; i++)
+  Scalar GetFocalLengthInPixel() const
   {
-    hs::math::random::UniformRandomVar<Scalar, 3>::Generate(
-      min_point, max_point, points[i]);
-    points[i] = north_west_rotaion * points[i];
+    return focal_length_in_metre_ / pixel_size_;
   }
-}
 
-void GenerateScenePlanarPoints(size_t number_of_points,
-                               Scalar height,
-                               Point3DContainer& points) const
-{
-  points.resize(number_of_points);
-  Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
-  GetSceneDimensions(scene_x_dimension, scene_y_dimension, scene_z_dimension);
-
-  Scalar north_west_angle_radian = north_west_angle_ / 180 * Scalar(M_PI);
-  Matrix33 north_west_rotaion;
-  north_west_rotaion
-    << cos(north_west_angle_radian), -sin(north_west_angle_radian), 0,
-       sin(north_west_angle_radian),  cos(north_west_angle_radian), 0,
-       0, 0, 1;
-
-  EIGEN_VECTOR(Scalar, 2) max_planar_point;
-  max_planar_point << scene_x_dimension * 0.5,
-                      scene_y_dimension * 0.5;
-  EIGEN_VECTOR(Scalar, 2) min_planar_point = -max_planar_point;
-  for (size_t i = 0; i < number_of_points; i++)
+  Err operator ()(IntrinsicParamsContainer& intrinsic_params_set,
+                  ExtrinsicParamsContainer& extrinsic_params_set,
+                  ImageContainer& images,
+                  Point3DContainer& points) const
   {
-    EIGEN_VECTOR(Scalar, 2) planar_point;
-    hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
-      min_planar_point, max_planar_point, planar_point);
-    points[i].template segment<2>(0) = planar_point;
-    points[i][2] = height;
-    points[i] = north_west_rotaion * points[i];
+    GenerateSceneCameras(intrinsic_params_set, extrinsic_params_set, images);
+    GenerateScenePoints(number_of_points_, points);
+
+    return 0;
   }
-}
 
-void GenerateSceneCameras(IntrinsicParamsContainer& intrinsic_params_set,
-                          ExtrinsicParamsContainer& extrinsic_params_set,
-                          ImageContainer& images) const
-{
-  Scalar flight_height = GetFlightHeight();
-
-  Scalar longitudinal_range_per_camera =
-    (1 - longitudinal_overlap_ratio_) * ground_resolution_ *
-    Scalar(image_height_);
-  Scalar lateral_range_per_camera = 
-    (1 - lateral_overlap_ratio_) * ground_resolution_ *
-    Scalar(image_width_);
-
-  size_t number_of_cameras = number_of_strips_ * number_of_cameras_in_strip_;
-
-  intrinsic_params_set.resize(number_of_cameras,
-                              IntrinsicParams(focal_length_in_metre_ /
-                                              pixel_size_));
-  extrinsic_params_set.resize(number_of_cameras);
-  images.resize(number_of_cameras);
-
-  Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
-  GetSceneDimensions(scene_x_dimension, scene_y_dimension, scene_z_dimension);
-
-  Matrix33 camera_position_covariance = Matrix33::Identity();
-  camera_position_covariance(0, 0) = camera_planar_stddev_;
-  camera_position_covariance(1, 1) = camera_planar_stddev_;
-  camera_position_covariance(2, 2) = camera_height_stddev_;
-  Matrix33 camera_rotation_covariance = Matrix33::Identity();
-  camera_rotation_covariance *= camera_rotation_stddev_;
-  Scalar north_west_angle_radian = north_west_angle_ / 180 * Scalar(M_PI);
-  Matrix33 north_west_rotation;
-  north_west_rotation
-    << cos(north_west_angle_radian), -sin(north_west_angle_radian), 0,
-       sin(north_west_angle_radian),  cos(north_west_angle_radian), 0,
-       0, 0, 1;
-  for (size_t i = 0; i < number_of_strips_; i++)
+  inline Scalar GetFlightHeight() const
   {
-    for (size_t j = 0; j < number_of_cameras_in_strip_; j++)
+    return focal_length_in_metre_ * ground_resolution_ / pixel_size_;
+  }
+
+  void GetSceneDimensions(Scalar& scene_x_dimension,
+                          Scalar& scene_y_dimension,
+                          Scalar& scene_z_dimension) const
+  {
+    Scalar longitudinal_range_per_camera =
+      (1 - longitudinal_overlap_ratio_) * ground_resolution_ *
+      Scalar(image_height_);
+    Scalar lateral_range_per_camera = 
+      (1 - lateral_overlap_ratio_) * ground_resolution_ *
+      Scalar(image_width_);
+
+    scene_x_dimension = image_width_ * ground_resolution_ + 
+      lateral_range_per_camera * (number_of_strips_ - 1);
+    scene_y_dimension = image_height_ * ground_resolution_ +
+      longitudinal_range_per_camera * (number_of_cameras_in_strip_ - 1);
+    scene_z_dimension = scene_max_height_;
+  }
+
+  void GenerateScenePoints(size_t number_of_points,
+                           Point3DContainer& points) const
+  {
+    points.resize(number_of_points);
+    Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
+    GetSceneDimensions(scene_x_dimension, scene_y_dimension, scene_z_dimension);
+
+    Scalar north_west_angle_radian = north_west_angle_ / 180 * Scalar(M_PI);
+    Matrix33 north_west_rotaion;
+    north_west_rotaion
+      << cos(north_west_angle_radian), -sin(north_west_angle_radian), 0,
+         sin(north_west_angle_radian),  cos(north_west_angle_radian), 0,
+         0, 0, 1;
+
+    Point3D max_point;
+    max_point << scene_x_dimension * 0.5,
+                 scene_y_dimension * 0.5,
+                 scene_z_dimension;
+    Point3D min_point;
+    min_point << -scene_z_dimension * 0.5,
+                 -scene_y_dimension * 0.5,
+                 0;
+
+    for (size_t i = 0; i < number_of_points; i++)
     {
-      size_t id = i * number_of_cameras_in_strip_ + j;
-      images[id].m_width = image_width_;
-      images[id].m_height = image_height_;
-      images[id].m_id = id;
-      images[id].m_path = "test";
-
-      Position mean_camera_position;
-      mean_camera_position << -scene_x_dimension * 0.5 +
-                              image_width_ * ground_resolution_ * 0.5 +
-                              i * lateral_range_per_camera,
-                              -scene_y_dimension * 0.5 +
-                              image_height_ * ground_resolution_ * 0.5 + 
-                              j * longitudinal_range_per_camera,
-                              flight_height;
-
-      hs::math::random::NormalRandomVar<Scalar, 3>::Generate(
-        mean_camera_position,
-        camera_position_covariance,
-        extrinsic_params_set[id].position());
-      extrinsic_params_set[id].position() =
-        north_west_rotation * extrinsic_params_set[id].position();
-      //extrins[id].m_c /= scale;
-      Position meanAngles = Position::Zero();
-      Position angles;
-      hs::math::random::NormalRandomVar<Scalar, 3>::Generate(
-        meanAngles, camera_rotation_covariance, angles);
-
-      hs::math::geometry::EulerAngles<Scalar> euler_angles(
-        angles[0] / 180 * Scalar(M_PI),
-        angles[1] / 180 * Scalar(M_PI),
-        angles[2] / 180 * Scalar(M_PI));
-      Matrix33 R = euler_angles.template ToOrthoRotMat<2, 1, -3, 1>();
-      R.transposeInPlace();
-      extrinsic_params_set[id].rotation() =
-        R * north_west_rotation.transpose();
+      hs::math::random::UniformRandomVar<Scalar, 3>::Generate(
+        min_point, max_point, points[i]);
+      points[i] = north_west_rotaion * points[i];
     }
   }
-}
+
+  void GenerateScenePlanarPoints(size_t number_of_points,
+                                 Scalar height,
+                                 Point3DContainer& points) const
+  {
+    points.resize(number_of_points);
+    Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
+    GetSceneDimensions(scene_x_dimension, scene_y_dimension, scene_z_dimension);
+
+    Scalar north_west_angle_radian = north_west_angle_ / 180 * Scalar(M_PI);
+    Matrix33 north_west_rotaion;
+    north_west_rotaion
+      << cos(north_west_angle_radian), -sin(north_west_angle_radian), 0,
+         sin(north_west_angle_radian),  cos(north_west_angle_radian), 0,
+         0, 0, 1;
+
+    EIGEN_VECTOR(Scalar, 2) max_planar_point;
+    max_planar_point << scene_x_dimension * 0.5,
+                        scene_y_dimension * 0.5;
+    EIGEN_VECTOR(Scalar, 2) min_planar_point = -max_planar_point;
+    for (size_t i = 0; i < number_of_points; i++)
+    {
+      EIGEN_VECTOR(Scalar, 2) planar_point;
+      hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
+        min_planar_point, max_planar_point, planar_point);
+      points[i].template segment<2>(0) = planar_point;
+      points[i][2] = height;
+      points[i] = north_west_rotaion * points[i];
+    }
+  }
+
+  void GenerateSceneCameras(IntrinsicParamsContainer& intrinsic_params_set,
+                            ExtrinsicParamsContainer& extrinsic_params_set,
+                            ImageContainer& images) const
+  {
+    Scalar flight_height = GetFlightHeight();
+
+    Scalar longitudinal_range_per_camera =
+      (1 - longitudinal_overlap_ratio_) * ground_resolution_ *
+      Scalar(image_height_);
+    Scalar lateral_range_per_camera = 
+      (1 - lateral_overlap_ratio_) * ground_resolution_ *
+      Scalar(image_width_);
+
+    size_t number_of_cameras = number_of_strips_ * number_of_cameras_in_strip_;
+
+    intrinsic_params_set.resize(number_of_cameras,
+                                IntrinsicParams(focal_length_in_metre_ /
+                                                pixel_size_));
+    extrinsic_params_set.resize(number_of_cameras);
+    images.resize(number_of_cameras);
+
+    Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
+    GetSceneDimensions(scene_x_dimension, scene_y_dimension, scene_z_dimension);
+
+    Matrix33 camera_position_covariance = Matrix33::Identity();
+    camera_position_covariance(0, 0) = camera_planar_stddev_;
+    camera_position_covariance(1, 1) = camera_planar_stddev_;
+    camera_position_covariance(2, 2) = camera_height_stddev_;
+    Matrix33 camera_rotation_covariance = Matrix33::Identity();
+    camera_rotation_covariance *= camera_rotation_stddev_;
+    Scalar north_west_angle_radian = north_west_angle_ / 180 * Scalar(M_PI);
+    Matrix33 north_west_rotation;
+    north_west_rotation
+      << cos(north_west_angle_radian), -sin(north_west_angle_radian), 0,
+         sin(north_west_angle_radian),  cos(north_west_angle_radian), 0,
+         0, 0, 1;
+    for (size_t i = 0; i < number_of_strips_; i++)
+    {
+      for (size_t j = 0; j < number_of_cameras_in_strip_; j++)
+      {
+        size_t id = i * number_of_cameras_in_strip_ + j;
+        images[id].m_width = image_width_;
+        images[id].m_height = image_height_;
+        images[id].m_id = id;
+        images[id].m_path = "test";
+
+        Position mean_camera_position;
+        mean_camera_position << -scene_x_dimension * 0.5 +
+                                image_width_ * ground_resolution_ * 0.5 +
+                                i * lateral_range_per_camera,
+                                -scene_y_dimension * 0.5 +
+                                image_height_ * ground_resolution_ * 0.5 + 
+                                j * longitudinal_range_per_camera,
+                                flight_height;
+
+        hs::math::random::NormalRandomVar<Scalar, 3>::Generate(
+          mean_camera_position,
+          camera_position_covariance,
+          extrinsic_params_set[id].position());
+        extrinsic_params_set[id].position() =
+          north_west_rotation * extrinsic_params_set[id].position();
+        //extrins[id].m_c /= scale;
+        Position meanAngles = Position::Zero();
+        Position angles;
+        hs::math::random::NormalRandomVar<Scalar, 3>::Generate(
+          meanAngles, camera_rotation_covariance, angles);
+
+        hs::math::geometry::EulerAngles<Scalar> euler_angles(
+          angles[0] / 180 * Scalar(M_PI),
+          angles[1] / 180 * Scalar(M_PI),
+          angles[2] / 180 * Scalar(M_PI));
+        Matrix33 R = euler_angles.template ToOrthoRotMat<2, 1, -3, 1>();
+        R.transposeInPlace();
+        extrinsic_params_set[id].rotation() =
+          R * north_west_rotation.transpose();
+      }
+    }
+  }
 
 private:
-/**
- *  相机的焦距米为单位
- */
-Scalar focal_length_in_metre_;
-/**
- *  航带数
- */
-size_t number_of_strips_;
-/**
- *  每条航带包含的相机数
- */
-size_t number_of_cameras_in_strip_;
-/**
- *  影像的地面分辨率
- */
-Scalar ground_resolution_;
-/**
- *  影像的宽度，像素为单位
- */
-ImageDimension image_width_;
-/**
- *  影像的高度，像素为单位
- */
-ImageDimension image_height_;
-/**
- *  像素大小，米为单位
- */
-Scalar pixel_size_;
-/**
- *  场景中空间点的数量
- */
-size_t number_of_points_;
-/**
- *  旁向重叠率
- */
-Scalar lateral_overlap_ratio_;
-/**
- *  航向重叠率
- */
-Scalar longitudinal_overlap_ratio_;
-/**
- *  场景中最高点的高度
- */
-Scalar scene_max_height_;
-/**
- *  相机高度分布标准差
- */
-Scalar camera_height_stddev_;
-/**
- *  相机平面方向分布标准差
- */
-Scalar camera_planar_stddev_;
-/**
- *  相机旋转角标准差，度为单位
- */
-Scalar camera_rotation_stddev_;
-/**
- *  飞行方向的北偏东角，度为单位
- */
-Scalar north_west_angle_;
+  /**
+   *  相机的焦距米为单位
+   */
+  Scalar focal_length_in_metre_;
+  /**
+   *  航带数
+   */
+  size_t number_of_strips_;
+  /**
+   *  每条航带包含的相机数
+   */
+  size_t number_of_cameras_in_strip_;
+  /**
+   *  影像的地面分辨率
+   */
+  Scalar ground_resolution_;
+  /**
+   *  影像的宽度，像素为单位
+   */
+  ImageDimension image_width_;
+  /**
+   *  影像的高度，像素为单位
+   */
+  ImageDimension image_height_;
+  /**
+   *  像素大小，米为单位
+   */
+  Scalar pixel_size_;
+  /**
+   *  场景中空间点的数量
+   */
+  size_t number_of_points_;
+  /**
+   *  旁向重叠率
+   */
+  Scalar lateral_overlap_ratio_;
+  /**
+   *  航向重叠率
+   */
+  Scalar longitudinal_overlap_ratio_;
+  /**
+   *  场景中最高点的高度
+   */
+  Scalar scene_max_height_;
+  /**
+   *  相机高度分布标准差
+   */
+  Scalar camera_height_stddev_;
+  /**
+   *  相机平面方向分布标准差
+   */
+  Scalar camera_planar_stddev_;
+  /**
+   *  相机旋转角标准差，度为单位
+   */
+  Scalar camera_rotation_stddev_;
+  /**
+   *  飞行方向的北偏东角，度为单位
+   */
+  Scalar north_west_angle_;
 };
 
 template <typename _Scalar, typename _ImageDimension>
 class KeysGenerator
 {
 public:
-typedef _Scalar Scalar;
-typedef _ImageDimension ImageDimension;
+  typedef _Scalar Scalar;
+  typedef _ImageDimension ImageDimension;
 
-typedef hs::sfm::CameraIntrinsicParams<Scalar> IntrinsicParams;
-typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinContainer;
-typedef hs::sfm::CameraExtrinsicParams<Scalar> ExtrinsicParams;
-typedef typename ExtrinsicParams::Position Position;
-typedef typename ExtrinsicParams::Rotation Rotation;
-typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinContainer;
-typedef EIGEN_VECTOR(Scalar, 3) Point3D;
-typedef EIGEN_STD_VECTOR(Point3D) Point3DContainer;
-typedef EIGEN_VECTOR(Scalar, 2) Point2D;
-typedef EIGEN_STD_VECTOR(Point2D) Point2DSet;
-typedef EIGEN_STD_VECTOR(Point2DSet) Point2DSetContainer;
-typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
-typedef CameraFunctions<Scalar> Camera;
-typedef typename Camera::ProjectionMatrix ProjectionMatrix;
-typedef ImageKeys<Scalar> Keys;
-typedef EIGEN_STD_VECTOR(Keys) KeysContainer;
+  typedef hs::sfm::CameraIntrinsicParams<Scalar> IntrinsicParams;
+  typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinContainer;
+  typedef hs::sfm::CameraExtrinsicParams<Scalar> ExtrinsicParams;
+  typedef typename ExtrinsicParams::Position Position;
+  typedef typename ExtrinsicParams::Rotation Rotation;
+  typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinContainer;
+  typedef EIGEN_VECTOR(Scalar, 3) Point3D;
+  typedef EIGEN_STD_VECTOR(Point3D) Point3DContainer;
+  typedef EIGEN_VECTOR(Scalar, 2) Point2D;
+  typedef EIGEN_STD_VECTOR(Point2D) Point2DSet;
+  typedef EIGEN_STD_VECTOR(Point2DSet) Point2DSetContainer;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
+  typedef CameraFunctions<Scalar> Camera;
+  typedef typename Camera::ProjectionMatrix ProjectionMatrix;
+  typedef ImageKeys<Scalar> Keys;
+  typedef EIGEN_STD_VECTOR(Keys) KeysContainer;
 
-typedef int Err;
+  typedef int Err;
 
-KeysGenerator(ImageDimension image_width, ImageDimension image_height)
-  : image_width_(image_width), image_height_(image_height) {}
+  KeysGenerator(ImageDimension image_width, ImageDimension image_height)
+    : image_width_(image_width), image_height_(image_height) {}
 
-Err operator()(const IntrinContainer& intrinsic_params_set, 
-               const ExtrinContainer& extrinsic_params_set, 
-               const Point3DContainer& point,
-               KeysContainer& keys_set, 
-               TrackContainer& tracks,
-               CameraViewContainer& camera_views) const
-{
-  size_t number_of_cameras = intrinsic_params_set.size();
-  if (number_of_cameras != extrinsic_params_set.size())
+  Err operator()(const IntrinContainer& intrinsic_params_set, 
+                 const ExtrinContainer& extrinsic_params_set, 
+                 const Point3DContainer& point,
+                 KeysContainer& keys_set, 
+                 TrackContainer& tracks,
+                 CameraViewContainer& camera_views) const
   {
-  return -1;
-  }
-
-  Point2DSetContainer key_sets(number_of_cameras);
-  size_t number_of_points = point.size();
-  tracks.resize(number_of_points);
-  camera_views.resize(number_of_cameras);
-  for (size_t i = 0; i < number_of_points; i++)
-  {
-    const Point3D& pt = point[i];
-    for (size_t j = 0; j < number_of_cameras; j++)
+    size_t number_of_cameras = intrinsic_params_set.size();
+    if (number_of_cameras != extrinsic_params_set.size())
     {
-      ProjectionMatrix P =
-        Camera::GetProjectionMatrix(intrinsic_params_set[j],
-                                    extrinsic_params_set[j]);
-      Point3D key_homogeneous = P.block(0, 0, 3, 3) * point[i] + 
-                                P.block(0, 3, 3, 1);
-      key_homogeneous /= key_homogeneous(2);
-      if (key_homogeneous(0) > (-Scalar(image_width_) / 2) && 
-          key_homogeneous(0) < ( Scalar(image_width_) / 2) &&
-          key_homogeneous(1) > (-Scalar(image_height_) / 2) && 
-          key_homogeneous(1) < ( Scalar(image_height_) / 2))
+    return -1;
+    }
+
+    Point2DSetContainer key_sets(number_of_cameras);
+    size_t number_of_points = point.size();
+    tracks.resize(number_of_points);
+    camera_views.resize(number_of_cameras);
+    for (size_t i = 0; i < number_of_points; i++)
+    {
+      const Point3D& pt = point[i];
+      for (size_t j = 0; j < number_of_cameras; j++)
       {
-        tracks[i].push_back(
-          std::make_pair(j, key_sets[j].size()));
-        camera_views[j].push_back(
-          std::make_pair(i, key_sets[j].size()));
-        key_sets[j].push_back(key_homogeneous.segment(0, 2));
+        ProjectionMatrix P =
+          Camera::GetProjectionMatrix(intrinsic_params_set[j],
+                                      extrinsic_params_set[j]);
+        Point3D key_homogeneous = P.block(0, 0, 3, 3) * point[i] + 
+                                  P.block(0, 3, 3, 1);
+        key_homogeneous /= key_homogeneous(2);
+        if (key_homogeneous(0) > (-Scalar(image_width_) / 2) && 
+            key_homogeneous(0) < ( Scalar(image_width_) / 2) &&
+            key_homogeneous(1) > (-Scalar(image_height_) / 2) && 
+            key_homogeneous(1) < ( Scalar(image_height_) / 2))
+        {
+          tracks[i].push_back(
+            std::make_pair(j, key_sets[j].size()));
+          camera_views[j].push_back(
+            std::make_pair(i, key_sets[j].size()));
+          key_sets[j].push_back(key_homogeneous.segment(0, 2));
+        }
       }
     }
-  }
-  keys_set.clear();
-  for (size_t i = 0; i < number_of_cameras; i++)
-  {
-    keys_set.push_back(Keys(key_sets[i]));
+    keys_set.clear();
+    for (size_t i = 0; i < number_of_cameras; i++)
+    {
+      keys_set.push_back(Keys(key_sets[i]));
+    }
+
+    return 0;
   }
 
-  return 0;
-}
+  private:
+  ImageDimension image_width_;
+  ImageDimension image_height_;
+};
+
+template <typename _Scalar, typename _ImageDimension>
+class RelativeGenerator
+{
+public:
+  typedef _Scalar Scalar;
+  typedef _ImageDimension ImageDimension;
+  typedef int Err;
+
+  typedef hs::sfm::CameraIntrinsicParams<Scalar> IntrinsicParams;
+  typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinContainer;
+  typedef hs::sfm::CameraExtrinsicParams<Scalar> ExtrinsicParams;
+  typedef typename ExtrinsicParams::Rotation rotation;
+  typedef typename ExtrinsicParams::Position Position;
+  typedef EIGEN_STD_VECTOR(ExtrinsicParams) ExtrinContainer;
+  typedef EIGEN_VECTOR(Scalar, 3) Point3D;
+  typedef EIGEN_STD_VECTOR(Point3D) Point3DContainer;
+  typedef ImageKeys<Scalar> ImageKeyset;
+  typedef EIGEN_STD_VECTOR(ImageKeyset) ImageKeysetContainer;
+
+  typedef EIGEN_MATRIX(Scalar, 3, 3) RMatrix;
+  typedef EIGEN_VECTOR(Scalar, 3) Translate;
 
 private:
-ImageDimension image_width_;
-ImageDimension image_height_;
+  class CompareFunctor
+  {
+  public:
+    CompareFunctor(const ExtrinsicParamsContainer& cameras,
+                    const ExtrinsicParams& fix_camera)
+      : cameras_(cameras),
+        fix_camera_(fix_camera) {}
+
+    bool operator() (const size_t id1, size_t id_2) const
+    {
+      Scalar distance1 = (cameras_[id_1].position() - )
+    }
+
+    const ExtrinsicParamsContainer& cameras_;
+    const ExtrinsicParams& fix_camera_;
+  };
+
+public:
+  Err operator() (const TrackContainer& tracks,
+                  const CameraViewContainer& camera_views,
+                  ExtrinsicParamsContainer& extrinsic_params_set,
+                  Point3DContainer& points,
+                  RMatrix& rotation_similar,
+                  Translate& translate_similar,
+                  Scalar& scale,
+                  size_t& camera_id_identity,
+                  size_t& camera_id_relative) const
+  {
+    if (ChooseCameraPair(extrinsic_params_set, camera_views,
+                         camera_id_identity,
+                         camera_id_relative) != 0)
+    {
+      return -1;
+    }
+
+    if (ComputeSimilarTransform(extrinsic_params_set,
+                                camera_id_identity,
+                                camera_id_relative,
+                                rotation_similar,
+                                translate_similar,
+                                scale_similar) != 0)
+    {
+      return -1;
+    }
+
+    if (SimilarTransformCameras(rotation_similar,
+                                translate_similar,
+                                scale_similar,
+                                extrinsic_params_set) != 0)
+    {
+      return -1;
+    }
+
+    if (SimilarTransformPoints(rotation_similar,
+                               translate_similar,
+                               scale_similar,
+                               points) != 0)
+    {
+      return -1;
+    }
+
+    return 0;
+  }
+
+private:
+  Err ChooseCameraPair(const ExtrinsicParamsContainer& extrinsic_params_set,
+                       const CameraViewContainer& camera_views,
+                       size_t& camera_id_identity,
+                       size_t& camera_id_relative) const
+  {
+    size_t number_of_cameras = camera_views.size();
+    if (number_of_cameras != extrinsic_params_set.size() ||
+        number_of_cameras < 2)
+    {
+      return -1;
+    }
+
+    //选取包含特征点最多的相机作为固定的相机
+    size_t max_number_of_camera_views = camera_views[0].size();
+    camera_id_identity = 0;
+    for (size_t i = 1; i < number_of_cameras; i++)
+    {
+      if (camera_views[i].size() > max_number_of_camera_views)
+      {
+        max_number_of_camera_views = camera_views[i].size();
+        camera_id_identity = i;
+      }
+    }
+
+    //选取距离固定相机第四近的相机作为相对相机
+    CompareFunctor compare_functor(extrinsic_params_set,
+                                   extrinsic_params_set[camera_id_identity]);
+    std::vector<size_t> indices(number_of_cameras);
+    for (size_t i = 0; i < number_of_cameras; i++)
+    {
+      indices[i] = i;
+    }
+    std::sort(indices.begin(), indices.end(), compare_functor);
+
+    if (number_of_cameras < 4)
+    {
+      camera_id_relative = indices[number_of_cameras - 1];
+    }
+    else
+    {
+      camera_id_relative = indices[3];
+    }
+
+    return 0;
+  }
+
+  Err ComputeSimilarTransform(
+    const ExtrinsicParamsContainer& extrinsic_params_set,
+    size_t camera_id_identity,
+    size_t camera_id_relative,
+    RMatrix& rotation_similar,
+    Translate& translate_similar,
+    Scalar& scale_similar) const
+  {
+    RMatrix rotation_identity =
+      extrinsic_params_set[camera_id_identity].rotation();
+
+    Position position_identity =
+      extrinsic_params_set[camera_id_identity].position();
+    Position position_relative =
+      extrinsic_params_set[camera_id_relative].position();
+
+    rotation_similar = rotation_identity.transpose();
+    translate_similar = position_identity;
+    scale_similar = (position_relative - position_identity).norm();
+
+    return 0;
+  }
+
+  Err SimilarTransformCameras(
+    const RMatrix& rotation_similar,
+    const Translate& translate_similar,
+    Scalar scale_similar,
+    ExtrinsicParamsContainer& extrinsic_params_set) const
+  {
+    size_t number_of_cameras = extrinsic_params_set.sise();
+    for (size_t i = 0; i < number_of_cameras; i++)
+    {
+      RMatrix rotation_absolute = extrinsic_params_set[i].rotation();
+      Position position_absolute = extrinsic_params_set[i].position();
+
+      RMatrix rotation_relative = rotation_absolute * rotation_similar;
+      Position position_relative =
+        rotation_similar.transpose *
+        (position_absolute - translate_similar) / scale;
+
+      extrinsic_params_set[i].rotation() = rotation_relative;
+      extrinsic_params_set[i].position() = position_relative;
+    }
+    return 0;
+  }
+
+  Err SimilarTransformPoints(
+    const RMatrix& rotation_similar,
+    const Translate& translate_similar,
+    Scalar scale_similar,
+    Point3DContainer& points) const
+  {
+    size_t number_of_points = points.size();
+    for (size_t i = 0; i < number_of_points; i++)
+    {
+      points[i] =
+        rotation_similar.transpose * (points[i] - translate_similar) / scale;
+    }
+    return -1;
+  }
 };
 
 class MatchGenerator
