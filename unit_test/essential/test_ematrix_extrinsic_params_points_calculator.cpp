@@ -4,7 +4,8 @@
 
 #include "hs_math/random/normal_random_var.hpp"
 
-#include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
+#include "hs_sfm/synthetic/scene_generator.hpp"
+#include "hs_sfm/synthetic/keyset_generator.hpp"
 
 #include "hs_sfm/essential/ematrix_5_points_calculator.hpp"
 #include "hs_sfm/essential/ematrix_extrinsic_params_points_calculator.hpp"
@@ -21,7 +22,8 @@ public:
   typedef int Err;
 
 private:
-  typedef hs::sfm::SceneGenerator<Scalar, ImageDimension> SceneGenerator;
+  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
+          SceneGenerator;
   typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
   typedef typename IntrinsicParams::KMatrix KMatrix;
   typedef typename SceneGenerator::IntrinsicParamsContainer
@@ -34,9 +36,9 @@ private:
   typedef typename SceneGenerator::Point3D Point3D;
   typedef typename SceneGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::KeysGenerator<Scalar, ImageDimension> KeysGenerator;
-  typedef typename KeysGenerator::Keys Keys;
-  typedef typename KeysGenerator::KeysContainer KeysContainer;
+  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension> KeysetGenerator;
+  typedef typename KeysetGenerator::Keyset Keyset;
+  typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
   typedef hs::sfm::essential::EMatrix5PointsCalculator<Scalar> EMatrixCalculator;
   typedef typename EMatrixCalculator::EMatrix EMatrix;
@@ -98,13 +100,13 @@ public:
     }
 
     //生成特征点
-    KeysContainer keys_set;
+    KeysetContainer keysets;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
     if (keys_generator_(intrinsic_params_set,
                         extrinsic_params_set,
                         points,
-                        keys_set,
+                        keysets,
                         tracks,
                         camera_views) != 0)
     {
@@ -129,8 +131,8 @@ public:
         size_t key_left_id = tracks[i][0].second;
         size_t key_right_id = tracks[i][1].second;
         HKeyPair key_pair;
-        key_pair.first.template segment<2>(0) = keys_set[0][key_left_id];
-        key_pair.second.template segment<2>(0) = keys_set[1][key_right_id];
+        key_pair.first.template segment<2>(0) = keysets[0][key_left_id];
+        key_pair.second.template segment<2>(0) = keysets[1][key_right_id];
         key_pair.first[2] = Scalar(1);
         key_pair.second[2] = Scalar(1);
         key_pair.first = K_left_inverse * key_pair.first;
@@ -222,7 +224,7 @@ public:
 
 private:
   SceneGenerator scene_generator_;
-  KeysGenerator keys_generator_;
+  KeysetGenerator keys_generator_;
 };
 
 TEST(TestEmatrixExtrinsicParamsPointsCalculator, SimpleTest)

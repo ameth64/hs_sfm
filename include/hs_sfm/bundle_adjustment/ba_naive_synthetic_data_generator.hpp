@@ -2,7 +2,8 @@
 #define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAIVE_SYNTHETIC_DATA_GENERATOR_HPP_
 
 #include "hs_sfm/bundle_adjustment/ba_naive_vector_function.hpp"
-#include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
+#include "hs_sfm/synthetic/scene_generator.hpp"
+#include "hs_sfm/synthetic/keyset_generator.hpp"
 
 namespace hs
 {
@@ -20,7 +21,8 @@ public:
 
   typedef int Err;
 
-  typedef hs::sfm::SceneGenerator<Scalar, ImageDimension> SceneGenerator;
+  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
+          SceneGenerator;
   typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
   typedef typename SceneGenerator::IntrinsicParamsContainer
                    IntrinsicParamsContainer;
@@ -32,9 +34,10 @@ public:
   typedef typename SceneGenerator::Point3D Point3D;
   typedef typename SceneGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::KeysGenerator<Scalar, ImageDimension> KeysGenerator;
-  typedef typename KeysGenerator::Keys Keys;
-  typedef typename KeysGenerator::KeysContainer KeysContainer;
+  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension>
+          KeysetGenerator;
+  typedef typename KeysetGenerator::Keyset Keyset;
+  typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
   typedef BANaiveVectorFunction<Scalar> BAVectorFunction;
   typedef typename BAVectorFunction::Index Index;
@@ -91,19 +94,19 @@ public:
       return -1;
     Scalar f = GetFocalLengthInPixel();
 
-    KeysContainer keys_set;
+    KeysetContainer keysets;
     TrackContainer tracks;
     CameraViewContainer camera_views;
     if (keys_generator_(intrinsic_params_set,
                         extrinsic_params_set,
-                        points, keys_set,
+                        points, keysets,
                         tracks,
                         camera_views) != 0) 
       return -1;
 
     size_t number_of_keys = 0;
-    auto itr_keys = keys_set.begin();
-    auto itr_keys_end = keys_set.end();
+    auto itr_keys = keysets.begin();
+    auto itr_keys_end = keysets.end();
     std::vector<Index> keys_id_offsets(extrinsic_params_set.size());
     Index i = 0;
     for (; itr_keys != itr_keys_end; ++itr_keys, ++i)
@@ -212,7 +215,7 @@ public:
     }
 
     //特征点
-    itr_keys = keys_set.begin();
+    itr_keys = keysets.begin();
     i = 0;
     for (; itr_keys != itr_keys_end; ++itr_keys)
     {
@@ -237,7 +240,7 @@ public:
                    const BAVectorFunction& vector_function,
                    const XVector& x,
                    Point3DContainer& gcps,
-                   KeysContainer& image_keys_set,
+                   KeysetContainer& keysets,
                    TrackContainer& tracks) const
   {
     scene_generator_.GenerateScenePoints(number_of_gcps, gcps);
@@ -264,14 +267,14 @@ public:
     return keys_generator_(intrinsic_params_set,
                            extrinsic_params_set,
                            gcps,
-                           image_keys_set,
+                           keysets,
                            tracks,
                            camera_views);
   }
 
 private:
   SceneGenerator scene_generator_;
-  KeysGenerator keys_generator_;
+  KeysetGenerator keys_generator_;
 };
 
 }

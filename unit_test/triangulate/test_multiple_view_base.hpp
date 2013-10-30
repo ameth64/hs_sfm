@@ -3,7 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
+#include "hs_sfm/synthetic/scene_generator.hpp"
+#include "hs_sfm/synthetic/keyset_generator.hpp"
 #include "hs_sfm/triangulate/multiple_view_vector_function.hpp"
 
 namespace hs
@@ -22,7 +23,8 @@ public:
 
   typedef int Err;
 
-  typedef hs::sfm::SceneGenerator<Scalar, ImageDimension> SceneGenerator;
+  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
+          SceneGenerator;
   typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
   typedef typename SceneGenerator::IntrinsicParamsContainer
                    IntrinsicParamsContainer;
@@ -34,9 +36,10 @@ public:
   typedef typename SceneGenerator::Point3D Point3D;
   typedef typename SceneGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::KeysGenerator<Scalar, ImageDimension> KeysGenerator;
-  typedef typename KeysGenerator::Keys Keys;
-  typedef typename KeysGenerator::KeysContainer KeysContainer;
+  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension>
+          KeysetGenerator;
+  typedef typename KeysetGenerator::Keyset Keyset;
+  typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
   typedef MultipleViewVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
@@ -93,11 +96,11 @@ public:
       return -1;
     }
 
-    KeysContainer image_keys;
+    KeysetContainer keysets;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
     if (keys_generator_(intrinsic_params_set, extrinsic_params_set, points,
-                        image_keys, tracks, camera_views) != 0)
+                        keysets, tracks, camera_views) != 0)
     {
       return -1;
     }
@@ -126,7 +129,7 @@ public:
     {
       if (!camera_views[i].empty())
       {
-        y.segment(view_id * 2, 2) = image_keys[i][0];
+        y.segment(view_id * 2, 2) = keysets[i][0];
         view_id++;
       }
     }
@@ -136,7 +139,7 @@ public:
 
 private:
   SceneGenerator scene_generator_;
-  KeysGenerator keys_generator_;
+  KeysetGenerator keys_generator_;
 };
 
 }

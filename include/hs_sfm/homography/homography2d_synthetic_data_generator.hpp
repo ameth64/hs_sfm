@@ -1,7 +1,8 @@
 #ifndef _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_SYNTHETIC_DATA_GENERATOR_HPP_
 #define _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_SYNTHETIC_DATA_GENERATOR_HPP_
 
-#include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
+#include "hs_sfm/synthetic/scene_generator.hpp"
+#include "hs_sfm/synthetic/keyset_generator.hpp"
 #include "hs_sfm/homography/homography2d_vector_function.hpp"
 
 namespace hs
@@ -18,7 +19,8 @@ public:
   typedef _Scalar Scalar;
   typedef _ImageDimension ImageDimension;
   typedef int Err;
-  typedef hs::sfm::SceneGenerator<Scalar, ImageDimension> SceneGenerator;
+  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
+          SceneGenerator;
   typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
   typedef typename SceneGenerator::IntrinsicParamsContainer
                    IntrinsicParamsContainer;
@@ -30,9 +32,10 @@ public:
   typedef typename SceneGenerator::Point3D Point3D;
   typedef typename SceneGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::KeysGenerator<Scalar, ImageDimension> KeysGenerator;
-  typedef typename KeysGenerator::Keys Keys;
-  typedef typename KeysGenerator::KeysContainer KeysContainer;
+  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension>
+          KeysetGenerator;
+  typedef typename KeysetGenerator::Keyset Keyset;
+  typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
   typedef Homography2DVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
@@ -94,13 +97,13 @@ public:
                                                points_height_,
                                                points);
 
-    KeysContainer keys_set;
+    KeysetContainer keysets;
     TrackContainer tracks;
     CameraViewContainer camera_views;
     if (keys_generator_(intrinsic_params_set,
                         extrinsic_params_set,
                         points,
-                        keys_set,
+                        keysets,
                         tracks,
                         camera_views) != 0)
     {
@@ -155,9 +158,9 @@ public:
     {
       if (itr_track->size() == 2)
       {
-        x.template segment<2>(i * 2) = keys_set[0][(*itr_track)[0].second];
-        y.template segment<2>(i * 4) = keys_set[0][(*itr_track)[0].second];
-        y.template segment<2>(i * 4 + 2) = keys_set[1][(*itr_track)[1].second];
+        x.template segment<2>(i * 2) = keysets[0][(*itr_track)[0].second];
+        y.template segment<2>(i * 4) = keysets[0][(*itr_track)[0].second];
+        y.template segment<2>(i * 4 + 2) = keysets[1][(*itr_track)[1].second];
 
         i++;
       }
@@ -168,7 +171,7 @@ public:
 
 private:
   SceneGenerator scene_generator_;
-  KeysGenerator keys_generator_;
+  KeysetGenerator keys_generator_;
   size_t number_of_keys_;
   Scalar points_height_;
 };

@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_SYNTHETIC_SCENE_GENERATOR_HPP_
+﻿#ifndef _HS_SFM_SYNTHETIC_SCENE_GENERATOR_HPP_
 #define _HS_SFM_SYNTHETIC_SCENE_GENERATOR_HPP_
 
 #include "hs_math/random/normal_random_var.hpp"

@@ -4,7 +4,8 @@
 
 #include "hs_math/random/normal_random_var.hpp"
 
-#include "hs_sfm/sfm_utility/synthetic_scene_generator.hpp"
+#include "hs_sfm/synthetic/scene_generator.hpp"
+#include "hs_sfm/synthetic/keyset_generator.hpp"
 
 #include "hs_sfm/fundamental/linear_8_points_calculator.hpp"
 
@@ -20,7 +21,8 @@ public:
   typedef int Err;
 
 private:
-  typedef hs::sfm::SceneGenerator<Scalar, ImageDimension> SceneGenerator;
+  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
+          SceneGenerator;
   typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
   typedef typename SceneGenerator::IntrinsicParamsContainer
                    IntrinsicParamsContainer;
@@ -32,9 +34,10 @@ private:
   typedef typename SceneGenerator::Point3D Point3D;
   typedef typename SceneGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::KeysGenerator<Scalar, ImageDimension> KeysGenerator;
-  typedef typename KeysGenerator::Keys Keys;
-  typedef typename KeysGenerator::KeysContainer KeysContainer;
+  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension>
+          KeysetGenerator;
+  typedef typename KeysetGenerator::Keyset Keyset;
+  typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
   typedef hs::sfm::fundamental::Linear8PointsCalculator<Scalar> Calculator;
   typedef typename Calculator::Key Key;
@@ -91,13 +94,13 @@ public:
     }
 
     //生成特征点
-    KeysContainer keys_set;
+    KeysetContainer keysets;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
     if (keys_generator_(intrinsic_params_set,
                         extrinsic_params_set,
                         points,
-                        keys_set,
+                        keysets,
                         tracks,
                         camera_views) != 0)
     {
@@ -115,8 +118,8 @@ public:
       {
         size_t key_left_id = tracks[i][0].second;
         size_t key_right_id = tracks[i][1].second;
-        Key key_left = keys_set[0][key_left_id];
-        Key key_right = keys_set[1][key_right_id];
+        Key key_left = keysets[0][key_left_id];
+        Key key_right = keysets[1][key_right_id];
         keys_left.push_back(key_left);
         keys_right.push_back(key_right);
       }
@@ -184,7 +187,7 @@ public:
 
 private:
   SceneGenerator scene_generator_;
-  KeysGenerator keys_generator_;
+  KeysetGenerator keys_generator_;
 
 };
 
