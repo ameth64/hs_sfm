@@ -26,7 +26,7 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   CameraIntrinsicParams()
-    : focal_length_(0),
+    : focal_length_(1),
       skew_(0),
       principal_point_x_(0),
       principal_point_y_(0),
@@ -46,13 +46,13 @@ public:
       skew_(K(0, 1)),
       principal_point_x_(K(0, 2)),
       principal_point_y_(K(1, 2)),
-      pixel_ratio_(K(0, 0) / K(1, 1)) {}
+      pixel_ratio_(K(1, 1) / K(0, 0)) {}
 
   inline KMatrix GetKMatrix() const
   {
     KMatrix K;
     K << focal_length_, skew_, principal_point_x_,
-       0, focal_length_ / pixel_ratio_, principal_point_y_,
+       0, focal_length_ * pixel_ratio_, principal_point_y_,
        0, 0, 1;
 
     return K;
@@ -128,7 +128,7 @@ private:
   Scalar principal_point_x_;
   Scalar principal_point_y_;
   /**
-   *  x方向与y方向上像素量纲比值
+   *  y方向与x方向上像素量纲比值
    */
   Scalar pixel_ratio_;
 };

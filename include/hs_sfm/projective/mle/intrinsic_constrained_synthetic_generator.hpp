@@ -1,5 +1,5 @@
-#ifndef _HS_SFM_PROJECTIVE_MLE_INTRINSIC_CONSTAINED_SYNTHETIC_GENERATOR_HPP_
-#define _HS_SFM_PROJECTIVE_MLE_INTRINSIC_CONSTAINED_SYNTHETIC_GENERATOR_HPP_
+#ifndef _HS_SFM_PROJECTIVE_MLE_INTRINSIC_CONSTRAINED_SYNTHETIC_GENERATOR_HPP_
+#define _HS_SFM_PROJECTIVE_MLE_INTRINSIC_CONSTRAINED_SYNTHETIC_GENERATOR_HPP_
 
 #include "hs_sfm/synthetic/scene_generator.hpp"
 #include "hs_sfm/synthetic/keyset_generator.hpp"
@@ -105,17 +105,28 @@ public:
                           points, keysets, tracks, camera_views) != 0)
       return -1;
 
-    vector_function.points() = points;
+    size_t number_of_points = points.size();
+    vector_function.points().clear();
+    for (size_t i = 0; i < number_of_points; i++)
+    {
+      if (!tracks[i].empty())
+      {
+        vector_function.points().push_back(points[i]);
+      }
+    }
+
     Index x_size = vector_function.GetXSize();
     Index y_size = vector_function.GetYSize();
     x.resize(x_size);
     y.resize(y_size);
+    Point3D t = -(extrinsic_params_set[0].rotation() *
+                  extrinsic_params_set[0].position());
     x[0] = extrinsic_params_set[0].rotation()[0];
     x[1] = extrinsic_params_set[0].rotation()[1];
     x[2] = extrinsic_params_set[0].rotation()[2];
-    x[3] = extrinsic_params_set[0].position()[0];
-    x[4] = extrinsic_params_set[0].position()[1];
-    x[5] = extrinsic_params_set[0].position()[2];
+    x[3] = t[0];
+    x[4] = t[1];
+    x[5] = t[2];
     x[6] = intrinsic_params_set[0].focal_length();
     x[7] = intrinsic_params_set[0].skew();
     x[8] = intrinsic_params_set[0].principal_point_x();

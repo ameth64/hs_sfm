@@ -43,7 +43,7 @@ public:
 
   Err operator()(const IntrinContainer& intrinsic_params_set,
                  const ExtrinContainer& extrinsic_params_set,
-                 const Point3DContainer& point,
+                 const Point3DContainer& points,
                  KeysetContainer& keysets,
                  TrackContainer& tracks,
                  CameraViewContainer& camera_views) const
@@ -55,18 +55,18 @@ public:
     }
 
     Point2DSetContainer point2dsets(number_of_cameras);
-    size_t number_of_points = point.size();
+    size_t number_of_points = points.size();
     tracks.resize(number_of_points);
     camera_views.resize(number_of_cameras);
     for (size_t i = 0; i < number_of_points; i++)
     {
-      const Point3D& pt = point[i];
+      const Point3D& point = points[i];
       for (size_t j = 0; j < number_of_cameras; j++)
       {
         ProjectionMatrix P =
           Camera::GetProjectionMatrix(intrinsic_params_set[j],
                                       extrinsic_params_set[j]);
-        Point3D key_homogeneous = P.block(0, 0, 3, 3) * point[i] + 
+        Point3D key_homogeneous = P.block(0, 0, 3, 3) * point + 
                                   P.block(0, 3, 3, 1);
         key_homogeneous /= key_homogeneous(2);
         if (key_homogeneous(0) > (-Scalar(image_width_) / 2) && 

@@ -32,16 +32,20 @@ public:
     Index y_size = GetYSize();
     y.resize(y_size);
     Index number_of_points = Index(points_.size());
+    Vector3 rotation  = x.template segment<3>(0);
+    Vector3 translate =  x.template segment<3>(3);
+    Matrix33 K;
+    K << x[6], x[7], x[8],
+         0, x[6] * x[10], x[9],
+         0, 0, 1;
+    Scalar theta = rotation.norm();
+    if (theta != Scalar(0))
+    {
+      rotation /= theta;
+    }
     for (Index i = 0; i < number_of_points; i++)
     {
-      Vector3 rotation  = x.template segment<3>(0);
-      Vector3 translate =  x.template segment<3>(3);
       const Vector3& point = points_[i];
-      Matrix33 K;
-      K << x[6], x[7], x[8],
-           0, x[6] / x[10], x[9],
-           0, 0, 1;
-      Scalar theta = rotation.norm();
       Vector3 key_homogeneous;
       if (theta == Scalar(0))
       {
@@ -49,7 +53,6 @@ public:
       }
       else
       {
-        rotation /= theta;
         key_homogeneous =
           cos(theta) * point +
           sin(theta) * rotation.cross(point) +
@@ -66,16 +69,14 @@ public:
     return 0;
   }
 
-  //x由相机旋转、相机位置、相机内参数的5个参数组成，一共11个元素
   Index GetXSize() const
   {
     return 11;
   }
 
-  //y由影像点以及相机内参数组成
   Index GetYSize() const
   {
-    return Index(points_.size() * 2 + 11);
+    return Index(points_.size() * 2 + 5);
   }
 
   const Point3DContainer&  points() const
