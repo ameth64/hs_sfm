@@ -1,6 +1,7 @@
-#ifndef _HS_SFM_INCREMENTAL_SCENE_SPANNER_HPP_
-#define _HS_SFM_INCREMENTAL_SCENE_SPANNER_HPP_
+ï»¿#ifndef _HS_SFM_INCREMENTAL_SCENE_EXPANDOR_HPP_
+#define _HS_SFM_INCREMENTAL_SCENE_EXPANDOR_HPP_
 
+#include <vector>
 #include <map>
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
@@ -16,7 +17,7 @@ namespace incremental
 {
 
 template <typename _Scalar>
-class SceneSpanner
+class SceneExpandor
 {
 public:
   typedef _Scalar Scalar;
@@ -29,18 +30,117 @@ public:
   typedef EIGEN_STD_VECTOR(ImageKeyset) ImageKeysetContainer;
   typedef EIGEN_VECTOR(Scalar, 3) Point;
   typedef EIGEN_STD_VECTOR(Point) PointContainer;
-  typedef std::map<size_t, size_t> TrackPointMap;
-  typedef std::map<size_t, size_t> ImageExtrinsicMap;
+  typedef std::vector<size_t> TrackPointMap;
+  typedef std::vector<size_t> ImageExtrinsicMap;
+
+  class ObjectIndexMap
+  {
+  public:
+    static const size_t invalid_value_ = std::numeric_limits<size_t>::max();
+    ObjectIndexMap(){}
+    ObjectIndexMap(size_t number_of_objects)
+      : mapper_(number_of_objects, invalid_value) {}
+  public:
+    size_t GetMappedId(size_t object_id) const
+    {
+      return mapper_[object_id];
+    }
+
+    void SetObjectId(size_t object_id, size_t mapped_id)
+    {
+      mapper_[object_id] = mapped_id;
+    }
+
+    size_t operator[] (size_t object_id) const
+    {
+      return mapper_[object_id];
+    }
+
+    size_t& operator[] (size_t object_id)
+    {
+      return mapper_[object_id];
+    }
+
+    bool IsValid(size_t object_id) const
+    {
+      return mapper_[object_id] != invalid_value_;
+    }
+
+    void Resize(size_t number_of_objects)
+    {
+      mapper_.resize(number_of_objects, invalid_value_);
+    }
+  private:
+    std::vector<size_t> mapper_;
+  };
+
+  typedef ObjectIndexMap TrackPointMap;
+  typedef ObjectIndexMap ImageExtrinsicMap;
 
 private:
   struct ViewInfo
   {
+    size_t track_id;
     size_t image_id;
     size_t key_id;
-    bool is_outlier;
+    bool is_blunder;
   };
-  typedef std::vector<ViewInfo> RichTrack;
-  typedef std::vector<RichTrack> RichTrackContainer;
+
+  class ViewInfoIndexer
+  {
+  public:
+    void SetViewInfoByTracks(const hs::sfm::TrackContainer& tracks,
+                             const TrackPointMap& track_point_map,
+                             const ImageExtrinsicMap& image_extrinsic_map)
+    {
+      views_info_.cleaa();
+      size_t number_of_tracks = tracks.size();
+      for (size_t i = 0; i < number_of_tracks; i++)
+      {
+        size_t number_of_views = tracks[i].size();
+        for (size_t j = 0; j < number_of_views; j++)
+        {
+          ViewInfo view_info;
+          view_info.track_id = i;
+          view_info.image_id = tracks[i][j].first;
+          view_info.key_id = tracks[i][j].second;
+          view_info.is_blunder = (track_point_map.IsValid(i) &&
+                                  image_extrinsic_map[view_info.image_id]);
+          views_info.push_back(view_info);
+        }
+      }
+    }
+
+    const ViewInfo& GetViewInfoByTrackImage(size_t track_id,
+                                            size_t image_id) const
+    {
+      return views_info[track_image_index[std::make_pair(track_id, image_id)]];
+    }
+
+    ViewInfo& GetViewInfoByTrackImage(size_t track_id,
+                                      size_t image_id)
+    {
+      return views_info[track_image_index[std::make_pair(track_id, image_id)]];
+    }
+
+    const ViewInfo& GetViewInfoByImageKey(size_t image_id,
+                                        size_t key_id) const
+    {
+      return views_info[image_key_index[std::make_pair(image_id, key_id)]];
+    }
+
+    ViewInfo& GetViewInfoByImageKey(size_t image_id,
+                                  size_t key_id)
+    {
+      return views_info[image_key_index[std::make_pair(image_id, key_id)]];
+    }
+
+  private:
+    std::vector<ViewInfo> views_info;
+    std::map<std::pair<size_t, size_t>, size_t> track_image_index;
+    std::map<std::pair<size_t, size_t>, size_t> image_key_index;
+  };
+
   typedef std::vector<size_t> ImageViewTracks;
   typedef std::vector<ImageViewTracks> ImageViewTracksContainer;
   typedef hs::sfm::projective::PMatrixDLTCalculator<Scalar>
@@ -55,7 +155,7 @@ private:
   typedef typename PMatrixRasacRefiner::IndexSet IndexSet;
 
 public:
-  SceneSpanner(
+  SceneExpandor(
     size_t add_new_image_matches_threshold,
     Scalar pmatrix_ransac_threshold)
     : add_new_image_matches_threshold_(add_new_image_matches_threshold),
@@ -67,7 +167,8 @@ public:
                   ExtrinsicParamsContainer& extrinsic_params_set,
                   ImageExtrinsicMap& image_extrinsic_map,
                   PointContainer& points,
-                  TrackPointMap& track_point_map) const
+                  TrackPointMap& track_point_map,
+                  ViewInfoIndexer& view_info_indexer) const
   {
     size_t number_of_images = image_keysets.size();
     if (number_of_images != intrinsic_params_set.size())
@@ -75,26 +176,21 @@ public:
       return -1;
     }
 
-    //¹¹ÔìRichTrackContainer
-    //¼ÆËãÃ¿¸öÄÚ²ÎÊı¶ÔÓ¦µÄÓ°ÏñÅÄµ½µÄtrack
+    //æ„é€ view info indexer
+    //è®¡ç®—æ¯ä¸ªå†…å‚æ•°å¯¹åº”çš„å½±åƒæ‹åˆ°çš„track
     ImageViewTracksContainer image_view_tracks_set(number_of_images);
-    RichTrackContainer rich_tracks;
     size_t number_of_tracks = tracks.size();
     for (size_t i = 0; i < number_of_tracks; i++)
     {
       size_t number_of_views = tracks[i].size();
-      RichTrack rich_track;
       for (size_t j = 0; j < number_of_views; j++)
       {
         image_view_tracks_set[tracks[i][j].first].push_back(i);
-        ViewInfo view;
-        view.image_id = tracks[i][j].first;
-        view.key_id = tracks[i][j].second;
-        view.is_outlier = false;
-        rich_track.push_back(view);
       }
-      rich_tracks.push_back(rich_track);
     }
+    view_info_indexer.SetViewInfoByTracks(tracks,
+                                          track_point_map,
+                                          image_extrinsic_map);
 
     ExtrinsicParams new_extrinsic_params;
     size_t new_image_id;
@@ -104,7 +200,7 @@ public:
                 track_point_map,
                 image_view_tracks_set,
                 image_extrinsic_map,
-                rich_tracks,
+                view_info_indexer,
                 new_extrinsic_params,
                 new_image_id);
 
@@ -118,7 +214,7 @@ private:
                   const TrackPointMap& track_point_map,
                   const ImageViewTracksContainer& image_view_tracks_set,
                   const ImageExtrinsicMap& image_extrinsic_map,
-                  RichTrackContainer& rich_tracks,
+                  ViewInfoIndexer& view_info_indexer,
                   ExtrinsicParams& new_extrinsic_params,
                   size_t& new_image_id) const
   {
@@ -128,15 +224,15 @@ private:
       return -1;
     }
 
-    //²éÕÒÅÄÉãµ½µ±Ç°µãÔÆµÄÆäËûÓ°Ïñ£¬Ñ¡È¡Æ¥ÅäÊı×î¶àµÄÓ°Ïñ£¬
-    //ÈôÆ¥ÅäÊı×î¶àµÄÓ°ÏñµÄÆ¥ÅäÊıÃ»³¬¹ıãĞÖµ£¬Ôòº¯ÊıÖ´ĞĞ²»³É¹¦¡£
+    //æŸ¥æ‰¾æ‹æ‘„åˆ°å½“å‰ç‚¹äº‘çš„å…¶ä»–å½±åƒï¼Œé€‰å–åŒ¹é…æ•°æœ€å¤šçš„å½±åƒï¼Œ
+    //è‹¥åŒ¹é…æ•°æœ€å¤šçš„å½±åƒçš„åŒ¹é…æ•°æ²¡è¶…è¿‡é˜ˆå€¼ï¼Œåˆ™å‡½æ•°æ‰§è¡Œä¸æˆåŠŸã€‚
     size_t max_matches_image_id = 0;
     size_t max_number_of_view_tracks = 0;
     ImageViewTracks max_image_view_tracks;
     for (size_t i = 0; i < number_of_images; i++)
     {
-      //ÒÑ¼ÓÈëµÄÓ°ÏñÅÅ³ıÔÚÍâ
-      if (image_extrinsic_map.find(i) != image_extrinsic_map.end())
+      //å·²åŠ å…¥çš„å½±åƒæ’é™¤åœ¨å¤–
+      if (image_extrinsic_map.IsValid(i))
       {
         continue;
       }
@@ -145,8 +241,7 @@ private:
       ImageViewTracks image_view_tracks;
       for (size_t j = 0; j < image_view_tracks_set[i].size(); j++)
       {
-        if (track_point_map.find(image_view_tracks_set[i][j]) ==
-            track_point_map.end())
+        if (!track_point_map.IsValid(image_view_tracks_set[i][j]))
         {
           continue;
         }
@@ -170,43 +265,28 @@ private:
 
     new_image_id = max_matches_image_id;
 
-    //»ñÈ¡ÈıÎ¬µãÓë¶şÎ¬µãµÄ¶ÔÓ¦
+    //è·å–ä¸‰ç»´ç‚¹ä¸äºŒç»´ç‚¹çš„å¯¹åº”
     CorrespondenceContainer coarse_correspondences;
-    std::vector<std::pair<size_t, size_t> > key_track_map;
-    for (size i = 0; i < max_number_of_view_tracks; i++)
+    ObjectIndexMap key_track_map(max_number_of_view_tracks);
+    for (size_t i = 0; i < max_number_of_view_tracks; i++)
     {
-      size_t track_id = image_view_tracks_set[i];
-      const RichTrack& rich_track = rich_tracks[track_id];
-      auto itr_track_point = track_point_map.find(image_view_tracks_set[i]);
-      if (itr_track_point == track_point_map.end())
+      size_t track_id = image_view_tracks_set[new_image_id][i];
+      if (!track_point_map.IsValid(track_id))
       {
         return -1;
       }
-      size_t point_id = itr_track_point->second;
-      size_t number_of_views = rich_track.size();
-      size_t key_id = std::numeric_limits<size_t>::max();
-      size_t view_id = 0;
-      for (size_t j = 0; j < number_of_views; j++)
-      {
-        if (rich_track[j].image_id == new_image_id)
-        {
-          key_id = rich_track[j].key_id;
-          view_id = j;
-        }
-      }
-      if (key_id == std::numeric_limits<size_t>::max())
-      {
-        return -1;
-      }
+
+      const ViewInfo view_info =
+        view_info_indexer.GetViewInfoByTrackImage(track_id, new_image_id);
 
       Correspondence correspondence;
-      correspondence.first = image_keysets[new_image_id][key_id];
+      correspondence.first = image_keysets[new_image_id][view_info.key_id];
       correspondence.second = points[point_id];
       coarse_correspondences.push_back(correspondence);
-      key_track_map.push_back(std::pair<size_t, size_t>(track_id, view_id));
+      key_track_map[i] = track_id;
     }
 
-    //RansacÌŞ³ı´íÎóµÄ¶ÔÓ¦
+    //Ransacå‰”é™¤é”™è¯¯çš„å¯¹åº”
     IndexSet inlier_indices;
     PMatrixRasacRefiner ransac_refiner;
     CorrespondenceContainer refined_correspondences;
@@ -220,8 +300,18 @@ private:
     size_t number_of_inliers = inlier_indices.size();
     for (size_t i = 0; i < number_of_inliers; i++)
     {
-      
+      size_t track_id = key_track_map[inlier_indices[i]];
+      ViewInfo& view_info =
+        view_info_indexer.GetViewInfoByTrackImage(track_id, new_image_id);
+      view_info.is_blunder = false;
     }
+
+    //ä½¿ç”¨å‰”é™¤ç²—å·®çš„ç‚¹è®¡ç®—PçŸ©é˜µ
+    PMatrixDLTCalculator calculator;
+    PMatrix p_matrix;
+    if (calculator(refined_correspondences, p_matrix) != 0) return -1;
+
+    //ç”±PçŸ©é˜µè·å–å½±åƒå¤–æ–¹ä½å…ƒç´ 
 
     return 0;
   }

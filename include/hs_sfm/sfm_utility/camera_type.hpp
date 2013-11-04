@@ -26,13 +26,13 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   CameraIntrinsicParams()
-    : focal_length_(0), 
+    : focal_length_(0),
       skew_(0),
       principal_point_x_(0),
       principal_point_y_(0),
       pixel_ratio_(1) {}
-  CameraIntrinsicParams(Scalar focal_length, 
-        Scalar skew = 0, 
+  CameraIntrinsicParams(Scalar focal_length,
+        Scalar skew = 0,
         Scalar principal_point_x = 0,
         Scalar principal_point_y = 0,
         Scalar pixel_ratio = 1)
@@ -68,9 +68,19 @@ public:
     return focal_length_;
   }
 
+  void set_focal_length(Scalar focal_length)
+  {
+    focal_length_ = focal_length;
+  }
+
   Scalar skew() const
   {
-    return skew;
+    return skew_;
+  }
+
+  void set_skew(Scalar skew)
+  {
+    skew_ = skew;
   }
 
   Scalar principal_point_x() const
@@ -78,14 +88,29 @@ public:
     return principal_point_x_;
   }
 
+  void set_principal_point_x(Scalar principal_point_x)
+  {
+    principal_point_x_ = principal_point_x;
+  }
+
   Scalar principal_point_y() const
   {
     return principal_point_y_;
   }
 
+  void set_principal_point_y(Scalar principal_point_y)
+  {
+    principal_point_y_ = principal_point_y;
+  }
+
   Scalar pixel_ratio() const
   {
     return pixel_ratio_;
+  }
+
+  void set_pixel_ratio(Scalar pixel_ratio)
+  {
+    pixel_ratio_ = pixel_ratio;
   }
 
 private:
@@ -190,7 +215,6 @@ class CameraFunctions
 {
 public:
   typedef _Scalar Scalar;
-  
 
   typedef CameraIntrinsicParams<Scalar> IntrinsicParams;
   typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;

@@ -1,4 +1,4 @@
-#include <iostream>
+ï»¿#include <iostream>
 
 #include <gtest/gtest.h>
 
@@ -47,6 +47,8 @@ private:
   typedef typename Calculator::PMatrix PMatrix;
   typedef EIGEN_VECTOR(Scalar, 3) HKey;
   typedef EIGEN_VECTOR(Scalar, 4) HPoint;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
+  typedef EIGEN_VECTOR(Scalar, 3) Vector3;
 
 public:
   TestPMatrixDLTCalculator(
@@ -80,7 +82,7 @@ public:
 
   Err operator() ()
   {
-    //Éú³ÉÏà»ú²ÎÊıºÍÈıÎ¬µã
+    //ç”Ÿæˆç›¸æœºå‚æ•°å’Œä¸‰ç»´ç‚¹
     IntrinsicParamsContainer intrinsic_params_set;
     ExtrinsicParamsContainer extrinsic_params_set;
     ImageContainer images;
@@ -92,7 +94,7 @@ public:
       return -1;
     }
 
-    //Éú³ÉÌØÕ÷µã
+    //ç”Ÿæˆç‰¹å¾ç‚¹
     KeysetContainer keysets;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
@@ -107,7 +109,7 @@ public:
       return -1;
     }
 
-    //Éú³É¼ÆËãP¾ØÕóËùĞèµÄ¶ÔÓ¦µã
+    //ç”Ÿæˆè®¡ç®—PçŸ©é˜µæ‰€éœ€çš„å¯¹åº”ç‚¹
     CorrespondenceContainer correspondences;
     size_t number_of_tracks = tracks.size();
     Scalar key_stddev = 2;
@@ -127,7 +129,7 @@ public:
       }
     }
 
-    //¼ÆËãP¾ØÕó
+    //è®¡ç®—PçŸ©é˜µ
     Calculator calculator;
     PMatrix p_matrix;
     if (calculator(correspondences, p_matrix) != 0)
@@ -136,7 +138,12 @@ public:
       return -1;
     }
 
-    //¼ì²éÖØÍ¶Ó°Îó²î
+    Matrix33 K, R;
+    Vector3 t;
+    calculator.GetRTFromPMatrix(p_matrix, K, R, t);
+
+
+    //æ£€æŸ¥é‡æŠ•å½±è¯¯å·®
     Scalar mean_error = Scalar(0);
     size_t number_of_correspondences = correspondences.size();
     for (size_t i = 0; i < number_of_correspondences; i++)
@@ -160,7 +167,6 @@ public:
     {
       return -1;
     }
-
   }
 
 private:

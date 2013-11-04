@@ -85,7 +85,7 @@ hslib_add_library(${INCREMENTAL_NAME} ${HSPRJ_NAME} ${INCREMENTAL_SOURCES})
 set(INCREMENTAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/incremental/test_incremental.cpp"
-  "unit_test/incremental/test_scene_spanner.cpp"
+  "unit_test/incremental/test_scene_expandor.cpp"
   )
 hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
 hslib_add_dep(${INCREMENTAL_NAME}_utest
@@ -155,6 +155,7 @@ set(PROJECTIVE_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/projective/test_pmatrix_dlt_calculator.cpp"
   "unit_test/projective/test_pmatrix_dlt_ransac_refiner.cpp"
+  "unit_test/projective/mle/test_intrinsic_constrained_vector_function.cpp"
   )
 hslib_add_utest(${PROJECTIVE_NAME} SOURCES ${PROJECTIVE_UTEST_SOURCES})
 hslib_add_dep(${PROJECTIVE_NAME}_utest
