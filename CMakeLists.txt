@@ -155,6 +155,7 @@ set(PROJECTIVE_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/projective/test_pmatrix_dlt_calculator.cpp"
   "unit_test/projective/test_pmatrix_dlt_ransac_refiner.cpp"
+  "unit_test/projective/test_single_camera_params_maximum_likelihood_estimator.cpp"
   "unit_test/projective/mle/test_intrinsic_constrained_analytical_jacobian_matrix_calculator.cpp"
   "unit_test/projective/mle/test_intrinsic_constrained_vector_function.cpp"
   "unit_test/projective/mle/test_intrinsic_constrained_normal_equation_builder.cpp"
@@ -162,7 +163,8 @@ set(PROJECTIVE_UTEST_SOURCES
 hslib_add_utest(${PROJECTIVE_NAME} SOURCES ${PROJECTIVE_UTEST_SOURCES})
 hslib_add_dep(${PROJECTIVE_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
-  HS_DEPS hs_math HEADONLY)
+  HS_DEPS hs_math HEADONLY
+  HS_DEPS hs_optimizor HEADONLY)
 hslib_post_build(${PROJECTIVE_NAME}_utest)
 
 #synthetic

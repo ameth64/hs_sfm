@@ -7,6 +7,7 @@
 #include "hs_sfm/projective/mle/intrinsic_constrained_noised_y_generator.hpp"
 
 #include "hs_sfm/projective/mle/intrinsic_constrained_normal_equation_builder.hpp"
+#include "hs_sfm/projective/mle/intrinsic_constrained_mahalanobis_distance_calculator.hpp"
 
 namespace
 {
@@ -43,6 +44,11 @@ private:
           NoisedYGenerator;
   typedef EIGEN_MATRIX(Scalar, Eigen::Dynamic, Eigen::Dynamic)
           DenseYCovarianceInverse;
+
+  typedef
+    hs::sfm::projective::IntrinsicConstrainedMahalanobisDistanceCalculator<
+      _Scalar>
+      MahalanobisDistanceCalculator;
 
 public:
   TestIntrinsicConstrainedNormalEquationBuilder(
@@ -122,6 +128,18 @@ public:
 
     Residuals residuals = y - noised_y;
 
+    MahalanobisDistanceCalculator mahalanobis_distance_calculator;
+    Scalar mahalanobis_distance =
+      mahalanobis_distance_calculator(residuals, y_covariance_inverse);
+    Scalar dense_mahalanobis_distance =
+      residuals.transpose() * dense_y_covariance_inverse * residuals;
+
+    const Scalar threshold = Scalar(1e-8);
+    if (std::abs(mahalanobis_distance - dense_mahalanobis_distance) > threshold)
+    {
+      return -1;
+    }
+
     NormalEquationBuilder builder;
     NormalMatrix normal_matrix;
     Gradient gradient;
@@ -139,7 +157,6 @@ public:
                               residuals;
 
     Index x_size = vector_function.GetXSize();
-    const Scalar threshold = Scalar(1e-8);
     Err result = 0;
     for (Index i = 0; i < x_size; i++)
     {

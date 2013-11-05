@@ -1,4 +1,4 @@
-ï»¿#include <iostream>
+#include <iostream>
 
 #include <gtest/gtest.h>
 
@@ -7,13 +7,13 @@
 #include "hs_sfm/synthetic/scene_generator.hpp"
 #include "hs_sfm/synthetic/keyset_generator.hpp"
 
-#include "hs_sfm/projective/pmatrix_dlt_calculator.hpp"
+#include "hs_sfm/projective/single_camera_params_maximum_likelihood_estimator.hpp"
 
 namespace
 {
 
 template <typename _Scalar, typename _ImageDimension>
-class TestPMatrixDLTCalculator
+class TestSingleCameraParamsMaximumLikelihoodEstimator
 {
 public:
   typedef _Scalar Scalar;
@@ -39,19 +39,20 @@ private:
   typedef typename KeysetGenerator::Keyset Keyset;
   typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
-  typedef hs::sfm::projective::PMatrixDLTCalculator<Scalar> Calculator;
-  typedef typename Calculator::Key Key;
-  typedef typename Calculator::Point Point;
-  typedef typename Calculator::Correspondence Correspondence;
-  typedef typename Calculator::CorrespondenceContainer CorrespondenceContainer;
-  typedef typename Calculator::PMatrix PMatrix;
+  typedef hs::sfm::projective::SingleCameraParamsMaximumLikelihoodEstimator<
+            Scalar> Estimator;
+  typedef typename Estimator::Correspondence Correspondence;
+  typedef typename Estimator::CorrespondenceContainer CorrespondenceContainer;
+  typedef typename Estimator::KeyCovariance KeyCovariance;
+
+  typedef EIGEN_VECTOR(Scalar, 2) Key;
   typedef EIGEN_VECTOR(Scalar, 3) HKey;
   typedef EIGEN_VECTOR(Scalar, 4) HPoint;
   typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
 
 public:
-  TestPMatrixDLTCalculator(
+  TestSingleCameraParamsMaximumLikelihoodEstimator(
     Scalar focal_length_in_metre,
     Scalar ground_resolution,
     ImageDimension image_width,
@@ -80,9 +81,9 @@ public:
                        north_west_angle),
       keys_generator_(image_width, image_height) {}
 
-  Err operator() ()
+  Err Test() const
   {
-    //ç”Ÿæˆç›¸æœºå‚æ•°å’Œä¸‰ç»´ç‚¹
+    //Éú³ÉÏà»ú²ÎÊıºÍÈıÎ¬µã
     IntrinsicParamsContainer intrinsic_params_set;
     ExtrinsicParamsContainer extrinsic_params_set;
     ImageContainer images;
@@ -94,7 +95,12 @@ public:
       return -1;
     }
 
-    //ç”Ÿæˆç‰¹å¾ç‚¹
+    intrinsic_params_set[0].set_skew(1e-2);
+    intrinsic_params_set[0].set_principal_point_x(20);
+    intrinsic_params_set[0].set_principal_point_y(30);
+    intrinsic_params_set[0].set_pixel_ratio(1.0001);
+
+    //Éú³ÉÌØÕ÷µã
     KeysetContainer keysets;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
@@ -109,11 +115,11 @@ public:
       return -1;
     }
 
-    //ç”Ÿæˆè®¡ç®—PçŸ©é˜µæ‰€éœ€çš„å¯¹åº”ç‚¹
+    //Éú³É¼ÆËãP¾ØÕóËùĞèµÄ¶ÔÓ¦µã
     CorrespondenceContainer correspondences;
     size_t number_of_tracks = tracks.size();
     Scalar key_stddev = 2;
-    EIGEN_MATRIX(Scalar, 2, 2) key_covariance;
+    KeyCovariance key_covariance;
     key_covariance.setIdentity();
     key_covariance *= key_stddev * key_stddev;
     for (size_t i = 0; i < number_of_tracks; i++)
@@ -121,7 +127,7 @@ public:
       if (tracks[i].size() == 1)
       {
         Key key_mean = keysets[0][tracks[i][0].second];
-        Point point_mean = points[i];
+        Point3D point_mean = points[i];
         Correspondence correspondence(key_mean, point_mean);
         hs::math::random::NormalRandomVar<Scalar, 2>::Generate(
           key_mean, key_covariance, correspondence.first);
@@ -129,39 +135,62 @@ public:
       }
     }
 
-    //è®¡ç®—PçŸ©é˜µ
-    Calculator calculator;
-    PMatrix p_matrix;
-    if (calculator(correspondences, p_matrix) != 0)
-    {
-      std::cout<<"calculator failed!\n";
-      return -1;
-    }
-
-    //æ£€æŸ¥é‡æŠ•å½±è¯¯å·®
-    Scalar mean_error = Scalar(0);
-    size_t number_of_correspondences = correspondences.size();
-    for (size_t i = 0; i < number_of_correspondences; i++)
-    {
-      HPoint hpoint;
-      hpoint.template segment<3>(0) = correspondences[i].second;
-      hpoint[3] = Scalar(1);
-      HKey hkey = p_matrix * hpoint;
-      hkey /= hkey(2);
-      Scalar error = (hkey.template segment<2>(0) -
-                      correspondences[i].first).norm();
-      mean_error += error;
-    }
-    mean_error /= Scalar(number_of_correspondences);
-
-    if (mean_error <= key_stddev + 1)
-    {
-      return 0;
-    }
-    else
+    Estimator estimator;
+    Scalar focal_length_stddev = 1;
+    Scalar skew_stddev = 1e-2;
+    Scalar principal_point_x_stddev = 1;
+    Scalar principal_point_y_stddev = 1;
+    Scalar pixel_ratio_stddev = 1e-5;
+    IntrinsicParams intrinsic_params_estimate;
+    ExtrinsicParams extrinsic_params_estimate;
+    if (estimator(correspondences, key_covariance,
+                  intrinsic_params_set[0],
+                  focal_length_stddev,
+                  skew_stddev,
+                  principal_point_x_stddev,
+                  principal_point_y_stddev,
+                  pixel_ratio_stddev,
+                  intrinsic_params_estimate,
+                  extrinsic_params_estimate) != 0)
     {
       return -1;
     }
+
+    if (std::abs(intrinsic_params_set[0].focal_length() -
+                 intrinsic_params_estimate.focal_length()) >
+        focal_length_stddev * 2)
+      return -1;
+    if (std::abs(intrinsic_params_set[0].skew() -
+                 intrinsic_params_estimate.skew()) >
+        skew_stddev * 2)
+      return -1;
+    if (std::abs(intrinsic_params_set[0].principal_point_x() -
+                 intrinsic_params_estimate.principal_point_x() >
+        principal_point_x_stddev * 2))
+      return -1;
+    if (std::abs(intrinsic_params_set[0].principal_point_y() -
+                 intrinsic_params_estimate.principal_point_y() >
+        principal_point_y_stddev * 2))
+      return -1;
+    if (std::abs(intrinsic_params_set[0].pixel_ratio() -
+                 intrinsic_params_estimate.pixel_ratio()) >
+        pixel_ratio_stddev * 2)
+      return -1;
+
+    if (std::abs(extrinsic_params_set[0].rotation()[0] -
+                 extrinsic_params_estimate.rotation()[0]) > Scalar(1e-3) ||
+        std::abs(extrinsic_params_set[0].rotation()[1] -
+                 extrinsic_params_estimate.rotation()[1]) > Scalar(1e-3) ||
+        std::abs(extrinsic_params_set[0].rotation()[2] -
+                 extrinsic_params_estimate.rotation()[2]) > Scalar(1e-3))
+      return -1;
+    if (!extrinsic_params_set[0].position().isApprox(
+          extrinsic_params_estimate.position(), Scalar(0.3)))
+    {
+      return -1;
+    }
+
+    return 0;
   }
 
 private:
@@ -169,11 +198,12 @@ private:
   KeysetGenerator keys_generator_;
 };
 
-TEST(TestPMatrixDLTCalculator, SimpleTest)
+TEST(TestSingleCameraParamsMaximumLikelihoodEstimator, SimpleTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
-  typedef TestPMatrixDLTCalculator<Scalar, ImageDimension> Test;
+  typedef TestSingleCameraParamsMaximumLikelihoodEstimator<Scalar,
+                                                           ImageDimension> Test;
 
   Scalar focal_length_in_metre = 0.019;
   Scalar ground_resolution = 0.1;
@@ -199,7 +229,7 @@ TEST(TestPMatrixDLTCalculator, SimpleTest)
             camera_rot_stddev,
             north_west_angle);
 
-  ASSERT_EQ(0, test());
+  ASSERT_EQ(0, test.Test());
 
 }
 

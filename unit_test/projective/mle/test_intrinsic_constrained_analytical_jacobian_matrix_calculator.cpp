@@ -109,9 +109,10 @@ public:
       {
         Scalar ffd_value = ffd_jacobian_matrix.coeff(i, j);
         Scalar analytical_value = analytical_jacobian_matrix.coeff(i, j);
-        Scalar error = abs(analytical_value - ffd_value);
-        if (ffd_value != Scalar(0)) error /= ffd_value;
-        if (error > Scalar(5e-4))
+        Scalar absolute_error = abs(analytical_value - ffd_value);
+        Scalar relative_error = absolute_error;
+        if (ffd_value != Scalar(0)) relative_error /= ffd_value;
+        if (relative_error > Scalar(5e-4) && absolute_error > Scalar(1e-4))
         {
           std::cout<<"analytical_jacobian_matrix[i, j]="<<analytical_value<<".\n";
           std::cout<<"ffd_jacobian_matrix[i, j]="<<ffd_value<<".\n";

@@ -89,43 +89,6 @@ public:
     return 0;
   }
 
-  void GetRTFromPMatrix(const PMatrix& P,
-                        Matrix33& K,
-                        Matrix33& R,
-                        Vector3& t) const
-  {
-    K = P.template block<3, 3>(0, 0);
-    //对M作RQ分解
-    Scalar nx = K.template block<1, 2>(2, 1).norm();
-    Scalar cx = -K(2, 2) / nx;
-    Scalar sx = K(2, 1) / nx;
-    Matrix33 Qx;
-    Qx << 1, 0, 0,
-          0, cx, -sx,
-          0, sx, cx;
-    K = K * Qx;
-    Scalar ny = std::sqrt(K(2, 0) * K(2, 0) + K(2, 2) * K(2, 2));
-    Scalar cy = K(2, 2) / ny;
-    Scalar sy = K(2, 0) / ny;
-    Matrix33 Qy;
-    Qy << cy, 0, sy,
-          0, 1, 0,
-          -sy, 0, cy;
-    K = K * Qy;
-    Scalar nz = K.template block<1, 2>(1, 0).norm();
-    Scalar cz = -K(1, 1) / nz;
-    Scalar sz = K(1, 0) / nz;
-    Matrix33 Qz;
-    Qz << cz, -sz, 0,
-          sz, cz, 0,
-          0, 0, 1;
-    K = K * Qz;
-    R = Qz.transpose() * Qy.transpose() * Qx.transpose();
-
-    Matrix33 M_dbg = K * R;
-    int bp = 0;
-  }
-
 private:
   void GetNormalTransform(const CorrespondenceContainer& correspondences,
                           KeyTransform& key_transform,
