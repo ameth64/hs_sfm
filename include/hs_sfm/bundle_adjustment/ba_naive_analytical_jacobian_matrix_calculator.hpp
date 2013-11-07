@@ -102,6 +102,10 @@ public:
                             VectorFunction::params_per_point_);
 
       Scalar theta = r.norm();
+      if (theta == Scalar(0))
+      {
+        return -1;
+      }
       Scalar theta2 = theta * theta;
       Scalar theta4 = theta2 * theta2;
       Scalar d = r.dot(p);

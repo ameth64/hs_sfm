@@ -4,6 +4,7 @@
 #include "hs_sfm/bundle_adjustment/ba_naive_vector_function.hpp"
 #include "hs_sfm/synthetic/scene_generator.hpp"
 #include "hs_sfm/synthetic/keyset_generator.hpp"
+#include "hs_sfm/synthetic/relative_generator.hpp"
 
 namespace hs
 {
@@ -39,6 +40,10 @@ public:
   typedef typename KeysetGenerator::Keyset Keyset;
   typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
+  typedef hs::sfm::synthetic::RelativeGenerator<Scalar> RelativeGenerator;
+  typedef typename RelativeGenerator::RMatrix RMatrix;
+  typedef typename RelativeGenerator::Translate Translate;
+
   typedef BANaiveVectorFunction<Scalar> BAVectorFunction;
   typedef typename BAVectorFunction::Index Index;
   typedef typename BAVectorFunction::XVector XVector;
@@ -62,7 +67,8 @@ public:
     Scalar camera_height_stddev,
     Scalar camera_plannar_stddev,
     Scalar camera_rot_stddev,
-    Scalar north_west_angle)
+    Scalar north_west_angle,
+    bool is_relative = false)
     : scene_generator_(focal_length_in_metre,
                        number_of_strps,
                        number_of_cameras_in_strip,
@@ -78,7 +84,8 @@ public:
                        camera_plannar_stddev,
                        camera_rot_stddev,
                        north_west_angle),
-      keys_generator_(image_width, image_height) {}
+      keys_generator_(image_width, image_height),
+      is_relative_(is_relative) {}
 
   Err operator () (BAVectorFunction& vector_function,
                    XVector& x, YVector& y) const
@@ -103,6 +110,27 @@ public:
                         tracks,
                         camera_views) != 0) 
       return -1;
+
+    if (is_relative_)
+    {
+      RMatrix rotation_similar;
+      Translate translate_similar;
+      Scalar scale_similar;
+      size_t camera_id_identity;
+      size_t camera_id_relative;
+      RelativeGenerator relative_generator;
+      if (relative_generator(tracks, camera_views,
+                             extrinsic_params_set,
+                             points,
+                             rotation_similar,
+                             translate_similar,
+                             scale_similar,
+                             camera_id_identity,
+                             camera_id_relative) != 0)
+      {
+        return -1;
+      }
+    }
 
     size_t number_of_keys = 0;
     auto itr_keys = keysets.begin();
@@ -275,6 +303,7 @@ public:
 private:
   SceneGenerator scene_generator_;
   KeysetGenerator keys_generator_;
+  bool is_relative_;
 };
 
 }

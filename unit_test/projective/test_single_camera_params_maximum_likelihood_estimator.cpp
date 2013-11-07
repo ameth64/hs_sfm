@@ -13,7 +13,7 @@ namespace
 {
 
 template <typename _Scalar, typename _ImageDimension>
-class TestSingleCameraParamsMaximumLikelihoodEstimator
+class CorrespondencesGenerator
 {
 public:
   typedef _Scalar Scalar;
@@ -23,10 +23,8 @@ public:
 private:
   typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
           SceneGenerator;
-  typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
   typedef typename SceneGenerator::IntrinsicParamsContainer
                    IntrinsicParamsContainer;
-  typedef typename SceneGenerator::ExtrinsicParams ExtrinsicParams;
   typedef typename SceneGenerator::ExtrinsicParamsContainer
                    ExtrinsicParamsContainer;
   typedef typename SceneGenerator::Image Image;
@@ -42,17 +40,17 @@ private:
   typedef hs::sfm::projective::SingleCameraParamsMaximumLikelihoodEstimator<
             Scalar> Estimator;
   typedef typename Estimator::Correspondence Correspondence;
+
+  typedef EIGEN_VECTOR(Scalar, 2) Key;
+
+public:
+  typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
+  typedef typename SceneGenerator::ExtrinsicParams ExtrinsicParams;
   typedef typename Estimator::CorrespondenceContainer CorrespondenceContainer;
   typedef typename Estimator::KeyCovariance KeyCovariance;
 
-  typedef EIGEN_VECTOR(Scalar, 2) Key;
-  typedef EIGEN_VECTOR(Scalar, 3) HKey;
-  typedef EIGEN_VECTOR(Scalar, 4) HPoint;
-  typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
-  typedef EIGEN_VECTOR(Scalar, 3) Vector3;
-
 public:
-  TestSingleCameraParamsMaximumLikelihoodEstimator(
+  CorrespondencesGenerator(
     Scalar focal_length_in_metre,
     Scalar ground_resolution,
     ImageDimension image_width,
@@ -81,7 +79,11 @@ public:
                        north_west_angle),
       keys_generator_(image_width, image_height) {}
 
-  Err Test() const
+  Err operator() (Scalar key_stddev,
+                  CorrespondenceContainer& correspondences,
+                  KeyCovariance& key_covariance,
+                  ExtrinsicParams& extrinsic_params_true,
+                  IntrinsicParams& intrinsic_params_true) const
   {
     //生成相机参数和三维点
     IntrinsicParamsContainer intrinsic_params_set;
@@ -116,10 +118,7 @@ public:
     }
 
     //生成计算P矩阵所需的对应点
-    CorrespondenceContainer correspondences;
     size_t number_of_tracks = tracks.size();
-    Scalar key_stddev = 2;
-    KeyCovariance key_covariance;
     key_covariance.setIdentity();
     key_covariance *= key_stddev * key_stddev;
     for (size_t i = 0; i < number_of_tracks; i++)
@@ -135,6 +134,41 @@ public:
       }
     }
 
+    intrinsic_params_true = intrinsic_params_set[0];
+    extrinsic_params_true = extrinsic_params_set[0];
+
+    return 0;
+  }
+
+private:
+  SceneGenerator scene_generator_;
+  KeysetGenerator keys_generator_;
+};
+
+template <typename _Scalar>
+class TestSingleCameraParamsMaximumLikelihoodEstimator
+{
+public:
+  typedef _Scalar Scalar;
+  typedef int Err;
+
+private:
+  typedef hs::sfm::projective::SingleCameraParamsMaximumLikelihoodEstimator<
+            Scalar> Estimator;
+  typedef typename Estimator::Correspondence Correspondence;
+
+public:
+  typedef typename Estimator::CorrespondenceContainer CorrespondenceContainer;
+  typedef typename Estimator::ExtrinsicParams ExtrinsicParams;
+  typedef typename Estimator::IntrinsicParams IntrinsicParams;
+  typedef typename Estimator::KeyCovariance KeyCovariance;
+
+public:
+  Err Test(const IntrinsicParams& intrinsic_params_true,
+           const ExtrinsicParams& extrinsic_params_true,
+           const CorrespondenceContainer& correspondences,
+           const KeyCovariance& key_covariance) const
+  {
     Estimator estimator;
     Scalar focal_length_stddev = 1;
     Scalar skew_stddev = 1e-2;
@@ -144,7 +178,7 @@ public:
     IntrinsicParams intrinsic_params_estimate;
     ExtrinsicParams extrinsic_params_estimate;
     if (estimator(correspondences, key_covariance,
-                  intrinsic_params_set[0],
+                  intrinsic_params_true,
                   focal_length_stddev,
                   skew_stddev,
                   principal_point_x_stddev,
@@ -156,35 +190,35 @@ public:
       return -1;
     }
 
-    if (std::abs(intrinsic_params_set[0].focal_length() -
+    if (std::abs(intrinsic_params_true.focal_length() -
                  intrinsic_params_estimate.focal_length()) >
         focal_length_stddev * 2)
       return -1;
-    if (std::abs(intrinsic_params_set[0].skew() -
+    if (std::abs(intrinsic_params_true.skew() -
                  intrinsic_params_estimate.skew()) >
         skew_stddev * 2)
       return -1;
-    if (std::abs(intrinsic_params_set[0].principal_point_x() -
+    if (std::abs(intrinsic_params_true.principal_point_x() -
                  intrinsic_params_estimate.principal_point_x() >
         principal_point_x_stddev * 2))
       return -1;
-    if (std::abs(intrinsic_params_set[0].principal_point_y() -
+    if (std::abs(intrinsic_params_true.principal_point_y() -
                  intrinsic_params_estimate.principal_point_y() >
         principal_point_y_stddev * 2))
       return -1;
-    if (std::abs(intrinsic_params_set[0].pixel_ratio() -
+    if (std::abs(intrinsic_params_true.pixel_ratio() -
                  intrinsic_params_estimate.pixel_ratio()) >
         pixel_ratio_stddev * 2)
       return -1;
 
-    if (std::abs(extrinsic_params_set[0].rotation()[0] -
+    if (std::abs(extrinsic_params_true.rotation()[0] -
                  extrinsic_params_estimate.rotation()[0]) > Scalar(1e-3) ||
-        std::abs(extrinsic_params_set[0].rotation()[1] -
+        std::abs(extrinsic_params_true.rotation()[1] -
                  extrinsic_params_estimate.rotation()[1]) > Scalar(1e-3) ||
-        std::abs(extrinsic_params_set[0].rotation()[2] -
+        std::abs(extrinsic_params_true.rotation()[2] -
                  extrinsic_params_estimate.rotation()[2]) > Scalar(1e-3))
       return -1;
-    if (!extrinsic_params_set[0].position().isApprox(
+    if (!extrinsic_params_true.position().isApprox(
           extrinsic_params_estimate.position(), Scalar(0.3)))
     {
       return -1;
@@ -192,18 +226,18 @@ public:
 
     return 0;
   }
-
-private:
-  SceneGenerator scene_generator_;
-  KeysetGenerator keys_generator_;
 };
 
-TEST(TestSingleCameraParamsMaximumLikelihoodEstimator, SimpleTest)
+TEST(TestSingleCameraParamsMaximumLikelihoodEstimator, GeneratorTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
-  typedef TestSingleCameraParamsMaximumLikelihoodEstimator<Scalar,
-                                                           ImageDimension> Test;
+  typedef CorrespondencesGenerator<Scalar, ImageDimension> Generator;
+  typedef TestSingleCameraParamsMaximumLikelihoodEstimator<Scalar> Tester;
+  typedef Generator::CorrespondenceContainer CorrespondenceContainer;
+  typedef Generator::KeyCovariance KeyCovariance;
+  typedef Generator::ExtrinsicParams ExtrinsicParams;
+  typedef Generator::IntrinsicParams IntrinsicParams;
 
   Scalar focal_length_in_metre = 0.019;
   Scalar ground_resolution = 0.1;
@@ -217,20 +251,148 @@ TEST(TestSingleCameraParamsMaximumLikelihoodEstimator, SimpleTest)
   Scalar camera_rot_stddev = 1;
   Scalar north_west_angle = 60;
 
-  Test test(focal_length_in_metre,
-            ground_resolution,
-            image_width,
-            image_height,
-            pixel_size,
-            number_of_points,
-            scene_max_height,
-            camera_height_stddev,
-            camera_plannar_stddev,
-            camera_rot_stddev,
-            north_west_angle);
+  Generator generator(focal_length_in_metre,
+                      ground_resolution,
+                      image_width,
+                      image_height,
+                      pixel_size,
+                      number_of_points,
+                      scene_max_height,
+                      camera_height_stddev,
+                      camera_plannar_stddev,
+                      camera_rot_stddev,
+                      north_west_angle);
 
-  ASSERT_EQ(0, test.Test());
+  CorrespondenceContainer correspondences;
+  KeyCovariance key_covariance;
+  ExtrinsicParams extrinsic_params_true;
+  IntrinsicParams intrinsic_params_true;
+  Scalar key_stddev = 2;
+  ASSERT_EQ(0, generator(key_stddev,
+                         correspondences,
+                         key_covariance,
+                         extrinsic_params_true,
+                         intrinsic_params_true));
+
+  Tester tester;
+
+  ASSERT_EQ(0, tester.Test(intrinsic_params_true, extrinsic_params_true,
+                           correspondences, key_covariance));
 
 }
+
+//TEST(TestSingleCameraParamsMaximumLikelihoodEstimator, PriorTest)
+//{
+//  typedef double Scalar;
+//  typedef TestSingleCameraParamsMaximumLikelihoodEstimator<Scalar> Tester;
+//  typedef Tester::Correspondence Correspondence;
+//  typedef Tester::CorrespondenceContainer CorrespondenceContainer;
+//  typedef Tester::KeyCovariance KeyCovariance;
+//  typedef Tester::ExtrinsicParams ExtrinsicParams;
+//  typedef Tester::IntrinsicParams IntrinsicParams;
+//
+//  KeyCovariance key_covariance = KeyCovariance::Identity();
+//  IntrinsicParams intrinsic_params_true(4871.7948717948721);
+//  ExtrinsicParams::Rotation rotation(-0.057859973647597408,
+//                                     -0.080337058970123637,
+//                                     0.096320521908897089);
+//  ExtrinsicParams::Position position;
+//  position << -1.0056138201277076,
+//              -0.38565737866881888,
+//              0.0096981822538216751;
+//  ExtrinsicParams extrinsic_params_true(rotation, position);
+//  CorrespondenceContainer correspondences;
+//  Correspondence correspondence;
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//
+//  correspondence.first << -1558.8451445799994,
+//                          1709.7276019096519;
+//  correspondence.second << -0.59998217473680893,
+//                           -0.84219614025300216,
+//                           -2.4080658828714063;
+//  correspondences.push_back(correspondence);
+//}
 
 }

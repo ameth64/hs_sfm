@@ -1,5 +1,11 @@
-#ifndef _HS_SFM_SYNTHETIC_RELATIVE_GENERATOR_HPP_
+﻿#ifndef _HS_SFM_SYNTHETIC_RELATIVE_GENERATOR_HPP_
 #define _HS_SFM_SYNTHETIC_RELATIVE_GENERATOR_HPP_
+
+#include "hs_math/linear_algebra/eigen_macro.hpp"
+#include "hs_math/geometry/euler_angles.hpp"
+
+#include "hs_sfm/sfm_utility/camera_type.hpp"
+#include "hs_sfm/sfm_utility/key_type.hpp"
 
 namespace hs
 {
@@ -155,14 +161,31 @@ private:
   {
     RMatrix rotation_identity =
       extrinsic_params_set[camera_id_identity].rotation();
+    RMatrix rotation_relative =
+      extrinsic_params_set[camera_id_relative].rotation();
+
+    hs::math::geometry::EulerAngles<Scalar> angles_identity;
+    angles_identity.template FromOrthoRotMat<2, 1, -3, 1>(rotation_identity);
+    hs::math::geometry::EulerAngles<Scalar> angles_relative;
+    angles_relative.template FromOrthoRotMat<2, 1, -3, 1>(rotation_relative);
+
+    hs::math::geometry::EulerAngles<Scalar> angles_virtual(
+      (angles_identity[0] + angles_relative[0]) / Scalar(2),
+      (angles_identity[1] + angles_relative[1]) / Scalar(2),
+      (angles_identity[2] + angles_relative[2]) / Scalar(2));
+    RMatrix rotation_virtual =
+      angles_virtual.template ToOrthoRotMat<2, 1, -3, 1>();
 
     Position position_identity =
       extrinsic_params_set[camera_id_identity].position();
     Position position_relative =
       extrinsic_params_set[camera_id_relative].position();
 
-    rotation_similar = rotation_identity.transpose();
-    translate_similar = position_identity;
+    Position position_virtual =
+      (position_identity + position_relative) / Scalar(2);
+
+    rotation_similar = rotation_virtual.transpose();
+    translate_similar = position_virtual;
     scale_similar = (position_relative - position_identity).norm();
 
     return 0;

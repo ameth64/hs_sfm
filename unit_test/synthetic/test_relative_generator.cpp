@@ -113,13 +113,6 @@ public:
       return -1;
     }
 
-    if (TestPair(extrinsic_params_set_relative,
-                 camera_id_identity,
-                 camera_id_relative) != 0)
-    {
-      return -1;
-    }
-
     if (TestReprojectError(intrinsic_params_set,
                            extrinsic_params_set_relative,
                            images,
@@ -190,36 +183,6 @@ private:
                             scale_similar,
                             camera_id_identity,
                             camera_id_relative) != 0)
-    {
-      return -1;
-    }
-
-    return 0;
-  }
-
-  Err TestPair(const ExtrinsicParamsContainer& extrinsic_params_set_relative,
-               Scalar camera_id_identity,
-               Scalar camera_id_relative) const
-  {
-    Scalar threshold = 1e-8;
-    RMatrix rotation_identity =
-      extrinsic_params_set_relative[camera_id_identity].rotation();
-    Position position_identity =
-      extrinsic_params_set_relative[camera_id_identity].position();
-
-    if (!rotation_identity.isApprox(RMatrix::Identity(), threshold))
-    {
-      return -1;
-    }
-
-    if (!position_identity.isApprox(Position::Zero(), threshold))
-    {
-      return -1;
-    }
-
-    Position position_relative =
-      extrinsic_params_set_relative[camera_id_relative].position();
-    if (std::abs(position_relative.norm() - Scalar(1)) > threshold)
     {
       return -1;
     }

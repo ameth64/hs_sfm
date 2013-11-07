@@ -151,17 +151,6 @@ public:
       return -1;
     }
 
-    if (TestReprojectErr(keysets_noised,
-                         intrinsic_params_set,
-                         tracks,
-                         extrinsic_params_set_relative_estimate,
-                         points_relative_estimate,
-                         image_extrinsic_map,
-                         track_point_map) != 0)
-    {
-      return -1;
-    }
-
     return 0;
   }
 
@@ -296,62 +285,19 @@ private:
       }
     }
 
-    Expandor expandor(50, key_stddev_ * 4);
+    Expandor expandor(8, key_stddev_ * 4);
+    Scalar reprojection_error;
     if (expandor(keysets_noised, intrinsic_params_set, tracks,
                  extrinsic_params_set_relative_estimate,
                  image_extrinsic_map,
                  points_relative_estimate,
-                 track_point_map) != 0)
+                 track_point_map,
+                 reprojection_error) != 0)
     {
       return -1;
     }
 
-    return 0;
-  }
-
-  Err TestReprojectErr(
-    const KeysetContainer& keysets_noised,
-    const IntrinsicParamsContainer& intrinsic_params_set,
-    const hs::sfm::TrackContainer& tracks,
-    const ExtrinsicParamsContainer& extrinsic_params_set_relative_estimate,
-    const Point3DContainer& points_relative_estimate,
-    const ImageExtrinsicMap& image_extrinsic_map,
-    const TrackPointMap& track_point_map) const
-  {
-    auto itr_track_point = track_point_map.begin();
-    auto itr_track_point_end = track_point_map.end();
-    size_t number_of_reprojections = 0;
-    Scalar mean_reprojection_error = 0;
-    for (; itr_track_point != itr_track_point_end; ++itr_track_point)
-    {
-      size_t track_id = itr_track_point->first;
-      size_t point_id = itr_track_point->second;
-      const Point3D& point = points_relative_estimate[point_id];
-      const hs::sfm::Track& track  = tracks[track_id];
-      size_t number_of_views = track.size();
-      for (size_t i = 0; i < number_of_views; i++)
-      {
-        size_t image_id = track[i].first;
-        size_t key_id = track[i].second;
-        auto itr_image_extrinsic = image_extrinsic_map.find(image_id);
-        if (itr_image_extrinsic != image_extrinsic_map.end())
-        {
-          size_t extrinsic_id = itr_image_extrinsic->second;
-          PMatrix P = CameraFunctions::GetProjectionMatrix(
-                        intrinsic_params_set[image_id],
-                        extrinsic_params_set_relative_estimate[extrinsic_id]);
-          Point3D reprojection = P.block(0, 0, 3, 3) * point + P.col(3);
-          reprojection /= reprojection[2];
-          Scalar reprojection_error = (keysets_noised[image_id][key_id] -
-                                       reprojection.segment(0, 2)).norm();
-          mean_reprojection_error += reprojection_error;
-          number_of_reprojections++;
-        }
-      }
-    }
-    mean_reprojection_error /= Scalar(number_of_reprojections);
-    std::cout<<"mean reprojection error:"<<mean_reprojection_error<<"\n;";
-    if (mean_reprojection_error < 2 * key_stddev_)
+    if (reprojection_error < key_stddev_ + 1)
     {
       return 0;
     }
@@ -376,13 +322,13 @@ TEST(TestSceneExpandor, SmallDataTest)
   typedef TestSceneExpandor<Scalar, ImageDimension> Test;
 
   Scalar focal_length_in_metre = 0.019;
-  size_t number_of_strips = 5;
-  size_t number_of_cameras_in_strips = 8;
+  size_t number_of_strips = 3;
+  size_t number_of_cameras_in_strips = 3;
   Scalar ground_resolution = 0.1;
   ImageDimension image_width = 6000;
   ImageDimension image_height = 4000;
   Scalar pixel_size = 0.0000039;
-  size_t number_of_points = 40000;
+  size_t number_of_points = 200;
   Scalar lateral_overlap_ratio = 0.7;
   Scalar longitudinal_overlap_ratio = 0.8;
   Scalar scene_max_height = 100;
@@ -390,7 +336,7 @@ TEST(TestSceneExpandor, SmallDataTest)
   Scalar camera_planar_stddev = 5;
   Scalar camera_rotation_stddev = 5;
   Scalar north_west_angle = 60;
-  Scalar outlier_ratio = 0.4;
+  Scalar outlier_ratio = 0.01;
   Scalar key_stddev = 2.0;
 
   Test test(focal_length_in_metre,

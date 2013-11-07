@@ -256,7 +256,8 @@ TEST(TestBANaiveJacobianMatrixCalculator, SmallDataTest)
                                camera_height_stddev,
                                camera_planar_stddev,
                                camera_rotation_stddev,
-                               north_west_angle);
+                               north_west_angle,
+                               true);
   ASSERT_EQ(0, data_generator(vector_function, x, y));
 
   ASSERT_EQ(0, Test::Test(vector_function, x, true));
