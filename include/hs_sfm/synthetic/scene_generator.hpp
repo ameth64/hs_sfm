@@ -124,7 +124,7 @@ public:
                  scene_y_dimension * 0.5,
                  scene_z_dimension;
     Point3D min_point;
-    min_point << -scene_z_dimension * 0.5,
+    min_point << -scene_x_dimension * 0.5,
                  -scene_y_dimension * 0.5,
                  0;
 

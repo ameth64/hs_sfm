@@ -1,9 +1,12 @@
 #include <iostream>
+#include <fstream>
+#include <string>
 
 #include <gtest/gtest.h>
 
 #include "hs_math/random/normal_random_var.hpp"
 #include "hs_math/random/uniform_random_var.hpp"
+#include "hs_math/geometry/euler_angles.hpp"
 
 #include "hs_sfm/synthetic/keyset_generator.hpp"
 #include "hs_sfm/synthetic/relative_generator.hpp"
@@ -74,7 +77,9 @@ public:
     Scalar camera_rotation_stddev,
     Scalar north_west_angle,
     Scalar outlier_ratio,
-    Scalar key_stddev)
+    Scalar key_stddev,
+    const std::string& accuracy_report_path,
+    const std::string& scene_data_path)
   : scene_generator_(focal_length_in_metre,
                      number_of_strips,
                      number_of_cameras_in_strip,
@@ -92,7 +97,9 @@ public:
                      north_west_angle),
     keyset_generator_(image_width, image_height),
     outlier_ratio_(outlier_ratio),
-    key_stddev_(key_stddev) {}
+    key_stddev_(key_stddev),
+    accuracy_report_path_(accuracy_report_path),
+    scene_data_path_(scene_data_path) {}
 
   Err Test ()
   {
@@ -151,6 +158,21 @@ public:
       return -1;
     }
 
+    if (TestAccuracy(intrinsic_params_set,
+                     extrinsic_params_set_absolute,
+                     images,
+                     points_absolute,
+                     rotation_similar,
+                     translate_similar,
+                     scale_similar,
+                     image_extrinsic_map,
+                     track_point_map,
+                     extrinsic_params_set_relative_estimate,
+                     points_relative_estimate) != 0)
+    {
+      return -1;
+    }
+
     return 0;
   }
 
@@ -186,6 +208,28 @@ private:
                           camera_views) != 0)
     {
       return -1;
+    }
+
+    std::ofstream scene_file(scene_data_path_.c_str(), std::ios::out);
+    size_t number_of_cameras = extrinsic_params_set_absolute.size();
+    scene_file<<"camera data:\n";
+    for (size_t i = 0; i < number_of_cameras; i++)
+    {
+      const ExtrinsicParams& extrinsic_params =
+        extrinsic_params_set_absolute[i];
+      scene_file<<i<<" "
+                <<extrinsic_params.position()[0]<<" "
+                <<extrinsic_params.position()[1]<<" "
+                <<extrinsic_params.position()[2]<<"\n";
+    }
+    size_t number_of_points = points_absolute.size();
+    scene_file<<"point data:\n";
+    for (size_t i = 0; i < number_of_points; i++)
+    {
+      scene_file<<i<<" "
+                <<points_absolute[i][0]<<" "
+                <<points_absolute[i][1]<<" "
+                <<points_absolute[i][2]<<"\n";
     }
 
     extrinsic_params_set_relative = extrinsic_params_set_absolute;
@@ -297,6 +341,7 @@ private:
       return -1;
     }
 
+    std::cout<<"reprojection_error:"<<reprojection_error<<"\n";
     if (reprojection_error < key_stddev_ + 1)
     {
       return 0;
@@ -307,12 +352,163 @@ private:
     }
   }
 
+  Err TestAccuracy(
+    const IntrinsicParamsContainer& intrinsic_params_set,
+    const ExtrinsicParamsContainer& extrinsic_params_set_absolute,
+    const ImageContainer& images,
+    const Point3DContainer& points_absolute,
+    const RMatrix& rotation_similar,
+    const Translate translate_similar,
+    Scalar scale_similar,
+    const ImageExtrinsicMap& image_extrinsic_map,
+    const TrackPointMap& track_point_map,
+    const ExtrinsicParamsContainer& extrinsic_params_set_relative_estimate,
+    const Point3DContainer& points_relative_estimate) const
+  {
+    std::ofstream report_file(accuracy_report_path_.c_str(), std::ios::out);
+    if (!report_file.is_open())
+    {
+      return -1;
+    }
+
+    typedef hs::math::geometry::EulerAngles<Scalar> EulerAngles;
+    size_t number_of_images = images.size();
+    Scalar mean_position_planar_error = Scalar(0);
+    Scalar mean_position_height_error = Scalar(0);
+    Scalar mean_rotation_angle0_error = Scalar(0);
+    Scalar mean_rotation_angle1_error = Scalar(0);
+    Scalar mean_rotation_angle2_error = Scalar(0);
+    size_t number_of_extrinsic_estimate = 0;
+    report_file<<"extrinsic params accuracy:\n";
+    for (size_t i = 0 ; i < number_of_images; i++)
+    {
+      if (image_extrinsic_map.IsValid(i))
+      {
+        size_t extrinsic_id = image_extrinsic_map[i];
+        const ExtrinsicParams& extrinsic_params_relative_estimate =
+          extrinsic_params_set_relative_estimate[extrinsic_id];
+        const ExtrinsicParams& extrinsic_params_absolute =
+          extrinsic_params_set_absolute[i];
+
+        RMatrix rotation_relative_estimate =
+          extrinsic_params_relative_estimate.rotation();
+        RMatrix rotation_absolute_estimate =
+          rotation_relative_estimate * rotation_similar.transpose();
+        EulerAngles angles_absolute_estimate;
+        angles_absolute_estimate.template FromOrthoRotMat<2, 1, -3, 1>(
+          rotation_absolute_estimate);
+
+        RMatrix rotation_absolute = extrinsic_params_absolute.rotation();
+        EulerAngles angles_absolute;
+        angles_absolute.template FromOrthoRotMat<2, 1, -3, 1>(
+          rotation_absolute);
+
+        Scalar rotation_angle0_error =
+          std::abs(angles_absolute[0] - angles_absolute_estimate[0]);
+        Scalar rotation_angle1_error =
+          std::abs(angles_absolute[1] - angles_absolute_estimate[1]);
+        Scalar rotation_angle2_error =
+          std::abs(angles_absolute[2] - angles_absolute_estimate[2]);
+
+        const Point3D& position_relative_estimate =
+          extrinsic_params_relative_estimate.position();
+        Point3D position_absolute_estimate =
+          scale_similar * rotation_similar * position_relative_estimate +
+          translate_similar;
+        const Point3D& position_absolute =
+          extrinsic_params_absolute.position();
+
+        Point3D position_diff = position_absolute_estimate - position_absolute;
+        Scalar position_planar_error = position_diff.segment(0, 2).norm();
+        Scalar position_height_error = std::abs(position_diff[2]);
+
+        mean_position_planar_error += position_planar_error;
+        mean_position_height_error += position_height_error;
+
+        mean_rotation_angle0_error += rotation_angle0_error;
+        mean_rotation_angle1_error += rotation_angle1_error;
+        mean_rotation_angle2_error += rotation_angle2_error;
+
+        report_file<<i<<" "
+                   <<position_absolute_estimate[0]<<" "
+                   <<position_absolute_estimate[1]<<" "
+                   <<position_absolute_estimate[2]<<" "
+                   <<position_planar_error<<" "
+                   <<position_height_error<<" "
+                   <<rotation_angle0_error<<" "
+                   <<rotation_angle1_error<<" "
+                   <<rotation_angle2_error<<"\n";
+
+        number_of_extrinsic_estimate++;
+      }
+    }
+
+    mean_position_planar_error /= Scalar(number_of_extrinsic_estimate);
+    mean_position_height_error /= Scalar(number_of_extrinsic_estimate);
+    mean_rotation_angle0_error /= Scalar(number_of_extrinsic_estimate);
+    mean_rotation_angle1_error /= Scalar(number_of_extrinsic_estimate);
+    mean_rotation_angle2_error /= Scalar(number_of_extrinsic_estimate);
+    report_file<<"mean position planar error:"
+               <<mean_position_planar_error<<"\n";
+    report_file<<"mean position height error:"
+               <<mean_position_height_error<<"\n";
+    report_file<<"mean rotation angle0 error:"
+               <<mean_rotation_angle0_error<<"\n";
+    report_file<<"mean rotation angle1 error:"
+               <<mean_rotation_angle1_error<<"\n";
+    report_file<<"mean rotation angle2 error:"
+               <<mean_rotation_angle2_error<<"\n";
+
+    size_t number_of_tracks = track_point_map.Size();
+    Scalar mean_point_planar_error = Scalar(0);
+    Scalar mean_point_height_error = Scalar(0);
+    size_t number_of_points_estimate = 0;
+    report_file<<"points accuracy:\n";
+    for (size_t i = 0; i < number_of_tracks; i++)
+    {
+      if (track_point_map.IsValid(i))
+      {
+        size_t point_id = track_point_map[i];
+        const Point3D& point_relative_estimate =
+          points_relative_estimate[point_id];
+        Point3D point_absolute_estimate =
+          scale_similar * rotation_similar * point_relative_estimate +
+          translate_similar;
+        Point3D diff = point_absolute_estimate - points_absolute[i];
+        Scalar planar_error = diff.segment(0, 2).norm();
+        Scalar height_error = std::abs(diff[2]);
+        number_of_points_estimate++;
+        mean_point_planar_error += planar_error;
+        mean_point_height_error += height_error;
+
+        report_file<<point_id<<" "
+                   <<point_absolute_estimate[0]<<" "
+                   <<point_absolute_estimate[1]<<" "
+                   <<point_absolute_estimate[2]<<" "
+                   <<planar_error<<" "
+                   <<height_error<<"\n";
+      }
+    }
+
+    mean_point_planar_error /= Scalar(number_of_points_estimate);
+    mean_point_height_error /= Scalar(number_of_points_estimate);
+
+    report_file<<"mean point planar error:"
+               <<mean_point_planar_error<<"\n";
+    report_file<<"mean point height error:"
+               <<mean_point_height_error<<"\n";
+
+    return 0;
+  }
+
 private:
   SceneGenerator scene_generator_;
   KeysetGenerator keyset_generator_;
   RelativeGenerator relative_generator_;
   Scalar outlier_ratio_;
   Scalar key_stddev_;
+  std::string accuracy_report_path_;
+  std::string scene_data_path_;
 };
 
 TEST(TestSceneExpandor, SmallDataTest)
@@ -355,7 +551,56 @@ TEST(TestSceneExpandor, SmallDataTest)
             camera_rotation_stddev,
             north_west_angle,
             outlier_ratio,
-            key_stddev);
+            key_stddev,
+            "small_data_accuracy.txt",
+            "small_data_scene.xug");
+
+  ASSERT_EQ(0, test.Test());
+}
+
+TEST(TestSceneExpandor, BigDataTest)
+{
+  typedef double Scalar;
+  typedef size_t ImageDimension;
+  typedef TestSceneExpandor<Scalar, ImageDimension> Test;
+
+  Scalar focal_length_in_metre = 0.019;
+  size_t number_of_strips = 7;
+  size_t number_of_cameras_in_strips = 15;
+  Scalar ground_resolution = 0.1;
+  ImageDimension image_width = 6000;
+  ImageDimension image_height = 4000;
+  Scalar pixel_size = 0.0000039;
+  size_t number_of_points = 20000;
+  Scalar lateral_overlap_ratio = 0.6;
+  Scalar longitudinal_overlap_ratio = 0.8;
+  Scalar scene_max_height = 100;
+  Scalar camera_height_stddev = 5;
+  Scalar camera_planar_stddev = 5;
+  Scalar camera_rotation_stddev = 5;
+  Scalar north_west_angle = 60;
+  Scalar outlier_ratio = 0.0;
+  Scalar key_stddev = 2.0;
+
+  Test test(focal_length_in_metre,
+            number_of_strips,
+            number_of_cameras_in_strips,
+            ground_resolution,
+            image_width,
+            image_height,
+            pixel_size,
+            number_of_points,
+            lateral_overlap_ratio,
+            longitudinal_overlap_ratio,
+            scene_max_height,
+            camera_height_stddev,
+            camera_planar_stddev,
+            camera_rotation_stddev,
+            north_west_angle,
+            outlier_ratio,
+            key_stddev,
+            "big_data_accuracy.txt",
+            "big_data_scene.xug");
 
   ASSERT_EQ(0, test.Test());
 }
