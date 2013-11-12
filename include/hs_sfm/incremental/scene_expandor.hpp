@@ -95,7 +95,7 @@ public:
   typedef ObjectIndexMap TrackPointMap;
   typedef ObjectIndexMap ImageExtrinsicMap;
 
-private:
+protected:
   struct ViewInfo
   {
     size_t track_id;
@@ -223,6 +223,25 @@ public:
                   TrackPointMap& track_point_map,
                   Scalar& reprojection_error) const
   {
+    return Run(image_keysets,
+               intrinsic_params_set,
+               tracks,
+               extrinsic_params_set,
+               image_extrinsic_map,
+               points,
+               track_point_map,
+               reprojection_error);
+  }
+
+  Err Run(const ImageKeysetContainer& image_keysets,
+          const IntrinsicParamsContainer& intrinsic_params_set,
+          const TrackContainer& tracks,
+          ExtrinsicParamsContainer& extrinsic_params_set,
+          ImageExtrinsicMap& image_extrinsic_map,
+          PointContainer& points,
+          TrackPointMap& track_point_map,
+          Scalar& reprojection_error) const
+  {
     ImageViewTracksContainer image_view_tracks_set;
     ViewInfoIndexer view_info_indexer;
     if (Initialize(image_keysets,
@@ -292,6 +311,8 @@ public:
                                tracks,
                                extrinsic_params_set,
                                image_extrinsic_map,
+                               min_triangulate_views_,
+                               triangulate_error_threshold_,
                                points,
                                track_point_map,
                                view_info_indexer) != 0)
@@ -302,7 +323,7 @@ public:
     return 0;
   }
 
-private:
+protected:
   Err Initialize(const ImageKeysetContainer& image_keysets,
                  const IntrinsicParamsContainer& intrinsic_params_set,
                  const TrackContainer& tracks,
@@ -463,6 +484,8 @@ private:
                            const TrackContainer& tracks,
                            const ExtrinsicParamsContainer& extrinsic_params_set,
                            const ImageExtrinsicMap& image_extrinsic_map,
+                           size_t min_triangulate_views,
+                           Scalar triangulate_error_threshold,
                            PointContainer& points,
                            TrackPointMap& track_point_map,
                            ViewInfoIndexer& view_info_indexer) const
@@ -489,7 +512,7 @@ private:
           }
         }
 
-        if (track_views.size() >= min_triangulate_views_)
+        if (track_views.size() >= min_triangulate_views)
         {
           //三角化计算三维点
           size_t track_size = track_views.size();
@@ -527,7 +550,7 @@ private:
               hkey /= hkey(2);
               Scalar error = (keys[i] - hkey.segment(0, 2)).norm();
 
-              if (error > triangulate_error_threshold_)
+              if (error > triangulate_error_threshold)
               {
                 is_blunder = true;
                 break;
@@ -765,7 +788,7 @@ private:
     return mean_reprojection_error;
   }
 
-private:
+protected:
   size_t add_new_image_matches_threshold_;
   Scalar pmatrix_ransac_threshold_;
   size_t min_triangulate_views_;

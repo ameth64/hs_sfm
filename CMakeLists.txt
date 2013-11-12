@@ -46,6 +46,7 @@ set(UTILITY_UTEST_SOURCES
   "unit_test/sfm_utility/test_camera_type.cpp"
   "unit_test/sfm_utility/test_ransac_fit_plane.cpp"
   "unit_test/sfm_utility/test_sfm_file_io.cpp"
+  "unit_test/sfm_utility/test_similar_transform_estimator.cpp"
   )
 hslib_add_utest(${UTILITY_NAME} SOURCES ${UTILITY_UTEST_SOURCES})
 hslib_add_dep(${UTILITY_NAME}_utest
@@ -86,6 +87,7 @@ set(INCREMENTAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/incremental/test_incremental.cpp"
   "unit_test/incremental/test_scene_expandor.cpp"
+  "unit_test/incremental/test_scene_expandor_gcp_constrained.cpp"
   )
 hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
 hslib_add_dep(${INCREMENTAL_NAME}_utest

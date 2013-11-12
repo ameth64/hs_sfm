@@ -13,13 +13,13 @@
 #include "hs_sfm/synthetic/scene_generator.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
 
-#include "hs_sfm/incremental/scene_expandor.hpp"
+#include "hs_sfm/incremental/scene_expandor_gcp_constrained.hpp"
 
 namespace
 {
 
 template <typename _Scalar, typename _ImageDimension>
-class TestSceneExpandor
+class TestSceneExpandorGCPConstrained
 {
 public:
   typedef _Scalar Scalar;
@@ -50,17 +50,17 @@ private:
   typedef typename RelativeGenerator::RMatrix RMatrix;
   typedef typename RelativeGenerator::Translate Translate;
 
-  typedef hs::sfm::incremental::SceneExpandor<Scalar> Expandor;
+  typedef hs::sfm::incremental::SceneExpandorGCPConstrained<Scalar> Expandor;
   typedef typename Expandor::TrackPointMap TrackPointMap;
   typedef typename Expandor::ImageExtrinsicMap ImageExtrinsicMap;
-
+  
   typedef hs::sfm::CameraFunctions<Scalar> CameraFunctions;
   typedef typename CameraFunctions::ProjectionMatrix PMatrix;
 
   typedef EIGEN_VECTOR(Scalar, 2) Key;
 
 public:
-  TestSceneExpandor(
+  TestSceneExpandorGCPConstrained(
     Scalar focal_length_in_metre,
     size_t number_of_strips,
     size_t number_of_cameras_in_strip,
@@ -80,28 +80,28 @@ public:
     Scalar key_stddev,
     const std::string& accuracy_report_path,
     const std::string& scene_data_path)
-  : scene_generator_(focal_length_in_metre,
-                     number_of_strips,
-                     number_of_cameras_in_strip,
-                     ground_resolution,
-                     image_width,
-                     image_height,
-                     pixel_size,
-                     number_of_points,
-                     lateral_overlap_ratio,
-                     longitudinal_overlap_ratio,
-                     scene_max_height,
-                     camera_height_stddev,
-                     camera_plannar_stddev,
-                     camera_rotation_stddev,
-                     north_west_angle),
-    keyset_generator_(image_width, image_height),
-    outlier_ratio_(outlier_ratio),
-    key_stddev_(key_stddev),
-    accuracy_report_path_(accuracy_report_path),
-    scene_data_path_(scene_data_path) {}
+    : scene_generator_(focal_length_in_metre,
+                       number_of_strips,
+                       number_of_cameras_in_strip,
+                       ground_resolution,
+                       image_width,
+                       image_height,
+                       pixel_size,
+                       number_of_points,
+                       lateral_overlap_ratio,
+                       longitudinal_overlap_ratio,
+                       scene_max_height,
+                       camera_height_stddev,
+                       camera_plannar_stddev,
+                       camera_rotation_stddev,
+                       north_west_angle),
+      keyset_generator_(image_width, image_height),
+      outlier_ratio_(outlier_ratio),
+      key_stddev_(key_stddev),
+      accuracy_report_path_(accuracy_report_path),
+      scene_data_path_(scene_data_path) {}
 
-  Err Test ()
+  Err Test () const
   {
     IntrinsicParamsContainer intrinsic_params_set;
     ExtrinsicParamsContainer extrinsic_params_set_absolute;
@@ -112,6 +112,10 @@ public:
     KeysetContainer keysets_true;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
+    Point3DContainer gcps;
+    KeysetContainer keysets_gcp_true;
+    hs::sfm::TrackContainer tracks_gcp;
+    hs::sfm::CameraViewContainer camera_views_gcp;
     RMatrix rotation_similar;
     Translate translate_similar;
     Scalar scale_similar;
@@ -126,6 +130,10 @@ public:
                       keysets_true,
                       tracks,
                       camera_views,
+                      gcps,
+                      keysets_gcp_true,
+                      tracks_gcp,
+                      camera_views_gcp,
                       rotation_similar,
                       translate_similar,
                       scale_similar,
@@ -136,24 +144,29 @@ public:
     }
 
     KeysetContainer keysets_noised;
-    if (TestNoiser(keysets_true, keysets_noised) != 0) return -1;
+    if (TestNoiser(keysets_true, keysets_noised, false) != 0) return -1;
+    KeysetContainer keysets_gcp_noised;
+    if (TestNoiser(keysets_gcp_true, keysets_gcp_noised, false) != 0) return -1;
 
-    ExtrinsicParamsContainer extrinsic_params_set_relative_estimate;
-    Point3DContainer points_relative_estimate;
+    ExtrinsicParamsContainer extrinsic_params_set_estimate;
+    Point3DContainer points_estimate;
     ImageExtrinsicMap image_extrinsic_map;
     TrackPointMap track_point_map;
     if (TestExpandor(keysets_noised,
-                    intrinsic_params_set,
-                    tracks,
-                    camera_views,
-                    extrinsic_params_set_relative,
-                    points_relative,
-                    camera_id_identity,
-                    camera_id_relative,
-                    extrinsic_params_set_relative_estimate,
-                    points_relative_estimate,
-                    image_extrinsic_map,
-                    track_point_map) != 0)
+                     intrinsic_params_set,
+                     tracks,
+                     camera_views,
+                     extrinsic_params_set_relative,
+                     points_relative,
+                     gcps,
+                     keysets_gcp_noised,
+                     tracks_gcp,
+                     camera_id_identity,
+                     camera_id_relative,
+                     extrinsic_params_set_estimate,
+                     points_estimate,
+                     image_extrinsic_map,
+                     track_point_map) != 0)
     {
       return -1;
     }
@@ -162,13 +175,10 @@ public:
                      extrinsic_params_set_absolute,
                      images,
                      points_absolute,
-                     rotation_similar,
-                     translate_similar,
-                     scale_similar,
                      image_extrinsic_map,
                      track_point_map,
-                     extrinsic_params_set_relative_estimate,
-                     points_relative_estimate) != 0)
+                     extrinsic_params_set_estimate,
+                     points_estimate) != 0)
     {
       return -1;
     }
@@ -186,6 +196,10 @@ private:
                     KeysetContainer& keysets,
                     hs::sfm::TrackContainer& tracks,
                     hs::sfm::CameraViewContainer& camera_views,
+                    Point3DContainer& gcps,
+                    KeysetContainer& keysets_gcp,
+                    hs::sfm::TrackContainer& tracks_gcp,
+                    hs::sfm::CameraViewContainer& camera_views_gcp,
                     RMatrix& rotation_similar,
                     Translate& translate_similar,
                     Scalar& scale_similar,
@@ -210,27 +224,33 @@ private:
       return -1;
     }
 
-    std::ofstream scene_file(scene_data_path_.c_str(), std::ios::out);
-    size_t number_of_cameras = extrinsic_params_set_absolute.size();
-    scene_file<<"camera data:\n";
-    for (size_t i = 0; i < number_of_cameras; i++)
+    size_t number_of_gcps = 7;
+    scene_generator_.GenerateScenePoints(number_of_gcps, gcps);
+
+    if (keyset_generator_(intrinsic_params_set,
+                          extrinsic_params_set_absolute,
+                          gcps,
+                          keysets_gcp,
+                          tracks_gcp,
+                          camera_views_gcp) != 0)
     {
-      const ExtrinsicParams& extrinsic_params =
-        extrinsic_params_set_absolute[i];
-      scene_file<<i<<" "
-                <<extrinsic_params.position()[0]<<" "
-                <<extrinsic_params.position()[1]<<" "
-                <<extrinsic_params.position()[2]<<"\n";
+      return -1;
     }
-    size_t number_of_points = points_absolute.size();
-    scene_file<<"point data:\n";
-    for (size_t i = 0; i < number_of_points; i++)
+
+    size_t number_of_gcps_avaiable = 0;
+    for (size_t i = 0; i < number_of_gcps; i++)
     {
-      scene_file<<i<<" "
-                <<points_absolute[i][0]<<" "
-                <<points_absolute[i][1]<<" "
-                <<points_absolute[i][2]<<"\n";
+      if (tracks_gcp[i].size() < 4)
+      {
+        tracks_gcp[i].clear();
+      }
+      else
+      {
+        number_of_gcps_avaiable++;
+      }
     }
+
+    std::cout<<"number of avaiable gcps:"<<number_of_gcps_avaiable<<"\n";
 
     extrinsic_params_set_relative = extrinsic_params_set_absolute;
     points_relative = points_absolute;
@@ -251,7 +271,8 @@ private:
   }
 
   Err TestNoiser(const KeysetContainer& keysets_true,
-                 KeysetContainer& keysets_noised) const
+                 KeysetContainer& keysets_noised,
+                 bool has_outlier) const
   {
     keysets_noised = keysets_true;
     EIGEN_MATRIX(Scalar, 2, 2) covariance_key;
@@ -270,7 +291,7 @@ private:
         Scalar random;
         hs::math::random::UniformRandomVar<Scalar, 1>::Generate(
           0, 1, random);
-        if (random < outlier_ratio_)
+        if (random < outlier_ratio_ && has_outlier)
         {
           hs::math::random::UniformRandomVar<Scalar, 2>::Generate(
             min_key, max_key, keysets_noised[i][j]);
@@ -294,36 +315,39 @@ private:
     const hs::sfm::CameraViewContainer& camera_views,
     const ExtrinsicParamsContainer& extrinsic_params_set_relative,
     const Point3DContainer& points_relative,
+    const Point3DContainer& gcps,
+    const KeysetContainer& keysets_noised_gcp,
+    const hs::sfm::TrackContainer& tracks_gcp,
     size_t camera_id_identity,
     size_t camera_id_relative,
-    ExtrinsicParamsContainer& extrinsic_params_set_relative_estimate,
-    Point3DContainer& points_relative_estimate,
+    ExtrinsicParamsContainer& extrinsic_params_set_estimate,
+    Point3DContainer& points_estimate,
     ImageExtrinsicMap& image_extrinsic_map,
     TrackPointMap& track_point_map) const
   {
-    extrinsic_params_set_relative_estimate.clear();
-    extrinsic_params_set_relative_estimate.push_back(
+    extrinsic_params_set_estimate.clear();
+    extrinsic_params_set_estimate.push_back(
       extrinsic_params_set_relative[camera_id_identity]);
-    extrinsic_params_set_relative_estimate.push_back(
+    extrinsic_params_set_estimate.push_back(
       extrinsic_params_set_relative[camera_id_relative]);
 
     image_extrinsic_map.Resize(extrinsic_params_set_relative.size());
     image_extrinsic_map[camera_id_identity] = 0;
     image_extrinsic_map[camera_id_relative] = 1;
 
-    points_relative_estimate.clear();
+    points_estimate.clear();
     track_point_map.Resize(points_relative.size());
     const hs::sfm::CameraView& view_identity = camera_views[camera_id_identity];
     const hs::sfm::CameraView& view_relative = camera_views[camera_id_relative];
-    for (size_t i = 0; i < view_identity.size(); i++)
+    for (size_t i = 0; i < view_relative.size(); i++)
     {
       size_t track_id = view_identity[i].first;
       for (size_t j = 0; j < view_relative.size(); j++)
       {
         if (track_id == view_relative[j].first)
         {
-          track_point_map[track_id] = points_relative_estimate.size();
-          points_relative_estimate.push_back(points_relative[track_id]);
+          track_point_map[track_id] = points_estimate.size();
+          points_estimate.push_back(points_relative[track_id]);
           break;
         }
       }
@@ -331,10 +355,15 @@ private:
 
     Expandor expandor(8, key_stddev_ * 4);
     Scalar reprojection_error;
-    if (expandor(keysets_noised, intrinsic_params_set, tracks,
-                 extrinsic_params_set_relative_estimate,
+    if (expandor(keysets_noised,
+                 intrinsic_params_set,
+                 tracks,
+                 gcps,
+                 keysets_noised_gcp,
+                 tracks_gcp,
+                 extrinsic_params_set_estimate,
                  image_extrinsic_map,
-                 points_relative_estimate,
+                 points_estimate,
                  track_point_map,
                  reprojection_error) != 0)
     {
@@ -354,16 +383,13 @@ private:
 
   Err TestAccuracy(
     const IntrinsicParamsContainer& intrinsic_params_set,
-    const ExtrinsicParamsContainer& extrinsic_params_set_absolute,
+    const ExtrinsicParamsContainer& extrinsic_params_set_true,
     const ImageContainer& images,
-    const Point3DContainer& points_absolute,
-    const RMatrix& rotation_similar,
-    const Translate translate_similar,
-    Scalar scale_similar,
+    const Point3DContainer& points_true,
     const ImageExtrinsicMap& image_extrinsic_map,
     const TrackPointMap& track_point_map,
-    const ExtrinsicParamsContainer& extrinsic_params_set_relative_estimate,
-    const Point3DContainer& points_relative_estimate) const
+    const ExtrinsicParamsContainer& extrinsic_params_set_estimate,
+    const Point3DContainer& points_estimate) const
   {
     std::ofstream report_file(accuracy_report_path_.c_str(), std::ios::out);
     if (!report_file.is_open())
@@ -380,45 +406,41 @@ private:
     Scalar mean_rotation_angle2_error = Scalar(0);
     size_t number_of_extrinsic_estimate = 0;
     report_file<<"extrinsic params accuracy:\n";
-    for (size_t i = 0 ; i < number_of_images; i++)
+    for (size_t i = 0; i < number_of_images; i++)
     {
       if (image_extrinsic_map.IsValid(i))
       {
         size_t extrinsic_id = image_extrinsic_map[i];
-        const ExtrinsicParams& extrinsic_params_relative_estimate =
-          extrinsic_params_set_relative_estimate[extrinsic_id];
-        const ExtrinsicParams& extrinsic_params_absolute =
-          extrinsic_params_set_absolute[i];
+        const ExtrinsicParams& extrinsic_params_estimate =
+          extrinsic_params_set_estimate[extrinsic_id];
+        const ExtrinsicParams& extrinsic_params_true =
+          extrinsic_params_set_true[i];
 
-        RMatrix rotation_relative_estimate =
-          extrinsic_params_relative_estimate.rotation();
-        RMatrix rotation_absolute_estimate =
-          rotation_relative_estimate * rotation_similar.transpose();
-        EulerAngles angles_absolute_estimate;
-        angles_absolute_estimate.template FromOrthoRotMat<2, 1, -3, 1>(
-          rotation_absolute_estimate);
+        RMatrix rotation_estimate =
+          extrinsic_params_estimate.rotation();
+        EulerAngles angles_estimate;
+        angles_estimate.template FromOrthoRotMat<2, 1, -3, 1>(
+          rotation_estimate);
 
-        RMatrix rotation_absolute = extrinsic_params_absolute.rotation();
-        EulerAngles angles_absolute;
-        angles_absolute.template FromOrthoRotMat<2, 1, -3, 1>(
-          rotation_absolute);
+        RMatrix rotation_true =
+          extrinsic_params_true.rotation();
+        EulerAngles angles_true;
+        angles_true.template FromOrthoRotMat<2, 1, -3, 1>(
+          rotation_true);
 
         Scalar rotation_angle0_error =
-          std::abs(angles_absolute[0] - angles_absolute_estimate[0]);
+          std::abs(angles_true[0] - angles_estimate[0]);
         Scalar rotation_angle1_error =
-          std::abs(angles_absolute[1] - angles_absolute_estimate[1]);
+          std::abs(angles_true[1] - angles_estimate[1]);
         Scalar rotation_angle2_error =
-          std::abs(angles_absolute[2] - angles_absolute_estimate[2]);
+          std::abs(angles_true[2] - angles_estimate[2]);
 
-        const Point3D& position_relative_estimate =
-          extrinsic_params_relative_estimate.position();
-        Point3D position_absolute_estimate =
-          scale_similar * rotation_similar * position_relative_estimate +
-          translate_similar;
-        const Point3D& position_absolute =
-          extrinsic_params_absolute.position();
-
-        Point3D position_diff = position_absolute_estimate - position_absolute;
+        const Point3D& position_estimate =
+          extrinsic_params_estimate.position();
+        const Point3D& position_true =
+          extrinsic_params_true.position();
+        
+        Point3D position_diff = position_estimate - position_true;
         Scalar position_planar_error = position_diff.segment(0, 2).norm();
         Scalar position_height_error = std::abs(position_diff[2]);
 
@@ -430,9 +452,9 @@ private:
         mean_rotation_angle2_error += rotation_angle2_error;
 
         report_file<<i<<" "
-                   <<position_absolute_estimate[0]<<" "
-                   <<position_absolute_estimate[1]<<" "
-                   <<position_absolute_estimate[2]<<" "
+                   <<position_estimate[0]<<" "
+                   <<position_estimate[1]<<" "
+                   <<position_estimate[2]<<" "
                    <<position_planar_error<<" "
                    <<position_height_error<<" "
                    <<rotation_angle0_error<<" "
@@ -442,7 +464,6 @@ private:
         number_of_extrinsic_estimate++;
       }
     }
-
     mean_position_planar_error /= Scalar(number_of_extrinsic_estimate);
     mean_position_height_error /= Scalar(number_of_extrinsic_estimate);
     mean_rotation_angle0_error /= Scalar(number_of_extrinsic_estimate);
@@ -469,12 +490,9 @@ private:
       if (track_point_map.IsValid(i))
       {
         size_t point_id = track_point_map[i];
-        const Point3D& point_relative_estimate =
-          points_relative_estimate[point_id];
-        Point3D point_absolute_estimate =
-          scale_similar * rotation_similar * point_relative_estimate +
-          translate_similar;
-        Point3D diff = point_absolute_estimate - points_absolute[i];
+        const Point3D& point_estimate =
+          points_estimate[point_id];
+        Point3D diff = point_estimate - points_true[i];
         Scalar planar_error = diff.segment(0, 2).norm();
         Scalar height_error = std::abs(diff[2]);
         number_of_points_estimate++;
@@ -482,14 +500,13 @@ private:
         mean_point_height_error += height_error;
 
         report_file<<point_id<<" "
-                   <<point_absolute_estimate[0]<<" "
-                   <<point_absolute_estimate[1]<<" "
-                   <<point_absolute_estimate[2]<<" "
+                   <<point_estimate[0]<<" "
+                   <<point_estimate[1]<<" "
+                   <<point_estimate[2]<<" "
                    <<planar_error<<" "
                    <<height_error<<"\n";
       }
     }
-
     mean_point_planar_error /= Scalar(number_of_points_estimate);
     mean_point_height_error /= Scalar(number_of_points_estimate);
 
@@ -511,11 +528,11 @@ private:
   std::string scene_data_path_;
 };
 
-TEST(TestSceneExpandor, SmallDataTest)
+TEST(TestSceneExpandorGCPConstrained, SmallDataTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
-  typedef TestSceneExpandor<Scalar, ImageDimension> Test;
+  typedef TestSceneExpandorGCPConstrained<Scalar, ImageDimension> Test;
 
   Scalar focal_length_in_metre = 0.019;
   size_t number_of_strips = 3;
@@ -552,17 +569,17 @@ TEST(TestSceneExpandor, SmallDataTest)
             north_west_angle,
             outlier_ratio,
             key_stddev,
-            "small_data_accuracy.txt",
-            "small_data_scene.xug");
+            "small_data_accuracy_gcp.txt",
+            "small_data_scene_gcp.xug");
 
   ASSERT_EQ(0, test.Test());
 }
 
-TEST(TestSceneExpandor, BigDataTest)
+TEST(TestSceneExpandorGCPConstrained, BigDataTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
-  typedef TestSceneExpandor<Scalar, ImageDimension> Test;
+  typedef TestSceneExpandorGCPConstrained<Scalar, ImageDimension> Test;
 
   Scalar focal_length_in_metre = 0.019;
   size_t number_of_strips = 7;
@@ -580,7 +597,7 @@ TEST(TestSceneExpandor, BigDataTest)
   Scalar camera_rotation_stddev = 5;
   Scalar north_west_angle = 60;
   Scalar outlier_ratio = 0.0;
-  Scalar key_stddev = 0.5;
+  Scalar key_stddev = 1;
 
   Test test(focal_length_in_metre,
             number_of_strips,
@@ -599,8 +616,8 @@ TEST(TestSceneExpandor, BigDataTest)
             north_west_angle,
             outlier_ratio,
             key_stddev,
-            "big_data_accuracy.txt",
-            "big_data_scene.xug");
+            "big_data_accuracy_gcp.txt",
+            "big_data_scene_gcp.xug");
 
   ASSERT_EQ(0, test.Test());
 }
