@@ -27,6 +27,8 @@ private:
   using Base::TriangulateNewPoints;
   using Base::BundleAdjustment;
   using Base::GetReprojectiveError;
+  using Base::min_triangulate_views_;
+  using Base::triangulate_error_threshold_;
 
   typedef hs::sfm::SimilarTransformEstimator<Scalar>
           TransformEstimator;
@@ -43,7 +45,23 @@ private:
   typedef hs::sfm::ba::BAGCPConstrainedLevenbergMarquardtOptimizor<
             GCPVectorFunction> GCPOptimizor;
   typedef typename GCPOptimizor::YCovarianceInverse GCPYCovarianceInverse;
-  
+
+  typedef typename Base::ViewInfoIndexer ViewInfoIndexer;
+  typedef typename Base::ImageViewTracksContainer
+          ImageViewTracksContainer;
+  typedef typename Base::ExtrinsicParams ExtrinsicParams;
+  typedef typename Base::Point Point;
+  typedef typename Base::ViewInfo ViewInfo;
+  typedef typename Base::KMatrix KMatrix;
+
+public:
+  typedef typename Base::ImageKeysetContainer ImageKeysetContainer;
+  typedef typename Base::IntrinsicParamsContainer IntrinsicParamsContainer;
+  typedef typename Base::PointContainer PointContainer;
+  typedef typename Base::ExtrinsicParamsContainer ExtrinsicParamsContainer;
+  typedef typename Base::ImageExtrinsicMap ImageExtrinsicMap;
+  typedef typename Base::TrackPointMap TrackPointMap;
+
 public:
   SceneExpandorGCPConstrained(
     size_t add_new_image_matches_threshold = 8,
@@ -58,10 +76,10 @@ public:
 public:
   Err operator() (const ImageKeysetContainer& image_keysets,
                   const IntrinsicParamsContainer& intrinsic_params_set,
-                  const TrackContainer& tracks,
+                  const hs::sfm::TrackContainer& tracks,
                   const PointContainer& gcps,
                   const ImageKeysetContainer& image_key_sets_gcp,
-                  const TrackContainer& tracks_gcp,
+                  const hs::sfm::TrackContainer& tracks_gcp,
                   ExtrinsicParamsContainer& extrinsic_params_set,
                   ImageExtrinsicMap& image_extrinsic_map,
                   PointContainer& points,
@@ -84,10 +102,10 @@ public:
 private:
   Err Run(const ImageKeysetContainer& image_keysets,
           const IntrinsicParamsContainer& intrinsic_params_set,
-          const TrackContainer& tracks,
+          const hs::sfm::TrackContainer& tracks,
           const PointContainer& gcps,
           const ImageKeysetContainer& image_key_sets_gcp,
-          const TrackContainer& tracks_gcp,
+          const hs::sfm::TrackContainer& tracks_gcp,
           ExtrinsicParamsContainer& extrinsic_params_set,
           ImageExtrinsicMap& image_extrinsic_map,
           PointContainer& points,
@@ -204,13 +222,13 @@ private:
   Err BundleAdjustmentWithGCPConstraits(
     const ImageKeysetContainer& image_keysets,
     const IntrinsicParamsContainer& intrinsic_params_set,
-    const TrackContainer& tracks,
+    const hs::sfm::TrackContainer& tracks,
     const ImageExtrinsicMap& image_extrinsic_map,
     const TrackPointMap& track_point_map,
     const ViewInfoIndexer& view_info_indexer,
     const PointContainer& gcps,
     const ImageKeysetContainer& image_key_sets_gcp,
-    const TrackContainer& tracks_gcp,
+    const hs::sfm::TrackContainer& tracks_gcp,
     ExtrinsicParamsContainer& extrinsic_params_set,
     PointContainer& points) const
   {
@@ -221,7 +239,7 @@ private:
     gcp_view_info_indexer.SetViewInfoByTracks(tracks_gcp,
                                               track_point_map_gcp,
                                               image_extrinsic_map);
-    
+
     PointContainer gcps_rel;
     if (TriangulateNewPoints(image_key_sets_gcp,
                              intrinsic_params_set,
@@ -498,7 +516,7 @@ private:
     }
 
     GCPOptimizor gcp_optimizor(initial_x);
-    XVector optimized_x;
+    GCPXVector optimized_x;
     if (gcp_optimizor(vector_function, near_y, y_covariance_inverse,
                       optimized_x) != 0)
     {

@@ -53,7 +53,7 @@ private:
   typedef hs::sfm::incremental::SceneExpandorGCPConstrained<Scalar> Expandor;
   typedef typename Expandor::TrackPointMap TrackPointMap;
   typedef typename Expandor::ImageExtrinsicMap ImageExtrinsicMap;
-  
+
   typedef hs::sfm::CameraFunctions<Scalar> CameraFunctions;
   typedef typename CameraFunctions::ProjectionMatrix PMatrix;
 
@@ -79,7 +79,8 @@ public:
     Scalar outlier_ratio,
     Scalar key_stddev,
     const std::string& accuracy_report_path,
-    const std::string& scene_data_path)
+    const std::string& scene_data_path,
+    size_t number_of_gcps)
     : scene_generator_(focal_length_in_metre,
                        number_of_strips,
                        number_of_cameras_in_strip,
@@ -99,7 +100,8 @@ public:
       outlier_ratio_(outlier_ratio),
       key_stddev_(key_stddev),
       accuracy_report_path_(accuracy_report_path),
-      scene_data_path_(scene_data_path) {}
+      scene_data_path_(scene_data_path),
+      number_of_gcps_(number_of_gcps) {}
 
   Err Test () const
   {
@@ -224,8 +226,7 @@ private:
       return -1;
     }
 
-    size_t number_of_gcps = 7;
-    scene_generator_.GenerateScenePoints(number_of_gcps, gcps);
+    scene_generator_.GenerateScenePoints(number_of_gcps_, gcps);
 
     if (keyset_generator_(intrinsic_params_set,
                           extrinsic_params_set_absolute,
@@ -238,7 +239,7 @@ private:
     }
 
     size_t number_of_gcps_avaiable = 0;
-    for (size_t i = 0; i < number_of_gcps; i++)
+    for (size_t i = 0; i < number_of_gcps_; i++)
     {
       if (tracks_gcp[i].size() < 4)
       {
@@ -526,6 +527,7 @@ private:
   Scalar key_stddev_;
   std::string accuracy_report_path_;
   std::string scene_data_path_;
+  size_t number_of_gcps_;
 };
 
 TEST(TestSceneExpandorGCPConstrained, SmallDataTest)
@@ -551,6 +553,7 @@ TEST(TestSceneExpandorGCPConstrained, SmallDataTest)
   Scalar north_west_angle = 60;
   Scalar outlier_ratio = 0.01;
   Scalar key_stddev = 2.0;
+  size_t number_of_gcps = 15;
 
   Test test(focal_length_in_metre,
             number_of_strips,
@@ -570,7 +573,8 @@ TEST(TestSceneExpandorGCPConstrained, SmallDataTest)
             outlier_ratio,
             key_stddev,
             "small_data_accuracy_gcp.txt",
-            "small_data_scene_gcp.xug");
+            "small_data_scene_gcp.xug",
+            number_of_gcps);
 
   ASSERT_EQ(0, test.Test());
 }
@@ -598,6 +602,7 @@ TEST(TestSceneExpandorGCPConstrained, BigDataTest)
   Scalar north_west_angle = 60;
   Scalar outlier_ratio = 0.0;
   Scalar key_stddev = 1;
+  size_t number_of_gcps = 7;
 
   Test test(focal_length_in_metre,
             number_of_strips,
@@ -617,7 +622,8 @@ TEST(TestSceneExpandorGCPConstrained, BigDataTest)
             outlier_ratio,
             key_stddev,
             "big_data_accuracy_gcp.txt",
-            "big_data_scene_gcp.xug");
+            "big_data_scene_gcp.xug",
+            number_of_gcps);
 
   ASSERT_EQ(0, test.Test());
 }
