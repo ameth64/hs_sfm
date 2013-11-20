@@ -45,7 +45,6 @@ set(UTILITY_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/sfm_utility/test_camera_type.cpp"
   "unit_test/sfm_utility/test_ransac_fit_plane.cpp"
-  "unit_test/sfm_utility/test_sfm_file_io.cpp"
   "unit_test/sfm_utility/test_similar_transform_estimator.cpp"
   )
 hslib_add_utest(${UTILITY_NAME} SOURCES ${UTILITY_UTEST_SOURCES})
@@ -87,12 +86,14 @@ set(INCREMENTAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/incremental/test_incremental.cpp"
   "unit_test/incremental/test_scene_expandor.cpp"
-  "unit_test/incremental/test_scene_expandor_gcp_constrained.cpp"
+  "unit_test/incremental/test_bundle_adjustment_gcp_constrained_optimizor.cpp"
+  #"unit_test/incremental/test_scene_expandor_gcp_constrained.cpp"
   )
 hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
 hslib_add_dep(${INCREMENTAL_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
-  HS_DEPS hs_math HEADONLY)
+  HS_DEPS hs_math HEADONLY
+  HS_DEPS hs_test_utility DEP_LIBS test_env)
 hslib_post_build(${INCREMENTAL_NAME}_utest)
 
 #essential
@@ -186,3 +187,22 @@ hslib_add_dep(${SYNTHETIC_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   HS_DEPS hs_math HEADONLY)
 hslib_post_build(${SYNTHETIC_NAME}_utest)
+
+#sfm file io
+set(FILEIO_NAME "sfm_file_io")
+set(FILEIO_SOUCES 
+  )
+hslib_add_library(${FILEIO_NAME} ${HSPRJ_NAME} ${FILEIO_SOURCES})
+
+set(FILEIO_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  "unit_test/sfm_file_io/test_loader_saver_consistency.cpp"
+  )
+hslib_add_utest(${FILEIO_NAME} SOURCES ${FILEIO_UTEST_SOURCES})
+hslib_add_dep(${FILEIO_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  3RDPARTY_DEPS boost HEADONLY
+  HS_DEPS hs_math HEADONLY
+  HS_DEPS hs_test_utility DEP_LIBS test_env
+  )
+hslib_post_build(${FILEIO_NAME}_utest)

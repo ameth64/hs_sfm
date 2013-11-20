@@ -42,7 +42,7 @@ public:
       principal_point_y_(principal_point_y),
       pixel_ratio_(pixel_ratio) {}
   CameraIntrinsicParams(const KMatrix& K)
-    : focal_length_(K(0, 0)), 
+    : focal_length_(K(0, 0)),
       skew_(K(0, 1)),
       principal_point_x_(K(0, 2)),
       principal_point_y_(K(1, 2)),
@@ -56,6 +56,15 @@ public:
        0, 0, 1;
 
     return K;
+  }
+
+  inline bool operator == (const CameraIntrinsicParams<Scalar>& other) const
+  {
+    return (focal_length_ == other.focal_length_ &&
+            skew_ == other.skew_ &&
+            principal_point_x_ == other.principal_point_x_ &&
+            principal_point_y_ == other.principal_point_y_ &&
+            pixel_ratio_ == other.pixel_ratio_);
   }
 
   inline operator KMatrix() const
@@ -158,6 +167,14 @@ public:
     M.block(0, 0, 3, 3) = Matrix33(rotation_);
     M.block(0, 3, 3, 1) = -Matrix33(rotation_) * position_;
     return M;
+  }
+
+  inline bool operator== (const CameraExtrinsicParams& other) const
+  {
+    return (rotation_[0] == other.rotation_[0] &&
+            rotation_[1] == other.rotation_[1] &&
+            rotation_[2] == other.rotation_[2] &&
+            position_ == other.position_);
   }
 
   inline operator MotionMatrix() const

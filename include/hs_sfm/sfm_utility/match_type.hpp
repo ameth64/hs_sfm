@@ -19,6 +19,162 @@ typedef std::vector<Track> TrackContainer;
 typedef std::vector<std::pair<size_t, size_t> > CameraView;
 typedef std::vector<CameraView> CameraViewContainer;
 
+class ObjectIndexMap
+{
+public:
+  ObjectIndexMap(){}
+  ObjectIndexMap(size_t number_of_objects)
+    : mapper_(number_of_objects, invalid_value()) {}
+public:
+
+  size_t GetMappedId(size_t object_id) const
+  {
+    return mapper_[object_id];
+  }
+
+  void SetObjectId(size_t object_id, size_t mapped_id)
+  {
+    mapper_[object_id] = mapped_id;
+  }
+
+  size_t operator[] (size_t object_id) const
+  {
+    return mapper_[object_id];
+  }
+
+  size_t& operator[] (size_t object_id)
+  {
+    return mapper_[object_id];
+  }
+
+  bool IsValid(size_t object_id) const
+  {
+    return (mapper_[object_id] != invalid_value());
+  }
+
+  void Resize(size_t number_of_objects)
+  {
+    mapper_.resize(number_of_objects, invalid_value());
+  }
+
+  size_t Size() const
+  {
+    return mapper_.size();
+  }
+
+  void AddObject(size_t mapped_id)
+  {
+    mapper_.push_back(mapped_id);
+  }
+
+  bool operator == (const ObjectIndexMap& other) const
+  {
+    return (mapper_ == other.mapper_);
+  }
+
+private:
+  inline size_t invalid_value() const
+  {
+    return std::numeric_limits<size_t>::max();
+  }
+
+private:
+  std::vector<size_t> mapper_;
+};
+
+struct ViewInfo
+{
+  size_t track_id;
+  size_t image_id;
+  size_t key_id;
+  bool is_blunder;
+
+  bool operator == (const ViewInfo& other) const
+  {
+    return (track_id == other.track_id &&
+            image_id == other.image_id &&
+            key_id == other.key_id &&
+            is_blunder == other.is_blunder);
+  }
+};
+
+class ViewInfoIndexer
+{
+public:
+  void Clear()
+  {
+    views_info_.clear();
+    track_image_index_.clear();
+    image_key_index_.clear();
+  }
+
+  void SetViewInfoByTracks(const hs::sfm::TrackContainer& tracks)
+  {
+    Clear();
+    size_t number_of_tracks = tracks.size();
+    for (size_t i = 0; i < number_of_tracks; i++)
+    {
+      size_t number_of_views = tracks[i].size();
+      for (size_t j = 0; j < number_of_views; j++)
+      {
+        ViewInfo view_info;
+        view_info.track_id = i;
+        view_info.image_id = tracks[i][j].first;
+        view_info.key_id = tracks[i][j].second;
+        view_info.is_blunder = false;
+        views_info_.push_back(view_info);
+        size_t view_id = views_info_.size() - 1;
+        track_image_index_[std::make_pair(view_info.track_id,
+                                          view_info.image_id)] = view_id;
+        image_key_index_[std::make_pair(view_info.image_id,
+                                        view_info.key_id)] = view_id;
+      }
+    }
+  }
+
+  const ViewInfo& GetViewInfoByTrackImage(size_t track_id,
+                                          size_t image_id) const
+  {
+    auto view_itr = track_image_index_.find(std::make_pair(track_id,
+                                                            image_id));
+    return views_info_[view_itr->second];
+  }
+
+  ViewInfo& GetViewInfoByTrackImage(size_t track_id,
+                                    size_t image_id)
+  {
+    return views_info_[track_image_index_[std::make_pair(track_id,
+                                                         image_id)]];
+  }
+
+  const ViewInfo& GetViewInfoByImageKey(size_t image_id,
+                                        size_t key_id) const
+  {
+    auto view_itr = image_key_index_.find(std::make_pair(image_id,
+                                                         key_id));
+    return views_info_[view_itr->second];
+  }
+
+  ViewInfo& GetViewInfoByImageKey(size_t image_id,
+                                size_t key_id)
+  {
+    return views_info_[image_key_index_[std::make_pair(image_id, key_id)]];
+  }
+
+  bool operator == (const ViewInfoIndexer& other) const
+  {
+    return (views_info_ == other.views_info_ &&
+            track_image_index_ == other.track_image_index_ &&
+            image_key_index_ == other.image_key_index_);
+  }
+
+private:
+  std::vector<ViewInfo> views_info_;
+  std::map<std::pair<size_t, size_t>, size_t> track_image_index_;
+  std::map<std::pair<size_t, size_t>, size_t> image_key_index_;
+};
+
+
 }
 }
 
