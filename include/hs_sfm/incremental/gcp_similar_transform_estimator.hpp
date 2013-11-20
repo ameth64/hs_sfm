@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_INCREMENTAL_GCP_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
+﻿#ifndef _HS_SFM_INCREMENTAL_GCP_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
 #define _HS_SFM_INCREMENTAL_GCP_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
@@ -62,6 +62,7 @@ public:
       return -1;
     }
     track_point_map_gcp.Resize(number_of_gcps);
+    view_info_indexer_gcp.SetViewInfoByTracks(tracks_gcp);
     PointTriangulator triangulator;
     gcps_relative.clear();
     if (triangulator(keysets_gcp,
@@ -84,12 +85,12 @@ public:
     {
       return -1;
     }
-    PointContainer gcps_absolute;
+    PointContainer gcps_absolute(number_of_available_gcps);
     for (size_t i = 0; i < number_of_gcps; i++)
     {
       if (track_point_map_gcp.IsValid(i))
       {
-        gcps_absolute.push_back(gcps[i]);
+        gcps_absolute[track_point_map_gcp[i]] = gcps[i];
       }
     }
 
@@ -101,6 +102,17 @@ public:
     {
       return -1;
     }
+
+#ifdef _DEBUG
+    for (size_t i = 0; i < number_of_available_gcps; i++)
+    {
+      Point gcp_abs = gcps_relative[i];
+      gcp_abs = scale_similar * (rotation_similar * gcp_abs) + translate_similar;
+      Point diff = gcp_abs - gcps_absolute[i];
+
+      int bp = 0;
+    }
+#endif
 
     return 0;
   }

@@ -145,16 +145,12 @@ public:
     //计算由相对坐标系转换到绝对坐标系的相似变换七参数
     typedef EIGEN_MATRIX(Scalar, 3, 3) RMatrix;
     RMatrix rotation_absolute_0 = extrinsic_params_set[0].rotation();
-    rotation_absolute_0.row(0) *= -1;
-    rotation_absolute_0.row(1) *= -1;
     RMatrix rotation = rotation_absolute_0.transpose();
     Position translate = extrinsic_params_set[0].position();
     Scalar scale = (extrinsic_params_set[1].position() - translate).norm();
 
     //计算真实相对外参数
     RMatrix rotation_absolute_1 = extrinsic_params_set[1].rotation();
-    rotation_absolute_1.row(0) *= -1;
-    rotation_absolute_1.row(1) *= -1;
     const Position& position_absolute = extrinsic_params_set[1].position();
     RMatrix rotation_relative = rotation_absolute_1 * rotation;
     Position position_relative = (position_absolute - translate) / scale;

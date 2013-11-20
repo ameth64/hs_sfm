@@ -112,25 +112,27 @@ public:
       point = scale_similar * (rotation_similar * point) + translate_similar;
     }
 
-    ExtrinsicParamsContainer extrinsic_params_set_absolute_true_reordered;
+    ExtrinsicParamsContainer extrinsic_params_set_absolute_true_reordered(
+                                extrinsic_params_set_absolute_estimate.size());
     size_t number_of_images = extrinsic_params_set_absolute_true.size();
     for (size_t i = 0; i < number_of_images; i++)
     {
       if (image_extrinsic_map.IsValid(i))
       {
-        extrinsic_params_set_absolute_true_reordered.push_back(
-          extrinsic_params_set_absolute_true[image_extrinsic_map[i]]);
+        extrinsic_params_set_absolute_true_reordered[image_extrinsic_map[i]] =
+          extrinsic_params_set_absolute_true[i];
       }
     }
 
-    PointContainer points_absolute_true_reordered;
+    PointContainer points_absolute_true_reordered(
+                     points_absolute_estimate.size());
     size_t number_of_tracks = points_absolute_true.size();
     for (size_t i = 0; i < number_of_tracks; i++)
     {
       if (track_point_map.IsValid(i))
       {
-        points_absolute_true_reordered.push_back(
-          points_absolute_true[track_point_map[i]]);
+        points_absolute_true_reordered[track_point_map[i]] =
+          points_absolute_true[i];
       }
     }
 

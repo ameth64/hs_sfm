@@ -144,8 +144,6 @@ public:
                  <<rotation_angle0_error<<" "
                  <<rotation_angle1_error<<" "
                  <<rotation_angle2_error<<"\n";
-
-      number_of_extrinsics++;
     }
 
     mean_position_planar_error /= Scalar(number_of_extrinsics);
@@ -211,7 +209,7 @@ public:
     }
 
     mean_point_planar_error /= Scalar(number_of_points);
-    mean_point_planar_error /= Scalar(number_of_points);
+    mean_point_height_error /= Scalar(number_of_points);
 
     accuracy_file<<"mean point planar error:"
                  <<mean_point_planar_error<<"\n";
