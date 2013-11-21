@@ -194,18 +194,6 @@ public:
     size_t number_of_points = points_relative.size();
     for (size_t i = 0; i < number_of_points; i++)
     {
-#ifdef _DEBUG
-      EIGEN_MATRIX(Scalar, 3, 3) R = extrinsic_params_set[1].rotation();
-      Point3D c = extrinsic_params_set[1].position();
-      Point3D t = -R * c;
-      EIGEN_MATRIX(Scalar, 3, 4) P;
-      P.block(0, 0, 3, 3) = R;
-      P.block(0, 3, 3, 1) = t;
-      Point3D p = points_absolute[i];
-      Scalar det = R.determinant();
-      Scalar z = (P.block(2, 0, 1, 3) * p)[0] + P(2, 3);
-#endif
-
       Point3D point_absolute = points_relative[i];
       point_absolute = rotation * point_absolute;
       point_absolute = scale * point_absolute + translate;

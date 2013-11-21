@@ -2,6 +2,7 @@
 #define _HS_SFM_INCREMENTAL_BEST_PAIR_SELECTOR_HPP_
 
 #include <map>
+#include <limits>
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/key_type.hpp"
@@ -10,6 +11,7 @@
 #include "hs_sfm/triangulate/multiple_view_levenberg_marquardt_optimizor.hpp"
 #include "hs_sfm/essential/ematrix_5_points_calculator.hpp"
 #include "hs_sfm/essential/ematrix_5_points_ransac_refiner.hpp"
+#include "hs_sfm/essential/ematrix_extrinsic_params_points_calculator.hpp"
 
 namespace hs
 {
@@ -46,6 +48,8 @@ private:
   typedef typename EMatrixCalculator::HKeyPairContainer HKeyPairContainer;
   typedef typename IntrinsicParams::KMatrix KMatrix;
   typedef typename EIGEN_MATRIX(Scalar, 3, 3) RMatrix;
+  typedef hs::sfm::essential::EMatrixExtrinsicParamsPointsCalculator<Scalar>
+          ExtrinsicParamsPointsCalculator;
 
 public:
   BestPairSelector(size_t min_number_of_pair_matches)
@@ -62,6 +66,7 @@ public:
     auto image_pair_itr = matches.begin();
     auto image_pair_itr_end = matches.end();
     EMatrixCalculator ematrix_calculator;
+    Scalar min_mean_height = std::numberic_limits<Scalar>::max();
     for (; image_pair_itr != image_pair_itr_end; image_pair_itr++)
     {
       if (image_pair_itr->second.size() > min_number_of_pair_matches_)
@@ -96,6 +101,33 @@ public:
         }
 
         //通过E矩阵计算影像对的相对外方位元素
+        ExtrinsicParamsPointsCalculator extrinsic_points_calculator;
+        ExtrinsicParams extrinsic_params_pair;
+        PointContainer points_pair;
+        if (extrinsic_points_calculator(e_matrix,
+                                        key_pairs,
+                                        extrinsic_params_pair,
+                                        points_pair) != 0)
+        {
+          return -1;
+        }
+
+        //计算平均基高比
+        Scalar mean_height = Scalar(0);
+        size_t number_of_points = points_pair.size();
+        for (size_t i = 0; i < number_of_points; i++)
+        {
+          mean_height += std::abs(points_pair[i][2]);
+        }
+        mean_height /= Scalar(number_of_points);
+
+        if (mean_height < min_mean_height)
+        {
+          best_identity_id = image_left_id;
+          best_relative_id = image_right_id;
+          extrinsic_params_relative = extrinsic_params_pair;
+          points.swap(points_pair);
+        }
       }
     }
 
