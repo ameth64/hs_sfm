@@ -52,7 +52,7 @@ struct MatchesTracksConvertor
           else
           {
             size_t track_id = itr_view0->second;
-            itr_view1->second = track_id;
+            view_track_indexer[view1] = track_id;
             tracks[track_id].push_back(view1);
           }
         }
@@ -61,13 +61,13 @@ struct MatchesTracksConvertor
           if (itr_view1 != view_track_indexer.end())
           {
             size_t track_id = itr_view1->second;
-            itr_view0->second = track_id;
+            view_track_indexer[view0] = track_id;
             tracks[track_id].push_back(view0);
           }
           else
           {
-            itr_view0->second = number_of_tracks;
-            itr_view1->second = number_of_tracks;
+            view_track_indexer[view0] = number_of_tracks;
+            view_track_indexer[view1] = number_of_tracks;
             number_of_tracks++;
             Track track;
             track.push_back(view0);

@@ -6,8 +6,6 @@
 #include "hs_sfm/synthetic/keyset_generator.hpp"
 #include "hs_sfm/sfm_utility/matches_tracks_convertor.hpp"
 
-#include "hs_sfm/sfm_file_io/tracks_saver.hpp"
-
 namespace
 {
 
@@ -16,7 +14,7 @@ class TestMatchesTracksConvertor
 public:
   typedef int Err;
 
-  Err Test(hs::sfm::TrackContainer& tracks_true) const
+  Err Test(const hs::sfm::TrackContainer& tracks_true) const
   {
     hs::sfm::MatchesTracksConvertor convertor;
     hs::sfm::MatchContainer matches;
@@ -24,13 +22,19 @@ public:
     hs::sfm::TrackContainer tracks_estimate;
     if (convertor(matches, tracks_estimate) != 0) return -1;
 
+    hs::sfm::TrackContainer tracks_reordered;
     auto itr_track_true = tracks_true.begin();
     auto itr_track_true_end = tracks_true.end();
     for (; itr_track_true != itr_track_true_end; ++itr_track_true)
     {
-      std::sort(itr_track_true->begin(), itr_track_true->end());
+      if (itr_track_true->size() > 1)
+      {
+        hs::sfm::Track track = *itr_track_true;
+        std::sort(track.begin(), track.end());
+        tracks_reordered.push_back(track);
+      }
     }
-    std::sort(tracks_true.begin(), tracks_true.end());
+    std::sort(tracks_reordered.begin(), tracks_reordered.end());
 
     auto itr_track_estimate = tracks_estimate.begin();
     auto itr_track_estimate_end = tracks_estimate.end();
@@ -40,15 +44,7 @@ public:
     }
     std::sort(tracks_estimate.begin(), tracks_estimate.end());
 
-    hs::sfm::fileio::TracksSaver saver;
-    hs::sfm::ViewInfoIndexer view_info_indexer_true;;
-    view_info_indexer_true.SetViewInfoByTracks(tracks_true);
-    saver("tracks_true.txt", tracks_true, view_info_indexer_true);
-    hs::sfm::ViewInfoIndexer view_info_indexer_estimate;
-    view_info_indexer_estimate.SetViewInfoByTracks(tracks_estimate);
-    saver("tracks_estimate.txt", tracks_estimate, view_info_indexer_estimate);
-
-    if (tracks_true == tracks_estimate)
+    if (tracks_reordered == tracks_estimate)
     {
       return 0;
     }
