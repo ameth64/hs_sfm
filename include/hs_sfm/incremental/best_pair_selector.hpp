@@ -17,7 +17,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace projective
+namespace incremental
 {
 
 /**
@@ -47,7 +47,8 @@ private:
   typedef typename EMatrixCalculator::HKeyPair HKeyPair;
   typedef typename EMatrixCalculator::HKeyPairContainer HKeyPairContainer;
   typedef typename IntrinsicParams::KMatrix KMatrix;
-  typedef typename EIGEN_MATRIX(Scalar, 3, 3) RMatrix;
+  typedef EIGEN_MATRIX(Scalar, 3, 3) RMatrix;
+  typedef typename EMatrixCalculator::EMatrix EMatrix;
   typedef hs::sfm::essential::EMatrixExtrinsicParamsPointsCalculator<Scalar>
           ExtrinsicParamsPointsCalculator;
 
@@ -66,7 +67,7 @@ public:
     auto image_pair_itr = matches.begin();
     auto image_pair_itr_end = matches.end();
     EMatrixCalculator ematrix_calculator;
-    Scalar min_mean_height = std::numberic_limits<Scalar>::max();
+    Scalar min_mean_height = std::numeric_limits<Scalar>::max();
     for (; image_pair_itr != image_pair_itr_end; image_pair_itr++)
     {
       if (image_pair_itr->second.size() > min_number_of_pair_matches_)
@@ -74,21 +75,25 @@ public:
         auto key_pair_itr = image_pair_itr->second.begin();
         auto key_pair_itr_end = image_pair_itr->second.end();
         HKeyPairContainer key_pairs;
-        size_t image_left_id = key_pair_itr->first.first;
-        size_t image_right_id = key_pair_itr->first.second;
+        size_t image_left_id = image_pair_itr->first.first;
+        size_t image_right_id = image_pair_itr->first.second;
         const IntrinsicParams& intrinsic_params_left =
           intrinsic_params_set[image_left_id];
-        KMatrix K_left_inverse = intrinsic_params_left.GetKMatrix().inverse();
-        KMatrix K_right_inverse = intrinsic_params_right.GetKMatrix().inverse();
         const IntrinsicParams& intrinsic_params_right =
           intrinsic_params_set[image_right_id];
+        KMatrix K_left_inverse = intrinsic_params_left.GetKMatrix().inverse();
+        KMatrix K_right_inverse = intrinsic_params_right.GetKMatrix().inverse();
         for (; key_pair_itr != key_pair_itr_end; ++key_pair_itr)
         {
           size_t key_left_id = key_pair_itr->first;
           size_t key_right_id = key_pair_itr->second;
           HKeyPair key_pair;
-          key_pair.first = image_keysets[image_left_id][key_left_id];
-          key_pair.second = image_keysets[image_right_id][key_right_id];
+          key_pair.first.segment(0, 2) =
+            image_keysets[image_left_id][key_left_id];
+          key_pair.first[2] = Scalar(1);
+          key_pair.second.segment(0, 2) =
+            image_keysets[image_right_id][key_right_id];
+          key_pair.second[2] = Scalar(1);
           key_pair.first = K_left_inverse * key_pair.first;
           key_pair.second = K_right_inverse * key_pair.second;
           key_pairs.push_back(key_pair);
@@ -125,7 +130,7 @@ public:
         {
           best_identity_id = image_left_id;
           best_relative_id = image_right_id;
-          extrinsic_params_relative = extrinsic_params_pair;
+          relative_extrinsic_params = extrinsic_params_pair;
           points.swap(points_pair);
         }
       }
