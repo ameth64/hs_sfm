@@ -79,6 +79,13 @@ public:
     hs::sfm::MatchesTracksConvertor matches_tracks_convertor;
     TrackContainer tracks;
     if (matches_tracks_convertor(matches, tracks) != 0) return -1;
+    auto itr_track = tracks.begin();
+    auto itr_track_end = tracks.end();
+    for (; itr_track != itr_track_end; ++itr_track)
+    {
+      std::sort(itr_track->begin(), itr_track->end());
+    }
+    std::sort(tracks.begin(), tracks.end());
     if (tester.TestReprojectiveError(
           keysets,
           intrinsic_params_set,
@@ -162,22 +169,48 @@ public:
       }
     }
 
-    std::string extrinsic_accuracy_similar_transform_path =
-      test_name_ + "_extrinsic_accuracy_incremental.txt";
+    PointContainer gcps_absolute_estimate = gcps_relative;
+    size_t number_of_available_gcps = gcps_relative.size();
+    for (size_t i = 0; i < number_of_available_gcps; i++)
+    {
+      Point& gcp = gcps_absolute_estimate[i];
+      gcp = scale_similar * (rotation_similar * gcp) + translate_similar;
+    }
 
+    PointContainer gcps_absolute_true_reordered(number_of_available_gcps);
+    size_t number_of_gcps = gcps.size();
+    for (size_t i = 0; i < number_of_gcps; i++)
+    {
+      if (track_point_map_gcp.IsValid(i))
+      {
+        gcps_absolute_true_reordered[track_point_map_gcp[i]] =
+          gcps[i];
+      }
+    }
+
+    std::string extrinsic_accuracy_incremental_path =
+      test_name_ + "_extrinsic_accuracy_incremental.txt";
     if (tester.TestExtrinsicAccuracy(
           extrinsic_params_set_absolute_true_reordered,
           extrinsic_params_set_absolute_estimate,
-          extrinsic_accuracy_similar_transform_path,
-          Scalar(2)) != 0) return -1;
+          extrinsic_accuracy_incremental_path,
+          Scalar(0.2)) != 0) return -1;
 
-    std::string point_accuracy_similar_transform_path =
+    std::string point_accuracy_incremental_path =
       test_name_ + "_point_accuracy_incremental.txt";
     if (tester.TestPointsAccuracy(
           points_absolute_true_reordered,
           points_absolute_estimate,
-          point_accuracy_similar_transform_path,
-          Scalar(3)) != 0) return -1;
+          point_accuracy_incremental_path,
+          Scalar(0.4)) != 0) return -1;
+
+    std::string gcp_accuracy_incremental_path =
+      test_name_ + "_gcp_accuracy_incremental.txt";
+    if (tester.TestPointsAccuracy(
+        gcps_absolute_true_reordered,
+        gcps_absolute_estimate,
+        gcp_accuracy_incremental_path,
+        Scalar(0.4)) != 0) return -1;
 
     return 0;
   }
@@ -185,6 +218,19 @@ public:
 private:
   Scalar key_stddev_;
   std::string test_name_;
+};
+
+template <typename _Scalar>
+struct RichTrack
+{
+  typedef _Scalar Scalar;
+  hs::sfm::Track track;
+  EIGEN_VECTOR(Scalar, 3) point;
+
+  bool operator < (const RichTrack<Scalar>& other) const
+  {
+    return (track < other.track);
+  }
 };
 
 TEST(TestIncremental, SyntheticTest)
@@ -200,6 +246,9 @@ TEST(TestIncremental, SyntheticTest)
   typedef Tester::PointContainer PointContainer;
   typedef Tester::MatchContainer MatchContainer;
   typedef Tester::TrackContainer TrackContainer;
+
+  typedef RichTrack<Scalar> RichTrack;
+  typedef EIGEN_STD_VECTOR(RichTrack) RichTrackContainer;
 
   typedef hs::sfm::incremental::SyntheticDataGenerator<Scalar, ImageDimension>
           Generator;
@@ -248,7 +297,7 @@ TEST(TestIncremental, SyntheticTest)
   IntrinsicParamsContainer intrinsic_params_set;
   ExtrinsicParamsContainer extrinsic_params_set_absolute_true;
   ImageContainer images;
-  PointContainer points_absolute_true;
+  PointContainer points_absolute;
   KeysetContainer keysets_true;
   TrackContainer tracks;
   hs::sfm::CameraViewContainer camera_views;
@@ -257,14 +306,35 @@ TEST(TestIncremental, SyntheticTest)
                            intrinsic_params_set,
                            extrinsic_params_set_absolute_true,
                            images,
-                           points_absolute_true,
+                           points_absolute,
                            keysets_true,
                            tracks,
                            camera_views));
+  RichTrackContainer rich_tracks;
+  for (size_t i = 0; i < number_of_points; i++)
+  {
+    if (tracks[i].size() > 1)
+    {
+      RichTrack rich_track;
+      rich_track.point = points_absolute[i];
+      rich_track.track = tracks[i];
+      std::sort(rich_track.track.begin(), rich_track.track.end());
+      rich_tracks.push_back(rich_track);
+    }
+  }
+  std::sort(rich_tracks.begin(), rich_tracks.end());
+  size_t number_of_rich_tracks = rich_tracks.size();
+  TrackContainer tracks_true(number_of_rich_tracks);
+  PointContainer points_absolute_true(number_of_rich_tracks);
+  for (size_t i = 0; i < number_of_rich_tracks; i++)
+  {
+    tracks_true[i] = rich_tracks[i].track;
+    points_absolute_true[i] = rich_tracks[i].point;
+  }
 
   hs::sfm::MatchesTracksConvertor matches_tracks_convertor;
   MatchContainer matches;
-  ASSERT_EQ(0, matches_tracks_convertor(tracks, matches));
+  ASSERT_EQ(0, matches_tracks_convertor(tracks_true, matches));
 
   KeysetContainer keysets_noised;
   ASSERT_EQ(0, generator.GenerateNoisedKeysets(keysets_true,

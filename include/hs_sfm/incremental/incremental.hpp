@@ -3,6 +3,7 @@
 
 #include <map>
 #include <limits>
+#include <algorithm>
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
@@ -112,6 +113,13 @@ public:
     {
       return -1;
     }
+    auto itr_track = tracks.begin();
+    auto itr_track_end = tracks.end();
+    for (; itr_track != itr_track_end; ++itr_track)
+    {
+      std::sort(itr_track->begin(), itr_track->end());
+    }
+    std::sort(tracks.begin(), tracks.end());
     size_t number_of_tracks = tracks.size();
     track_point_map.Resize(number_of_tracks);
     std::map<std::pair<size_t, size_t>, size_t> key_pair_indexer;
