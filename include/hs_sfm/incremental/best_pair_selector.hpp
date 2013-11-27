@@ -102,7 +102,7 @@ public:
         EMatrix e_matrix;
         if (ematrix_calculator(key_pairs, e_matrix) != 0)
         {
-          return -1;
+          continue;
         }
 
         //通过E矩阵计算影像对的相对外方位元素
@@ -114,7 +114,7 @@ public:
                                         extrinsic_params_pair,
                                         points_pair) != 0)
         {
-          return -1;
+          continue;
         }
 
         //计算平均基高比
