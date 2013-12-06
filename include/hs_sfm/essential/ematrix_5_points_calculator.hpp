@@ -346,6 +346,10 @@ public:
                     const EMatrixHypotheses& ematrix_hypotheses,
                     EMatrix& best_E) const
     {
+      if (ematrix_hypotheses.empty())
+      {
+        return -1;
+      }
       size_t number_of_hypotheses = ematrix_hypotheses.size();
       std::vector<size_t> hypotheses_score(number_of_hypotheses, 0);
       HypothesesEvaluator evaluator;
