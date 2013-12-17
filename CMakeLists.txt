@@ -179,6 +179,8 @@ hslib_add_library(${SYNTHETIC_NAME} ${HSPRJ_NAME} ${SYNTHETIC_SOURCES})
 
 set(SYNTHETIC_UTEST_SOURCES
   "unit_test/test_main.cpp"
+  "unit_test/synthetic/test_flight_generator.cpp"
+  "unit_test/synthetic/test_multiple_flight_generator.cpp"
   "unit_test/synthetic/test_keyset_generator.cpp"
   "unit_test/synthetic/test_relative_generator.cpp"
   "unit_test/synthetic/test_scene_generator.cpp"
