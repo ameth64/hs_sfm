@@ -156,4 +156,63 @@ TEST(TestSimilarTransformEstimator, SimpleTest)
   ASSERT_EQ(0, tester.Test());
 }
 
+TEST(TestSimilarTransformEstimator, PriorTest)
+{
+  typedef double Scalar;
+  typedef hs::sfm::SimilarTransformEstimator<Scalar> Estimator;
+  typedef Estimator::Point Point;
+  typedef Estimator::PointContainer PointContainer;
+  typedef Estimator::Rotation Rotation;
+  typedef Estimator::Translate Translate;
+
+  PointContainer points_1(4);
+  PointContainer points_2(4);
+
+  points_2[0] << 2614304.862,
+                 404783.446,
+                 116.810;
+  points_2[1] << 2611325.079,
+                 405029.381,
+                 117.931;
+  points_2[2] << 2615611.506,
+                 411900.269,
+                 131.823;
+  points_2[3] << 2611160.858,
+                 413763.796,
+                 108.580;
+
+  points_1[0] << 2614108.822,
+                 557851.217,
+                 116.810;
+  points_1[1] << 2611131.991,
+                 558128.369,
+                 117.931;
+  points_1[2] << 2615490.009,
+                 564953.528,
+                 131.823;
+  points_1[3] << 2611059.331,
+                 566863.561,
+                 108.580;
+
+  Estimator estimator;
+  Rotation rotation_similar;
+  Translate translate_similar;
+  Scalar scale_similar;
+  ASSERT_EQ(0, estimator(points_1, points_2,
+                         rotation_similar,
+                         translate_similar,
+                         scale_similar));
+
+  for (size_t i = 0; i < 4; i++)
+  {
+    Point point_2_estimate = points_1[i];
+    point_2_estimate = rotation_similar * point_2_estimate;
+    point_2_estimate = scale_similar * point_2_estimate;
+    point_2_estimate = point_2_estimate + translate_similar;
+    Point diff = point_2_estimate - points_2[i];
+    int bp = 0;
+  }
+
+}
+
 }

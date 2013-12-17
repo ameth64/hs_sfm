@@ -54,7 +54,7 @@ public:
     size_t number_of_flights = flight_generators_.size();
     north_west_angles_.resize(number_of_flights);
     offsets_.resize(number_of_flights);
-    Point2D offset;
+    Point2D offset = Point2D::Zero();
     for (size_t i = 0; i < number_of_flights; i++)
     {
       hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
@@ -111,6 +111,7 @@ public:
   {
     points.resize(number_of_points);
     size_t number_of_flights = flight_generators_.size();
+    Scalar pi = Scalar(3.141592653);
     for (size_t i = 0; i < number_of_points; i++)
     {
       size_t flight_id = i % number_of_flights;
@@ -131,7 +132,7 @@ public:
       points[i][0] += offsets_[flight_id][0];
       points[i][1] += offsets_[flight_id][1];
       RMatrix rotation;
-      Scalar north_west_angle = north_west_angles_[flight_id];
+      Scalar north_west_angle = north_west_angles_[flight_id] / Scalar(180) * pi;
       rotation << std::cos(north_west_angle), -std::sin(north_west_angle), 0,
                   std::sin(north_west_angle),  std::cos(north_west_angle), 0,
                   0, 0, 1;
@@ -148,6 +149,7 @@ public:
     size_t number_of_flights = flight_generators_.size();
     extrinsic_params_sets.clear();
     image_sets.clear();
+    Scalar pi = Scalar(3.141592653);
     for (size_t i = 0; i < number_of_flights; i++)
     {
       const FlightGenerator& flight = flight_generators_[i];
@@ -156,7 +158,7 @@ public:
       flight.GenerateCameras(extrinsic_params_set, image_set);
 
       RMatrix rotation;
-      Scalar north_west_angle = north_west_angles_[i];
+      Scalar north_west_angle = north_west_angles_[i] / Scalar(180) * pi;
       rotation << std::cos(north_west_angle), -std::sin(north_west_angle), 0,
                   std::sin(north_west_angle),  std::cos(north_west_angle), 0,
                   0, 0, 1;

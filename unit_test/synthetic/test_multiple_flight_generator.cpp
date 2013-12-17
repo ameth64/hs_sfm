@@ -265,7 +265,7 @@ TEST(TestMultipleFlightGenerator, SimpleTest)
     camera_rotation_stddev_2);
   flight_generators.push_back(flight_generator_2);
 
-  Test test(0.8, 0.2, 60, 10, 15, flight_generators, 5000, "simple_test");
+  Test test(0.8, 0.2, 60, 0, 15, flight_generators, 5000, "simple_test");
   ASSERT_EQ(0, test.Test());
 }
 
