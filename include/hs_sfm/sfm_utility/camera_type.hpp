@@ -30,23 +30,39 @@ public:
       skew_(0),
       principal_point_x_(0),
       principal_point_y_(0),
-      pixel_ratio_(1) {}
+      pixel_ratio_(1),
+      k1_(0), k2_(0), k3_(0),
+      d1_(0), d2_(0) {}
   CameraIntrinsicParams(Scalar focal_length,
         Scalar skew = 0,
         Scalar principal_point_x = 0,
         Scalar principal_point_y = 0,
-        Scalar pixel_ratio = 1)
+        Scalar pixel_ratio = 1,
+        Scalar k1 = 0,
+        Scalar k2 = 0,
+        Scalar k3 = 0,
+        Scalar d1 = 0,
+        Scalar d2 = 0)
     : focal_length_(focal_length),
       skew_(skew),
       principal_point_x_(principal_point_x),
       principal_point_y_(principal_point_y),
-      pixel_ratio_(pixel_ratio) {}
-  CameraIntrinsicParams(const KMatrix& K)
+      pixel_ratio_(pixel_ratio),
+      k1_(k1), k2_(k2), k3_(k3),
+      d1_(d1), d2_(d2) {}
+  CameraIntrinsicParams(const KMatrix& K,
+                        Scalar k1 = 0,
+                        Scalar k2 = 0,
+                        Scalar k3 = 0,
+                        Scalar d1 = 0,
+                        Scalar d2 = 0)
     : focal_length_(K(0, 0)),
       skew_(K(0, 1)),
       principal_point_x_(K(0, 2)),
       principal_point_y_(K(1, 2)),
-      pixel_ratio_(K(1, 1) / K(0, 0)) {}
+      pixel_ratio_(K(1, 1) / K(0, 0)),
+      k1_(k1), k2_(k2), k3_(k3),
+      d1_(d1), d2_(d2) {}
 
   inline KMatrix GetKMatrix() const
   {
@@ -122,6 +138,56 @@ public:
     pixel_ratio_ = pixel_ratio;
   }
 
+  Scalar k1() const
+  {
+    return k1_;
+  }
+
+  void set_k1(Scalar k1)
+  {
+    k1_ = k1;
+  }
+
+  Scalar k2() const
+  {
+    return k2_;
+  }
+
+  void set_k2(Scalar k2)
+  {
+    k2_ = k2;
+  }
+
+  Scalar k3() const
+  {
+    return k3_;
+  }
+
+  void set_k3(Scalar k3)
+  {
+    k3_ = k3;
+  }
+
+  Scalar d1() const
+  {
+    return d1_;
+  }
+
+  void set_d1(Scalar d1)
+  {
+    d1_ = d1;
+  }
+
+  Scalar d2() const
+  {
+    return d2_;
+  }
+
+  void set_d2(Scalar d2)
+  {
+    d2_ = d2;
+  }
+
 private:
   /**
    *  焦距
@@ -140,6 +206,16 @@ private:
    *  y方向与x方向上像素量纲比值
    */
   Scalar pixel_ratio_;
+
+  /**
+   *  径向畸变参数
+   */
+  Scalar k1_, k2_, k3_;
+
+  /**
+   *  切向畸变参数
+   */
+  Scalar d1_, d2_;
 };
 
 template <typename _Scalar>

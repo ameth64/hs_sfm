@@ -25,6 +25,7 @@ set(BA_UTEST_SOURCES
   "unit_test/bundle_adjustment/test_ba_gcp_constrained_jacobian_matrix_calculator.cpp"
   "unit_test/bundle_adjustment/test_ba_gcp_constrained_normal_equation_builder.cpp"
   "unit_test/bundle_adjustment/test_ba_gcp_constrained_vector_function.cpp"
+  "unit_test/bundle_adjustment/test_general_vector_function.cpp"
   )
 hslib_add_utest(${BA_NAME} SOURCES ${BA_UTEST_SOURCES})
 hslib_add_dep(${BA_NAME}_utest
@@ -180,7 +181,7 @@ hslib_add_library(${SYNTHETIC_NAME} ${HSPRJ_NAME} ${SYNTHETIC_SOURCES})
 set(SYNTHETIC_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/synthetic/test_flight_generator.cpp"
-  "unit_test/synthetic/test_multiple_flight_generator.cpp"
+  "unit_test/synthetic/test_multiple_camera_generator.cpp"
   "unit_test/synthetic/test_keyset_generator.cpp"
   "unit_test/synthetic/test_relative_generator.cpp"
   "unit_test/synthetic/test_scene_generator.cpp"

@@ -29,11 +29,9 @@ public:
   typedef typename ExtrinsicParams::Position Position;
   typedef typename ExtrinsicParams::Rotation Rotation;
   typedef typename FlightGenerator::ExtrinsicParamsContainer
-                   ExtrinsicParamsSet;
-  typedef EIGEN_STD_VECTOR(ExtrinsicParamsSet) ExtrinsicParamsSetContainer;
+                   ExtrinsicParamsContainer;
   typedef typename FlightGenerator::Image Image;
-  typedef typename FlightGenerator::ImageContainer ImageSet;
-  typedef EIGEN_STD_VECTOR(ImageSet) ImageSetContainer;
+  typedef typename FlightGenerator::ImageContainer ImageContainer;
   typedef typename FlightGenerator::Point3D Point3D;
   typedef typename FlightGenerator::Point3DContainer Point3DContainer;
 
@@ -132,7 +130,8 @@ public:
       points[i][0] += offsets_[flight_id][0];
       points[i][1] += offsets_[flight_id][1];
       RMatrix rotation;
-      Scalar north_west_angle = north_west_angles_[flight_id] / Scalar(180) * pi;
+      Scalar north_west_angle =
+        north_west_angles_[flight_id] / Scalar(180) * pi;
       rotation << std::cos(north_west_angle), -std::sin(north_west_angle), 0,
                   std::sin(north_west_angle),  std::cos(north_west_angle), 0,
                   0, 0, 1;
@@ -142,41 +141,38 @@ public:
     return 0;
   }
 
-  Err GenerateExtrinsicParamsSets(
-    ExtrinsicParamsSetContainer& extrinsic_params_sets,
-    ImageSetContainer& image_sets) const
+  Err GenerateExtrinsicParamsContainer(
+    size_t flight_id,
+    ExtrinsicParamsContainer& extrinsic_params_set,
+    ImageContainer& images) const
   {
     size_t number_of_flights = flight_generators_.size();
-    extrinsic_params_sets.clear();
-    image_sets.clear();
     Scalar pi = Scalar(3.141592653);
-    for (size_t i = 0; i < number_of_flights; i++)
+
+    const FlightGenerator& flight = flight_generators_[flight_id];
+    flight.GenerateCameras(extrinsic_params_set, images);
+
+    RMatrix rotation;
+    Scalar north_west_angle = north_west_angles_[flight_id] / Scalar(180) * pi;
+    rotation << std::cos(north_west_angle), -std::sin(north_west_angle), 0,
+                std::sin(north_west_angle),  std::cos(north_west_angle), 0,
+                0, 0, 1;
+    for (size_t i = 0; i < extrinsic_params_set.size(); i++)
     {
-      const FlightGenerator& flight = flight_generators_[i];
-      ExtrinsicParamsSet extrinsic_params_set;
-      ImageSet image_set;
-      flight.GenerateCameras(extrinsic_params_set, image_set);
-
-      RMatrix rotation;
-      Scalar north_west_angle = north_west_angles_[i] / Scalar(180) * pi;
-      rotation << std::cos(north_west_angle), -std::sin(north_west_angle), 0,
-                  std::sin(north_west_angle),  std::cos(north_west_angle), 0,
-                  0, 0, 1;
-      for (size_t j = 0; j < extrinsic_params_set.size(); j++)
-      {
-        ExtrinsicParams& extrinsic_params = extrinsic_params_set[j];
-        extrinsic_params.position()[0] += offsets_[i][0];
-        extrinsic_params.position()[1] += offsets_[i][1];
-        extrinsic_params.position() = rotation * extrinsic_params.position();
-        extrinsic_params.rotation() =
-          RMatrix(extrinsic_params.rotation()) * rotation.transpose();
-      }
-
-      extrinsic_params_sets.push_back(extrinsic_params_set);
-      image_sets.push_back(image_set);
+      ExtrinsicParams& extrinsic_params = extrinsic_params_set[i];
+      extrinsic_params.position()[0] += offsets_[flight_id][0];
+      extrinsic_params.position()[1] += offsets_[flight_id][1];
+      extrinsic_params.position() = rotation * extrinsic_params.position();
+      extrinsic_params.rotation() =
+        RMatrix(extrinsic_params.rotation()) * rotation.transpose();
     }
 
     return 0;
+  }
+
+  Err GetNumberOfFlights() const
+  {
+    return flight_generators_.size();
   }
 
 private:

@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_GENERAL_VECTOR_FUNCTION_HPP_
+﻿#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_GENERAL_VECTOR_FUNCTION_HPP_
 #define _HS_SFM_BUNDLE_ADJUSTMENT_GENERAL_VECTOR_FUNCTION_HPP_
 
 #include <vector>
@@ -38,7 +38,7 @@ public:
     COMPUTE_RADIAL_DISTORTION = 0,
     COMPUTE_DECENTERING_DISTORTION,
     COMPUTE_INTRINSIC_PARAMS,
-    NUMBER_OF_INTRINSIC_COMPUTATION
+    NUMBER_OF_INTRINSIC_COMPUTATIONS
   };
 
   enum
@@ -54,13 +54,13 @@ public:
     CONSTRAIN_PRINCIPAL_Y,
     CONSTRAIN_PIXEL_RATIO,
     NUMBER_OF_INTRINSIC_CONSTRAINTS
-  }
+  };
 
   enum
   {
     CONSTRAIN_POINTS = 0,
-    NUMBER_OF_STRUCTURE_CONSTRAINTS;
-  }
+    NUMBER_OF_STRUCTURE_CONSTRAINTS
+  };
 
   typedef std::bitset<NUMBER_OF_INTRINSIC_COMPUTATIONS>
           IntrinsicComputationsMask;
@@ -96,7 +96,17 @@ public:
   }
   inline void set_number_of_cameras(Index number_of_cameras)
   {
-    number_of_cameras_ = number_of_cameras_;
+    number_of_cameras_ = number_of_cameras;
+  }
+
+  inline Index number_of_images() const
+  {
+    return number_of_images_;
+  }
+
+  inline void set_number_of_images(Index number_of_images)
+  {
+    number_of_images_ = number_of_images;
   }
 
   inline Index number_of_points() const
@@ -261,7 +271,8 @@ public:
         !intrinsic_computations_mask_[COMPUTE_RADIAL_DISTORTION]) return -1;
     if ((intrinsic_constraints_mask_[CONSTRAIN_DECENTERING_D1] ||
          intrinsic_constraints_mask_[CONSTRAIN_DECENTERING_D2]) &&
-        !intrinsic_computations_mask_[COMPUTE_DECENTERING_DISTORTION]) return -1;
+        !intrinsic_computations_mask_[COMPUTE_DECENTERING_DISTORTION])
+      return -1;
     Index y_size = GetYSize();
     y.resize(y_size);
 
@@ -278,9 +289,11 @@ public:
       Vector3 point = x.segment(point_id * params_per_point_,
                                 params_per_point_);
       Vector3 rotation =
-        x.segment(point_params_size + image_id * params_per_camera, 3);
+        x.segment(point_params_size +
+                  image_id * extrinsic_params_per_image_, 3);
       Vector3 translation =
-        x.segment(point_params_size + image_id * params_per_camera, + 3, 3);
+        x.segment(point_params_size +
+                  image_id * extrinsic_params_per_image_ + 3, 3);
 
       Vector2 normalized_key;
       WorldPointToNormalizedKey(point,
@@ -333,6 +346,7 @@ public:
     }
 
     Index y_offset = GetYKeysSize();
+    Index x_offset = point_params_size + extrinsic_params_size;
     if (intrinsic_constraints_mask_.any())
     {
       for (Index i = 0; i < number_of_cameras_; i++)
@@ -419,24 +433,24 @@ public:
     return 0;
   }
 
-  inline static void WorldPointToNormalizedKey(const Vecotr3& world_point,
+  inline static void WorldPointToNormalizedKey(const Vector3& world_point,
                                                const Vector3& rotation,
                                                const Vector3& translation,
                                                Vector2& normalized_key)
   {
     Scalar theta = rotation.norm();
-    vector3 camera_point;
+    Vector3 camera_point;
     if (theta == Scalar(0))
     {
-      camera_point = point + translation;
+      camera_point = world_point + translation;
     }
     else
     {
       Vector3 normalized_rotation = rotation / theta;
       camera_point =
-        std::cos(theta) * point +
-        std::sin(theta) * normalized_rotation.cross(point) +
-        (1 - std::cos(theta)) * point.dot(normalized_rotation) +
+        std::cos(theta) * world_point +
+        std::sin(theta) * normalized_rotation.cross(world_point) +
+        (1 - std::cos(theta)) * world_point.dot(normalized_rotation) *
         normalized_rotation + translation;
     }
     camera_point /= camera_point[2];
@@ -449,8 +463,8 @@ public:
                                                 Vector2& normalized_key)
   {
     Vector2 delta_key;
-    RadialDistortor()(k1, k2, k3, normalized_key[0], normalized_key[1],
-                      delta_key[0], delta_key[1]);
+    RadialDistortor<Scalar>()(k1, k2, k3, normalized_key[0], normalized_key[1],
+                              delta_key[0], delta_key[1]);
     normalized_key += delta_key;
   }
 
@@ -459,8 +473,8 @@ public:
                                                      Vector2& normalized_key)
   {
     Vector2 delta_key;
-    DecenteringDistortor()(d1, d2, normalized_key[0], normalized_key[1],
-                           delta_key[0], delta_key[1]);
+    DecenteringDistortor<Scalar>()(d1, d2, normalized_key[0], normalized_key[1],
+                                   delta_key[0], delta_key[1]);
     normalized_key += delta_key;
   }
 
