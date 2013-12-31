@@ -1,9 +1,12 @@
-﻿#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_GENERAL_SYNTHETIC_DATA_GENERATOR_HPP_
-#define _HS_SFM_BUNDLE_ADJUSTMENT_GENERAL_SYNTHETIC_DATA_GENERATOR_HPP_
+﻿#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_CAMERA_SHARED_SYNTHETIC_DATA_GENERATOR_HPP_
+#define _HS_SFM_BUNDLE_ADJUSTMENT_CAMERA_SHARED_SYNTHETIC_DATA_GENERATOR_HPP_
+
+#include "boost/random.hpp"
 
 #include "hs_sfm/synthetic/multiple_flight_generator.hpp"
 #include "hs_sfm/synthetic/multiple_camera_keyset_generator.hpp"
-#include "hs_sfm/bundle_adjustment/general_vector_function.hpp"
+#include "hs_sfm/bundle_adjustment/camera_shared_common_types.hpp"
+#include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 
 namespace hs
 {
@@ -12,8 +15,36 @@ namespace sfm
 namespace ba
 {
 
+template <typename _Integer>
+class IntegerUniformRandomGenerator
+{
+public:
+  typedef _Integer Integer;
+  typedef int Err;
+
+  static Err Generate(Integer min, Integer max, Integer& var)
+  {
+    if (max < min)
+    {
+      return -1;
+    }
+
+    boost::random::uniform_int_distribution<Integer> distribution(min, max);
+    var = distribution(random_generator_);
+
+    return 0;
+  }
+
+private:
+  static boost::random::mt19937 random_generator_;
+};
+template <typename _Integer>
+boost::random::mt19937
+IntegerUniformRandomGenerator<_Integer>::random_generator_;
+
+
 template <typename _Scalar, typename _ImageDimension>
-class GeneralSyntheticDataGenerator
+class CameraSharedSyntheticDataGenerator
 {
 public:
   typedef _Scalar Scalar;
@@ -42,23 +73,19 @@ public:
   typedef typename KeysetGenerator::Keyset Keyset;
   typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
-  typedef GeneralVectorFunction<Scalar> VectorFunction;
+  typedef CameraSharedVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
   typedef typename VectorFunction::XVector XVector;
   typedef typename VectorFunction::YVector YVector;
   typedef typename VectorFunction::FeatureMap FeatureMap;
   typedef typename VectorFunction::FeatureMapContainer FeatureMapContainer;
   typedef typename VectorFunction::ImageCameraMap ImageCameraMap;
-  typedef typename VectorFunction::IntrinsicConstraintsMask
-                   IntrinsicConstraintsMask;
-  typedef typename VectorFunction::StructureConstraintsMask
-                   StructureConstraintsMask;
 
 private:
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
 
 public:
-  GeneralSyntheticDataGenerator(
+  CameraSharedSyntheticDataGenerator(
     Scalar flight_longitudinal_overlap_ratio,
     Scalar flight_lateral_overlap_ratio,
     Scalar north_west_angle,
@@ -66,10 +93,11 @@ public:
     Scalar offset_stddev,
     const FlightGeneratorContainer& flight_generators,
     size_t number_of_points,
-    size_t number_of_constrained_points,
-    const IntrinsicParamsContainer& intrinsic_params_set,
-    const IntrinsicConstraintsMask& intrinsic_constraints_mask,
-    const StructureConstraintsMask& structure_constraints_mask)
+    size_t number_of_planar_constrained_points,
+    size_t number_of_full_constrained_points,
+    size_t number_of_constrained_images,
+    size_t number_of_constrained_cameras,
+    const IntrinsicParamsContainer& intrinsic_params_set)
     : multiple_flight_generator_(flight_longitudinal_overlap_ratio,
                                  flight_lateral_overlap_ratio,
                                  north_west_angle,
@@ -78,10 +106,11 @@ public:
                                  flight_generators),
       keyset_generator_(),
       number_of_points_(number_of_points),
-      number_of_constrained_points_(number_of_constrained_points),
-      intrinsic_params_set_(intrinsic_params_set),
-      intrinsic_constraints_mask_(intrinsic_constraints_mask),
-      structure_constraints_mask_(structure_constraints_mask) {}
+      number_of_planar_constrained_points_(number_of_planar_constrained_points),
+      number_of_full_constrained_points_(number_of_full_constrained_points),
+      number_of_constrained_images_(number_of_constrained_images),
+      number_of_constrained_cameras_(number_of_constrained_cameras),
+      intrinsic_params_set_(intrinsic_params_set) {}
 
   Err operator() (VectorFunction& vector_function,
                   XVector& x,
@@ -123,11 +152,19 @@ public:
       return -1;
     }
 
+    std::vector<size_t> constrained_point_ids;
+    std::vector<size_t> constrained_image_ids;
     if (GenerateVectorFunction(number_of_available_images,
                                number_of_available_points,
                                number_of_keys,
+                               image_map,
+                               point_map,
+                               tracks,
+                               camera_views,
                                feature_maps,
                                image_camera_map,
+                               constrained_image_ids,
+                               constrained_point_ids,
                                vector_function) != 0)
     {
       return -1;
@@ -144,9 +181,12 @@ public:
     }
 
     if (GenerateYVector(keysets,
+                        extrinsic_params_set,
                         points,
                         tracks,
                         vector_function,
+                        constrained_image_ids,
+                        constrained_point_ids,
                         number_of_available_points,
                         y) != 0)
     {
@@ -279,23 +319,156 @@ private:
   Err GenerateVectorFunction(size_t number_of_available_images,
                              size_t number_of_available_points,
                              size_t number_of_keys,
+                             const std::vector<size_t>& image_map,
+                             const std::vector<size_t>& point_map,
+                             const TrackContainer& tracks,
+                             const CameraViewContainer& camera_views,
                              const FeatureMapContainer& feature_maps,
                              const ImageCameraMap& image_camera_map,
+                             std::vector<size_t>& constrained_image_ids,
+                             std::vector<size_t>& constrained_point_ids,
                              VectorFunction& vector_function) const
   {
     vector_function.set_number_of_images(Index(number_of_available_images));
     vector_function.set_number_of_points(Index(number_of_available_points));
     vector_function.set_number_of_keys(Index(number_of_keys));
-    vector_function.set_number_of_constrained_points(
-      Index(number_of_constrained_points_));
     vector_function.set_number_of_cameras(Index(intrinsic_params_set_.size()));
     vector_function.set_feature_maps(feature_maps);
     vector_function.set_image_camera_map(image_camera_map);
     //TODO:目前是计算所有的内参数，应根据mask选择性计算畸变和内参数
     vector_function.intrinsic_computations_mask().set();
-    vector_function.intrinsic_constraints_mask() = intrinsic_constraints_mask_;
-    vector_function.structure_constraints_mask() = structure_constraints_mask_;
-    return -1;
+    //生成constraints
+    PointConstraintContainer point_constraints;
+    for (size_t i = 0; i < number_of_planar_constrained_points_; i++)
+    {
+      while (1)
+      {
+        size_t point_id;
+        IntegerUniformRandomGenerator<size_t>::Generate(
+          0, tracks.size() - 1, point_id);
+        auto itr_point = constrained_point_ids.begin();
+        auto itr_point_end = constrained_point_ids.end();
+        bool existed = false;
+        for (; itr_point != itr_point_end; ++itr_point)
+        {
+          if (*itr_point == point_id)
+          {
+            existed = true;
+            break;
+          }
+        }
+        if (!existed && !tracks[point_id].empty())
+        {
+          PointConstraint point_constraint;
+          point_constraint.point_id = point_map[point_id] - 1;
+          point_constraint.mask.set(POINT_CONSTRAIN_X);
+          point_constraint.mask.set(POINT_CONSTRAIN_Y);
+          point_constraints.push_back(point_constraint);
+          constrained_point_ids.push_back(point_id);
+          break;
+        }
+      }
+    }// for (size_t i = 0; i < number_of_planar_constrained_points_; i++)
+    for (size_t i = 0; i < number_of_full_constrained_points_; i++)
+    {
+      while (1)
+      {
+        size_t point_id;
+        IntegerUniformRandomGenerator<size_t>::Generate(
+          0, tracks.size() - 1, point_id);
+        auto itr_point = constrained_point_ids.begin();
+        auto itr_point_end = constrained_point_ids.end();
+        bool existed = false;
+        for (; itr_point != itr_point_end; ++itr_point)
+        {
+          if (*itr_point == point_id)
+          {
+            existed = true;
+            break;
+          }
+        }
+        if (!existed && !tracks[point_id].empty())
+        {
+          PointConstraint point_constraint;
+          point_constraint.point_id = point_map[point_id] - 1;
+          point_constraint.mask.set(POINT_CONSTRAIN_X);
+          point_constraint.mask.set(POINT_CONSTRAIN_Y);
+          point_constraint.mask.set(POINT_CONSTRAIN_Z);
+          point_constraints.push_back(point_constraint);
+          constrained_point_ids.push_back(point_id);
+          break;
+        }
+      }
+    }// for (size_t i = 0; i < number_of_full_constrained_points_; i++)
+
+    ImageConstraintContainer image_constraints;
+    for (size_t i = 0; i < number_of_constrained_images_; i++)
+    {
+      while (1)
+      {
+        size_t image_id;
+        IntegerUniformRandomGenerator<size_t>::Generate(
+          0, camera_views.size() - 1, image_id);
+        auto itr_image = constrained_image_ids.begin();
+        auto itr_image_end = constrained_image_ids.end();
+        bool existed = false;
+        for (; itr_image != itr_image_end; ++itr_image)
+        {
+          if (*itr_image == image_id)
+          {
+            existed = true;
+            break;
+          }
+        }
+        if (!existed)
+        {
+          ImageConstraint image_constraint;
+          image_constraint.image_id = image_map[image_id] - 1;
+          image_constraint.mask.set();
+          image_constraints.push_back(image_constraint);
+          constrained_image_ids.push_back(image_id);
+          break;
+        }
+      }
+    }// for (size_t i = 0; i < number_of_constrained_images_; i++)
+
+    CameraConstraintContainer camera_constraints;
+    for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+    {
+      while (1)
+      {
+        size_t camera_id;
+        IntegerUniformRandomGenerator<size_t>::Generate(
+          0, intrinsic_params_set_.size() - 1, camera_id);
+        auto itr_camera = camera_constraints.begin();
+        auto itr_camera_end = camera_constraints.end();
+        bool existed = false;
+        for (; itr_camera != itr_camera_end; ++itr_camera)
+        {
+          if (itr_camera->camera_id == camera_id)
+          {
+            existed = true;
+            break;
+          }
+        }
+        if (!existed)
+        {
+          CameraConstraint camera_constraint;
+          camera_constraint.camera_id = camera_id;
+          camera_constraint.radial_mask.reset();
+          camera_constraint.decentering_mask.reset();
+          camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_SKEW);
+          camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+          camera_constraints.push_back(camera_constraint);
+          break;
+        }
+      }
+    }// for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+    vector_function.point_constraints() = point_constraints;
+    vector_function.image_constraints() = image_constraints;
+    vector_function.camera_constraints() = camera_constraints;
+
+    return 0;
   }
 
   Err GenerateXVector(const Point3DContainer& points,
@@ -384,9 +557,12 @@ private:
   }
 
   Err GenerateYVector(const KeysetContainer& keysets,
+                      const ExtrinsicParamsContainer& extrinsic_params_set,
                       const Point3DContainer& points,
                       const TrackContainer& tracks,
                       const VectorFunction& vector_function,
+                      const std::vector<size_t>& constrained_image_ids,
+                      const std::vector<size_t>& constrained_point_ids,
                       size_t number_of_available_points,
                       YVector& y) const
   {
@@ -408,105 +584,118 @@ private:
     }
 
     Index y_offset = vector_function.GetYKeysSize();
-    if (intrinsic_constraints_mask_.any())
+    auto itr_point_id = constrained_point_ids.begin();
+    auto itr_point_id_end = constrained_point_ids.end();
+    for (size_t i = 0; itr_point_id != itr_point_id_end; ++itr_point_id, ++i)
     {
-      for (Index i = 0; i < Index(intrinsic_params_set_.size()); i++)
+      const PointConstraint& point_constraint =
+        vector_function.point_constraints()[i];
+      if (point_constraint.mask[POINT_CONSTRAIN_X])
       {
-        const IntrinsicParams& intrinsic_params = intrinsic_params_set_[i];
-        Index y_intrinsic_offset =
-          y_offset + i * Index(intrinsic_constraints_mask_.count());
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_RADIAL_K1])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.k1();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_RADIAL_K2])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.k2();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_RADIAL_K3])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.k3();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_DECENTERING_D1])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.d1();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_DECENTERING_D2])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.d2();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_FOCAL_LENGTH])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.focal_length();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_SKEW])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.skew();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_PRINCIPAL_X])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.principal_point_x();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_PRINCIPAL_Y])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.principal_point_y();
-          y_intrinsic_offset++;
-        }
-        if (intrinsic_constraints_mask_[
-              VectorFunction::CONSTRAIN_PIXEL_RATIO])
-        {
-          y[y_intrinsic_offset] = intrinsic_params.pixel_ratio();
-          y_intrinsic_offset++;
-        }
+        y[y_offset] = points[*itr_point_id][0];
+        y_offset++;
+      }
+      if (point_constraint.mask[POINT_CONSTRAIN_Y])
+      {
+        y[y_offset] = points[*itr_point_id][1];
+        y_offset++;
+      }
+      if (point_constraint.mask[POINT_CONSTRAIN_Z])
+      {
+        y[y_offset] = points[*itr_point_id][2];
+        y_offset++;
+      }
+    }//for (size_t i = 0; itr_point_id != itr_point_id_end; ++itr_point_id, ++i)
 
-      }// for (Index i = 0; i < Index(intrinsic_params_set_.size()); i++)
-    }// if (intrinsic_constraints_mask_.any())
-
-    y_offset += vector_function.GetYConstrainedIntrinsicParamsSize();
-    if (structure_constraints_mask_.any())
+    auto itr_image_id = constrained_image_ids.begin();
+    auto itr_image_id_end = constrained_image_ids.end();
+    for (size_t i = 0; itr_image_id != itr_image_id_end; ++itr_image_id, ++i)
     {
-      if (structure_constraints_mask_[VectorFunction::CONSTRAIN_POINTS])
+      const ImageConstraint& image_constraint =
+        vector_function.image_constraints()[i];
+      const ExtrinsicParams& extrinsic_params =
+        extrinsic_params_set[*itr_image_id];
+      Vector3 t = -(extrinsic_params.rotation() * extrinsic_params.position());
+      if (image_constraint.mask[IMAGE_CONSTRAIN_ROTATION])
       {
-        size_t constrained_points_begin = number_of_available_points -
-                                          number_of_constrained_points_;
-        auto itr_point = points.begin();
-        auto itr_point_end = points.end();
-        auto itr_track = tracks.begin();
-        auto itr_track_end = tracks.end();
-        for (size_t i = 0; itr_point != itr_point_end; ++itr_point, ++itr_track)
-        {
-          if (!itr_track->empty())
-          {
-            if (i >= constrained_points_begin)
-            {
-              Index constrained_point_id = Index(i - constrained_points_begin);
-              y.segment(y_offset +
-                        constrained_point_id *
-                        VectorFunction::params_per_point_,
-                        VectorFunction::params_per_point_) = *itr_point;
-            }
-            i++;
-          }
-        }
-      }// if (structure_constraints_mask_[CONSTRAIN_POINTS])
-    }// if (structure_constraints_mask_.any())
+        y[y_offset + 0] = extrinsic_params.rotation()[0];
+        y[y_offset + 1] = extrinsic_params.rotation()[1];
+        y[y_offset + 2] = extrinsic_params.rotation()[2];
+        y_offset += 3;
+      }
+      if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_X])
+      {
+        y[y_offset] = t[0];
+        y_offset++;
+      }
+      if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_Y])
+      {
+        y[y_offset] = t[1];
+        y_offset++;
+      }
+      if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_Z])
+      {
+        y[y_offset] = t[2];
+        y_offset++;
+      }
+    }//for (size_t i = 0; itr_image_id != itr_image_id_end; ++itr_image_id, ++i)
+
+    for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+    {
+      const CameraConstraint& camera_constraint =
+        vector_function.camera_constraints()[i];
+      size_t camera_id = camera_constraint.camera_id;
+      if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K1])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].k1();
+        y_offset++;
+      }
+      if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K2])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].k2();
+        y_offset++;
+      }
+      if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K3])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].k3();
+        y_offset++;
+      }
+      if (camera_constraint.decentering_mask[DECENTERING_CONSTRAIN_D1])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].d1();
+        y_offset++;
+      }
+      if (camera_constraint.decentering_mask[DECENTERING_CONSTRAIN_D2])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].d2();
+        y_offset++;
+      }
+      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_FOCAL_LENGTH])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].focal_length();
+        y_offset++;
+      }
+      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_SKEW])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].skew();
+        y_offset++;
+      }
+      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PRINCIPAL_X])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].principal_point_x();
+        y_offset++;
+      }
+      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PRINCIPAL_Y])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].principal_point_y();
+        y_offset++;
+      }
+      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PIXEL_RATIO])
+      {
+        y[y_offset] = intrinsic_params_set_[camera_id].pixel_ratio();
+        y_offset++;
+      }
+    }// for (size_t i = 0; i < number_of_constrained_cameras_; i++)
 
     return 0;
   }
@@ -515,11 +704,11 @@ private:
   MultipleFlightGenerator multiple_flight_generator_;
   KeysetGenerator keyset_generator_;
   size_t number_of_points_;
-  size_t number_of_constrained_points_;
+  size_t number_of_planar_constrained_points_;
+  size_t number_of_full_constrained_points_;
+  size_t number_of_constrained_images_;
+  size_t number_of_constrained_cameras_;
   IntrinsicParamsContainer intrinsic_params_set_;
-  IntrinsicConstraintsMask intrinsic_constraints_mask_;
-  StructureConstraintsMask structure_constraints_mask_;
-
 };
 
 }

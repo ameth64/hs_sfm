@@ -73,7 +73,7 @@ public:
           extrinsic_params_set[j];
         const Image& image = images[j];
         Key key =
-          ProjectiveFunctions::WorldPointProjectToImageKey(
+          ProjectiveFunctions::WorldPointProjectToImageKeyNoDistort(
             intrinsic_params,
             extrinsic_params,
             point);
@@ -83,11 +83,21 @@ public:
             key[1] > (-Scalar(image.m_height) / 2) &&
             key[1] < ( Scalar(image.m_height) / 2))
         {
-          tracks[i].push_back(
-            std::make_pair(j, keys_vector[j].size()));
-          camera_views[j].push_back(
-            std::make_pair(i, keys_vector[j].size()));
-          keys_vector[j].push_back(key);
+          key = ProjectiveFunctions::WorldPointProjectToImageKey(
+                  intrinsic_params,
+                  extrinsic_params,
+                  point);
+          if (key[0] > (-Scalar(image.m_width) / 2) &&
+              key[0] < ( Scalar(image.m_width) / 2) &&
+              key[1] > (-Scalar(image.m_height) / 2) &&
+              key[1] < ( Scalar(image.m_height) / 2))
+          {
+            tracks[i].push_back(
+              std::make_pair(j, keys_vector[j].size()));
+            camera_views[j].push_back(
+              std::make_pair(i, keys_vector[j].size()));
+            keys_vector[j].push_back(key);
+          }
         }
       }// for (size_t j = 0; j < number_of_images; j++)
     }// for (size_t i = 0; i < number_of_points; i++)

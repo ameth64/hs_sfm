@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_SYNTHETIC_KEYSET_GENERATOR_HPP_
+﻿#ifndef _HS_SFM_SYNTHETIC_KEYSET_GENERATOR_HPP_
 #define _HS_SFM_SYNTHETIC_KEYSET_GENERATOR_HPP_
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"

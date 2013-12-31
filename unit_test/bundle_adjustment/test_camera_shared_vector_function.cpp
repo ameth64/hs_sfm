@@ -2,27 +2,26 @@
 
 #include "gtest/gtest.h"
 
-#include "hs_sfm/bundle_adjustment/general_synthetic_data_generator.hpp"
-#include "hs_sfm/bundle_adjustment/general_vector_function.hpp"
+#include "hs_sfm/bundle_adjustment/camera_shared_synthetic_data_generator.hpp"
+#include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 
 namespace
 {
 
-TEST(TestGeneralVectorFunction, SimpleTest)
+TEST(TestCameraSharedVectorFunction, SimpleTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
 
-  typedef hs::sfm::ba::GeneralSyntheticDataGenerator<Scalar, ImageDimension>
+  typedef hs::sfm::ba::CameraSharedSyntheticDataGenerator<Scalar,
+                                                          ImageDimension>
           DataGenerator;
   typedef DataGenerator::FlightGenerator FlightGenerator;
   typedef DataGenerator::FlightGeneratorContainer FlightGeneratorContainer;
   typedef DataGenerator::IntrinsicParams IntrinsicParams;
   typedef DataGenerator::IntrinsicParamsContainer IntrinsicParamsContainer;
-  typedef DataGenerator::IntrinsicConstraintsMask IntrinsicConstraintsMask;
-  typedef DataGenerator::StructureConstraintsMask StructureConstraintsMask;
 
-  typedef hs::sfm::ba::GeneralVectorFunction<Scalar> VectorFunction;
+  typedef hs::sfm::ba::CameraSharedVectorFunction<Scalar> VectorFunction;
   typedef VectorFunction::Index Index;
   typedef VectorFunction::XVector XVector;
   typedef VectorFunction::YVector YVector;
@@ -162,11 +161,10 @@ TEST(TestGeneralVectorFunction, SimpleTest)
   Scalar north_west_angle_stddev = 10.0;
   Scalar offset_stddev = 15.0;
   size_t number_of_points = 100;
-  size_t number_of_constrained_points = 6;
-  IntrinsicConstraintsMask intrinsic_constraints_mask;
-  intrinsic_constraints_mask.set();
-  StructureConstraintsMask structure_constraints_mask;
-  structure_constraints_mask.set();
+  size_t number_of_planar_constrained_points = 4;
+  size_t number_of_full_constrained_points = 6;
+  size_t number_of_constrained_images = 10;
+  size_t number_of_constrained_cameras = 2;
 
   DataGenerator data_generator(flight_longitudinal_overlap_ratio,
                                flight_lateral_overlap_ratio,
@@ -175,28 +173,20 @@ TEST(TestGeneralVectorFunction, SimpleTest)
                                offset_stddev,
                                flight_generators,
                                number_of_points,
-                               number_of_constrained_points,
-                               intrinsic_params_set,
-                               intrinsic_constraints_mask,
-                               structure_constraints_mask);
+                               number_of_planar_constrained_points,
+                               number_of_full_constrained_points,
+                               number_of_constrained_images,
+                               number_of_constrained_cameras,
+                               intrinsic_params_set);
 
   VectorFunction vector_function;
   XVector x;
-  YVector y_synthetic;
-  ASSERT_EQ(0, data_generator(vector_function, x, y_synthetic));
-  YVector y;
-  ASSERT_EQ(0, vector_function(x, y));
+  YVector y_synthetic, y;
   Scalar threshold = 1e-8;
-  //ASSERT_EQ(true, y_synthetic.isApprox(y, threshold));
-  Index y_size = y.size();
-  for (Index i = 0; i < y_size; i++)
-  {
-    if (std::abs(y[i] - y_synthetic[i]) > threshold)
-    {
-      std::cout<<"y["<<i<<"]="<<y[i]<<"\n";
-      std::cout<<"y_synthetic["<<i<<"]="<<y_synthetic[i]<<"\n";
-    }
-  }
+
+  ASSERT_EQ(0, data_generator(vector_function, x, y_synthetic));
+  ASSERT_EQ(0, vector_function(x, y));
+  ASSERT_EQ(true, y_synthetic.isApprox(y, threshold));
 }
 
 }

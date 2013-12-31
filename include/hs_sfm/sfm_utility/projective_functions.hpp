@@ -50,9 +50,24 @@ public:
                                    decentering_delta_key[0],
                                    decentering_delta_key[1]);
 
-    return (camera_point.segment(0, 2) +
-            radial_delta_key +
-            decentering_delta_key);
+    camera_point.segment(0, 2) += radial_delta_key;
+    camera_point.segment(0, 2) += decentering_delta_key;
+    camera_point = intrinsic_params.GetKMatrix() * camera_point;
+
+    return camera_point.segment(0, 2);
+  }
+
+  static Key WorldPointProjectToImageKeyNoDistort(
+    const IntrinsicParams& intrinsic_params,
+    const ExtrinsicParams& extrinsic_params,
+    const Point3D& point)
+  {
+    Point3D camera_point = point - extrinsic_params.position();
+    camera_point = extrinsic_params.rotation() * camera_point;
+    camera_point = intrinsic_params.GetKMatrix() * camera_point;
+    camera_point /= camera_point[2];
+
+    return camera_point.segment(0, 2);
   }
 
 };

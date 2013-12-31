@@ -25,7 +25,9 @@ set(BA_UTEST_SOURCES
   "unit_test/bundle_adjustment/test_ba_gcp_constrained_jacobian_matrix_calculator.cpp"
   "unit_test/bundle_adjustment/test_ba_gcp_constrained_normal_equation_builder.cpp"
   "unit_test/bundle_adjustment/test_ba_gcp_constrained_vector_function.cpp"
-  "unit_test/bundle_adjustment/test_general_vector_function.cpp"
+  "unit_test/bundle_adjustment/test_camera_shared_vector_function.cpp"
+  "unit_test/bundle_adjustment/test_camera_shared_jacobian_matrix_calculator.cpp"
+  "unit_test/bundle_adjustment/test_camera_shared_analytical_derivative.cpp"
   )
 hslib_add_utest(${BA_NAME} SOURCES ${BA_UTEST_SOURCES})
 hslib_add_dep(${BA_NAME}_utest
