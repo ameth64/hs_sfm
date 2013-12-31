@@ -65,6 +65,8 @@ public:
     jacobian_matrix.set_number_of_images(number_of_images);
     jacobian_matrix.set_number_of_points(number_of_points);
     jacobian_matrix.set_number_of_cameras(number_of_cameras);
+    jacobian_matrix.intrinsic_computations_mask() =
+      vector_function.intrinsic_computations_mask();
     Index point_params_size = vector_function.GetPointParamsSize();
     Index extrinsic_params_size = vector_function.GetExtrinsicParamsSize();
     Index intrinsic_params_size_per_camera =

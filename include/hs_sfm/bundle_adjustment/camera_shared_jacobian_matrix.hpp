@@ -299,7 +299,7 @@ public:
   {
     return intrinsic_computations_mask_;
   }
-  IntrinsicComputationsMask intrinsic_computations_mask()
+  IntrinsicComputationsMask& intrinsic_computations_mask()
   {
     return intrinsic_computations_mask_;
   }

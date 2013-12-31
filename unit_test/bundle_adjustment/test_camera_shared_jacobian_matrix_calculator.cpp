@@ -135,7 +135,7 @@ public:
           ba_analytical_point_block.derivative_block.cols() !=
           ba_ffd_point_block.derivative_block.cols())
       {
-        std::cout<<"Size of point derivativematrix not match.\n";
+        std::cout<<"Size of point derivative matrix not match.\n";
         result = -1;
         break;
       }
@@ -148,13 +148,18 @@ public:
             ba_ffd_point_block.derivative_block(j, k);
           Scalar ba_analytical_value =
             ba_analytical_point_block.derivative_block(j, k);
-          Scalar error = std::abs(ba_ffd_value - ba_analytical_value);
-          if (ba_ffd_value != Scalar(0)) error = std::abs(error / ba_ffd_value);
-          if (error > threshold)
+          Scalar abs_error = std::abs(ba_ffd_value - ba_analytical_value);
+          Scalar rel_error = abs_error;
+          if (ba_ffd_value != Scalar(0))
           {
-            std::cout<<"Deference beteen the point derivative matrix value"
+            rel_error = std::abs(abs_error / ba_ffd_value);
+          }
+          if (abs_error > threshold && rel_error > threshold)
+          {
+            std::cout<<"Deference between the point derivative matrix value"
                        "is too big\n";
-            std::cout<<"error:"<<error<<"\n";
+            std::cout<<"abs_error:"<<abs_error<<"\n";
+            std::cout<<"rel_error:"<<rel_error<<"\n";
             std::cout<<"point derivative matrix id:"<<i<<".\n";
             std::cout<<"       ba_ffd_point_block["<<j<<","<<k<<"] = "
                      <<ba_ffd_value<<".\n";
@@ -182,7 +187,7 @@ public:
           ba_analytical_image_block.derivative_block.cols() !=
           ba_ffd_image_block.derivative_block.cols())
       {
-        std::cout<<"Size of image derivativematrix not match.\n";
+        std::cout<<"Size of image derivative matrix not match.\n";
         result = -1;
         break;
       }
@@ -195,13 +200,18 @@ public:
             ba_ffd_image_block.derivative_block(j, k);
           Scalar ba_analytical_value =
             ba_analytical_image_block.derivative_block(j, k);
-          Scalar error = std::abs(ba_ffd_value - ba_analytical_value);
-          if (ba_ffd_value != Scalar(0)) error = std::abs(error / ba_ffd_value);
-          if (error > threshold)
+          Scalar abs_error = std::abs(ba_ffd_value - ba_analytical_value);
+          Scalar rel_error = abs_error;
+          if (ba_ffd_value != Scalar(0))
           {
-            std::cout<<"Deference beteen the image derivative matrix value"
+            rel_error = std::abs(abs_error / ba_ffd_value);
+          }
+          if (abs_error > threshold && rel_error > threshold)
+          {
+            std::cout<<"Deference between the image derivative matrix value"
                        "is too big\n";
-            std::cout<<"error:"<<error<<"\n";
+            std::cout<<"abs_error:"<<abs_error<<"\n";
+            std::cout<<"rel_error:"<<rel_error<<"\n";
             std::cout<<"image derivative matrix id:"<<i<<".\n";
             std::cout<<"       ba_ffd_image_block["<<j<<","<<k<<"] = "
                      <<ba_ffd_value<<".\n";
@@ -213,52 +223,57 @@ public:
       }// for (Index j = 0; j < ba_ffd_image_block.derivative_block.rows(); j++)
     }
 
-    //for (Index i = 0;
-    //     i < Index(ba_ffd_jacobian_matrix.camera_derivatives().size());
-    //     i++)
-    //{
-    //  const typename BAAnalitycalJacobianMatrix::CameraDerivativeBlock&
-    //    ba_analytical_camera_block =
-    //      ba_analytical_jacobian_matrix.camera_derivatives()[i];
-    //  const typename BAFFDJacobianMatrix::CameraDerivativeBlock&
-    //    ba_ffd_camera_block =
-    //      ba_ffd_jacobian_matrix.camera_derivatives()[i];
+    for (Index i = 0;
+         i < Index(ba_ffd_jacobian_matrix.camera_derivatives().size());
+         i++)
+    {
+      const typename BAAnalitycalJacobianMatrix::CameraDerivativeBlock&
+        ba_analytical_camera_block =
+          ba_analytical_jacobian_matrix.camera_derivatives()[i];
+      const typename BAFFDJacobianMatrix::CameraDerivativeBlock&
+        ba_ffd_camera_block =
+          ba_ffd_jacobian_matrix.camera_derivatives()[i];
 
-    //  if (ba_analytical_camera_block.derivative_block.rows() !=
-    //      ba_ffd_camera_block.derivative_block.rows() ||
-    //      ba_analytical_camera_block.derivative_block.cols() !=
-    //      ba_ffd_camera_block.derivative_block.cols())
-    //  {
-    //    std::cout<<"Size of camera derivativematrix not match.\n";
-    //    result = -1;
-    //    break;
-    //  }
+      if (ba_analytical_camera_block.derivative_block.rows() !=
+          ba_ffd_camera_block.derivative_block.rows() ||
+          ba_analytical_camera_block.derivative_block.cols() !=
+          ba_ffd_camera_block.derivative_block.cols())
+      {
+        std::cout<<"Size of camera derivativematrix not match.\n";
+        result = -1;
+        break;
+      }
 
-    //  for (Index j = 0; j < ba_ffd_camera_block.derivative_block.rows(); j++)
-    //  {
-    //    for (Index k = 0; k < ba_ffd_camera_block.derivative_block.cols(); k++)
-    //    {
-    //      Scalar ba_ffd_value =
-    //        ba_ffd_camera_block.derivative_block(j, k);
-    //      Scalar ba_analytical_value =
-    //        ba_analytical_camera_block.derivative_block(j, k);
-    //      Scalar error = std::abs(ba_ffd_value - ba_analytical_value);
-    //      if (ba_ffd_value != Scalar(0)) error = std::abs(error / ba_ffd_value);
-    //      if (error > threshold)
-    //      {
-    //        std::cout<<"Deference beteen the camera derivative matrix value"
-    //                   "is too big\n";
-    //        std::cout<<"error:"<<error<<"\n";
-    //        std::cout<<"camera derivative matrix id:"<<i<<".\n";
-    //        std::cout<<"       ba_ffd_camera_block["<<j<<","<<k<<"] = "
-    //                 <<ba_ffd_value<<".\n";
-    //        std::cout<<"ba_analytical_camera_block["<<j<<","<<k<<"] = "
-    //                 <<ba_analytical_value<<".\n";
-    //        result = -1;
-    //      }
-    //    }
-    //  }//for (Index j = 0; j < ba_ffd_camera_block.derivative_block.rows(); j++)
-    //}
+      for (Index j = 0; j < ba_ffd_camera_block.derivative_block.rows(); j++)
+      {
+        for (Index k = 0; k < ba_ffd_camera_block.derivative_block.cols(); k++)
+        {
+          Scalar ba_ffd_value =
+            ba_ffd_camera_block.derivative_block(j, k);
+          Scalar ba_analytical_value =
+            ba_analytical_camera_block.derivative_block(j, k);
+          Scalar abs_error = std::abs(ba_ffd_value - ba_analytical_value);
+          Scalar rel_error = abs_error;
+          if (ba_ffd_value != Scalar(0))
+          {
+            rel_error = std::abs(abs_error / ba_ffd_value);
+          }
+          if (abs_error > threshold && rel_error > threshold)
+          {
+            std::cout<<"Deference between the camera derivative matrix value"
+                       "is too big\n";
+            std::cout<<"abs_error:"<<abs_error<<"\n";
+            std::cout<<"rel_error:"<<rel_error<<"\n";
+            std::cout<<"camera derivative matrix id:"<<i<<".\n";
+            std::cout<<"       ba_ffd_camera_block["<<j<<","<<k<<"] = "
+                     <<ba_ffd_value<<".\n";
+            std::cout<<"ba_analytical_camera_block["<<j<<","<<k<<"] = "
+                     <<ba_analytical_value<<".\n";
+            result = -1;
+          }
+        }
+      }//for (Index j = 0; j < ba_ffd_camera_block.derivative_block.rows(); j++)
+    }
 
     if (with_ffd)
     {
