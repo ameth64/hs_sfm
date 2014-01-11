@@ -78,15 +78,21 @@ public:
   typedef EIGEN_SPARSE_MATRIX(DerivativeId, EigenDefaultMajor, Index)
           DerivativeMap;
 
+  struct KeyMap
+  {
+    Index point_id;
+    Index image_id;
+    Index camera_id;
+  };
+  typedef std::vector<KeyMap> KeyMapContainer;
+
 public:
   inline void Clear()
   {
     ImageDerivativeBlockContainer().swap(image_derivatives_);
     PointDerivativeBlockContainer().swap(point_derivatives_);
     CameraDerivativeBlockContainer().swap(camera_derivatives_);
-    DerivativeMap().swap(image_derivatives_map_);
-    DerivativeMap().swap(point_derivatives_map_);
-    DerivativeMap().swap(camera_derivatives_map_);
+    KeyMapContainer().swap(key_maps_);
   }
 
   Scalar coeff(Index i, Index j) const
@@ -236,8 +242,9 @@ public:
 
   inline Index GetNumberOfKeys() const
   {
-    size_t number_of_keys = image_derivatives_.size();
+    size_t number_of_keys = key_maps_.size();
     if (point_derivatives_.size() != number_of_keys ||
+        image_derivatives_.size() != number_of_keys ||
         camera_derivatives_.size() != number_of_keys)
     {
       return 0;
@@ -268,9 +275,24 @@ public:
     return Index(camera_constraints_map_.size());
   }
 
+  inline Index GetXSize() const
+  {
+    return GetPointParamsSize() +
+           GetExtrinsicParamsSize() +
+           GetIntrinsicParamsSize();
+  }
+
+  inline Index GetYSize() const
+  {
+    return GetKeysParamsSize() +
+           GetPointConstraintsSize() +
+           GetImageConstraintsSize() +
+           GetCameraConstraintsSize();
+  }
+
   Index number_of_images() const
   {
-    return number_of_cameras_;
+    return number_of_images_;
   }
   void set_number_of_images(Index number_of_images)
   {
@@ -313,15 +335,6 @@ public:
     return image_derivatives_;
   }
 
-  const DerivativeMap& image_derivatives_map() const
-  {
-    return image_derivatives_map_;
-  }
-  DerivativeMap& image_derivatives_map()
-  {
-    return image_derivatives_map_;
-  }
-
   const PointDerivativeBlockContainer& point_derivatives() const
   {
     return point_derivatives_;
@@ -329,15 +342,6 @@ public:
   PointDerivativeBlockContainer& point_derivatives()
   {
     return point_derivatives_;
-  }
-
-  const DerivativeMap& point_derivatives_map() const
-  {
-    return point_derivatives_map_;
-  }
-  DerivativeMap& point_derivatives_map()
-  {
-    return point_derivatives_map_;
   }
 
   const CameraDerivativeBlockContainer& camera_derivatives() const
@@ -349,13 +353,13 @@ public:
     return camera_derivatives_;
   }
 
-  const DerivativeMap& camera_derivatives_map() const
+  const KeyMapContainer& key_maps() const
   {
-    return camera_derivatives_map_;
+    return key_maps_;
   }
-  DerivativeMap& camera_derivatives_map()
+  KeyMapContainer& key_maps()
   {
-    return camera_derivatives_map_;
+    return key_maps_;
   }
 
   void SetPointConstraints(const PointConstraintContainer& point_constraints)
@@ -478,13 +482,46 @@ public:
     }// for (; itr_camera != itr_camera_end; ++itr_camera)
   }
 
+  Index GetPointConstraintPointID(Index offset) const
+  {
+    return point_constraints_map_[offset] /
+           VectorFunction::params_per_point_;
+  }
+  Index GetPointConstraintParamID(Index offset) const
+  {
+    return point_constraints_map_[offset] %
+           VectorFunction::params_per_point_;
+  }
+
+  Index GetImageConstraintImageID(Index offset) const
+  {
+    return (image_constraints_map_[offset] - GetPointParamsSize()) /
+           VectorFunction::extrinsic_params_per_image_;
+  }
+  Index GetImageConstraintParamID(Index offset) const
+  {
+    return (image_constraints_map_[offset] - GetPointParamsSize()) %
+           VectorFunction::extrinsic_params_per_image_;
+  }
+
+  Index GetCameraConstraintCameraID(Index offset) const
+  {
+    Index camera_begin = GetPointParamsSize() + GetExtrinsicParamsSize();
+    return (camera_constraints_map_[offset] - camera_begin) /
+           GetIntrinsicParamsSizePerCamera();
+  }
+  Index GetCameraConstraintParamID(Index offset) const
+  {
+    Index camera_begin = GetPointParamsSize() + GetExtrinsicParamsSize();
+    return (camera_constraints_map_[offset] - camera_begin) %
+           GetIntrinsicParamsSizePerCamera();
+  }
+
 private:
   ImageDerivativeBlockContainer image_derivatives_;
-  DerivativeMap image_derivatives_map_;
   PointDerivativeBlockContainer point_derivatives_;
-  DerivativeMap point_derivatives_map_;
   CameraDerivativeBlockContainer camera_derivatives_;
-  DerivativeMap camera_derivatives_map_;
+  KeyMapContainer key_maps_;
   Index number_of_images_;
   Index number_of_points_;
   Index number_of_cameras_;

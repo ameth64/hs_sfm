@@ -33,6 +33,8 @@ private:
   typedef typename VectorFunction::FeatureMap FeatureMap;
   typedef typename VectorFunction::FeatureMapContainer FeatureMapContainer;
   typedef typename JacobianMatrix::DerivativeId DerivativeId;
+  typedef typename JacobianMatrix::KeyMap KeyMap;
+  typedef typename JacobianMatrix::KeyMapContainer KeyMapContainer;
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
   typedef EIGEN_VECTOR(Scalar, 2) Vector2;
   typedef EIGEN_VECTOR(Scalar, Eigen::Dynamic) VectorX;
@@ -65,10 +67,6 @@ public:
                   const XVector& x,
                   JacobianMatrix& jacobian_matrix) const
   {
-    typedef Eigen::Triplet<DerivativeId, Index> TripletType;
-    std::vector<TripletType> images_triplets;
-    std::vector<TripletType> points_triplets;
-    std::vector<TripletType> cameras_triplets;
     Index number_of_images = vector_function.number_of_images();
     Index number_of_points = vector_function.number_of_points();
     Index number_of_cameras = vector_function.number_of_cameras();
@@ -93,6 +91,11 @@ public:
       Index image_id = feature_map.first;
       Index point_id = feature_map.second;
       Index camera_id = image_camera_map[image_id];
+      KeyMap key_map;
+      key_map.point_id = point_id;
+      key_map.image_id = image_id;
+      key_map.camera_id = camera_id;
+      jacobian_matrix.key_maps().push_back(key_map);
 
       Vector3 point = x.segment(point_id * VectorFunction::params_per_point_,
                                 VectorFunction::params_per_point_);
@@ -188,9 +191,6 @@ public:
         IntrinsicPointDerivation(pnpp, focal_length, skew, pixel_ratio,
                                  point_block.derivative_block);
         jacobian_matrix.point_derivatives().push_back(point_block);
-        points_triplets.push_back(
-          TripletType(image_id, point_id,
-                      jacobian_matrix.point_derivatives().size()));
 
         typename JacobianMatrix::ImageDerivativeBlock image_block;
         image_block.image_id = image_id;
@@ -198,9 +198,6 @@ public:
         IntrinsicExtrinsicDerivation(pnpe, focal_length, skew, pixel_ratio,
                                      image_block.derivative_block);
         jacobian_matrix.image_derivatives().push_back(image_block);
-        images_triplets.push_back(
-          TripletType(image_id, point_id,
-                      jacobian_matrix.image_derivatives().size()));
 
         typename JacobianMatrix::CameraDerivativeBlock camera_block;
         camera_block.derivative_block.resize(VectorFunction::params_per_key_,
@@ -242,9 +239,6 @@ public:
                                             VectorFunction::params_per_key_,
                                             5) = pipi;
         jacobian_matrix.camera_derivatives().push_back(camera_block);
-        cameras_triplets.push_back(
-          TripletType(image_id, point_id,
-                      jacobian_matrix.camera_derivatives().size()));
       }
       else
       {
@@ -283,31 +277,9 @@ public:
         jacobian_matrix.point_derivatives().push_back(point_block);
         jacobian_matrix.image_derivatives().push_back(image_block);
         jacobian_matrix.camera_derivatives().push_back(camera_block);
-        points_triplets.push_back(
-          TripletType(image_id, point_id,
-                      jacobian_matrix.point_derivatives().size()));
-        images_triplets.push_back(
-          TripletType(image_id, point_id,
-                      jacobian_matrix.image_derivatives().size()));
-        cameras_triplets.push_back(
-          TripletType(image_id, point_id,
-                      jacobian_matrix.camera_derivatives().size()));
       }
 
     }// for (Index i = 0; i < number_of_keys; i++)
-
-    jacobian_matrix.point_derivatives_map().resize(
-      number_of_images, number_of_points);
-    jacobian_matrix.point_derivatives_map().setFromTriplets(
-      points_triplets.begin(), points_triplets.end());
-    jacobian_matrix.image_derivatives_map().resize(
-      number_of_images, number_of_points);
-    jacobian_matrix.image_derivatives_map().setFromTriplets(
-      images_triplets.begin(), images_triplets.end());
-    jacobian_matrix.camera_derivatives_map().resize(
-      number_of_images, number_of_points);
-    jacobian_matrix.camera_derivatives_map().setFromTriplets(
-      cameras_triplets.begin(), cameras_triplets.end());
 
     jacobian_matrix.SetPointConstraints(vector_function.point_constraints());
     jacobian_matrix.SetImageConstraints(vector_function.image_constraints());

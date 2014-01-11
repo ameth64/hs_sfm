@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAICE_GRADIENT_HPP_
+﻿#ifndef _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAICE_GRADIENT_HPP_
 #define _HS_SFM_BUNDLE_ADJUSTMENT_BA_NAICE_GRADIENT_HPP_
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"

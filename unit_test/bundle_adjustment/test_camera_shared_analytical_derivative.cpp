@@ -728,11 +728,6 @@ public:
                               analytical_jacobian_matrix) != 0)
       return -1;
 
-    std::cout.setf(std::ios::fixed);
-    std::cout<<std::setprecision(10);
-    std::cout<<"       ffd:"<<ffd_jacobian_matrix(0, 3)<<"\n";
-    std::cout<<"analytical:"<<analytical_jacobian_matrix(0, 3)<<"\n";
-
     if (!ffd_jacobian_matrix.isApprox(analytical_jacobian_matrix, Scalar(1e-5)))
       return -1;
 

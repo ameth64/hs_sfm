@@ -28,13 +28,19 @@ set(BA_UTEST_SOURCES
   "unit_test/bundle_adjustment/test_camera_shared_vector_function.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_jacobian_matrix_calculator.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_analytical_derivative.cpp"
+  "unit_test/bundle_adjustment/test_camera_shared_normal_equation_builder.cpp"
   )
 hslib_add_utest(${BA_NAME} SOURCES ${BA_UTEST_SOURCES})
 hslib_add_dep(${BA_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   3RDPARTY_DEPS boost HEADONLY
+  3RDPARTY_DEPS tiff DEP_LIBS tiff
+  3RDPARTY_DEPS jpeg DEP_LIBS jpeg
+  3RDPARTY_DEPS png DEP_LIBS png
+  3RDPARTY_DEPS z DEP_LIBS z
   HS_DEPS hs_math HEADONLY
   HS_DEPS hs_optimizor HEADONLY
+  HS_DEPS hs_image_io DEP_LIBS whole_io
   )
 hslib_post_build(${BA_NAME}_utest)
 
