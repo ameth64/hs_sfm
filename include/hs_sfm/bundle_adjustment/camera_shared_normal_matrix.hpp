@@ -54,6 +54,9 @@ public:
   typedef EIGEN_STD_VECTOR(PointCameraBlock) PointCameraBlockContainer;
   typedef EIGEN_STD_VECTOR(ImageCameraBlock) ImageCameraBlockContainer;
 
+  typedef typename PointBlockContainer::size_type BlockIdx;
+
+private:
   enum
   {
     EigenDefaultMajor =
@@ -63,7 +66,6 @@ public:
       Eigen::ColMajor
 #endif
   };
-  typedef typename PointBlockContainer::size_type BlockIdx;
   typedef EIGEN_SPARSE_MATRIX(BlockIdx, EigenDefaultMajor, Index)
           SparseBlockMap;
 
@@ -243,7 +245,14 @@ public:
     point_image_blocks_.clear();
     point_camera_blocks_.clear();
     image_camera_blocks_.clear();
+  }
 
+  Index GetXSize() const
+  {
+    return Index(number_of_points_) * VectorFunction::params_per_point_ +
+           Index(number_of_images_) *
+           VectorFunction::extrinsic_params_per_image_ +
+           Index(number_of_cameras_) * camera_params_size_;
   }
 
   const PointBlock& GetPointBlock(Index point_id) const
@@ -392,6 +401,26 @@ public:
     {
       return &(image_camera_blocks_[block_id - 1]);
     }
+  }
+
+  size_t number_of_points() const
+  {
+    return number_of_points_;
+  }
+
+  size_t number_of_images() const
+  {
+    return number_of_images_;
+  }
+
+  size_t number_of_cameras() const
+  {
+    return number_of_cameras_;
+  }
+
+  Index camera_params_size() const
+  {
+    return camera_params_size_;
   }
 
 private:

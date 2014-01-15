@@ -1,16 +1,16 @@
 ﻿#include <gtest/gtest.h>
 
-#include "test_camera_shared_normal_equation_builder.hpp"
+#include "test_camera_shared_normal_equation_solver.hpp"
 
 namespace test
 {
 
-TEST(TestCameraSharedNormalEquationBuilder, SimpleTest)
+TEST(TestCameraSharedNormalEquationSolver, SimpleTest)
 {
   typedef double Scalar;
   typedef size_t ImageDimension;
 
-  typedef TestCameraSharedNormalEquationBuilder<Scalar>
+  typedef TestCameraSharedNormalEquationSolver<Scalar>
           Tester;
   typedef Tester::KeyCovariance KeyCovariance;
 

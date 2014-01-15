@@ -29,6 +29,7 @@ set(BA_UTEST_SOURCES
   "unit_test/bundle_adjustment/test_camera_shared_jacobian_matrix_calculator.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_analytical_derivative.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_normal_equation_builder.cpp"
+  "unit_test/bundle_adjustment/test_camera_shared_normal_equation_solver.cpp"
   )
 hslib_add_utest(${BA_NAME} SOURCES ${BA_UTEST_SOURCES})
 hslib_add_dep(${BA_NAME}_utest
