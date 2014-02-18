@@ -105,6 +105,13 @@ public:
     return camera_segments_[camera_id];
   }
 
+  Index GetXSize() const
+  {
+    return Index(number_of_points_) * params_per_point_ +
+           Index(number_of_images_) * extrinsic_params_per_image_ +
+           Index(number_of_cameras_) * camera_params_size_;
+  }
+
 private:
   size_t number_of_points_;
   size_t number_of_images_;

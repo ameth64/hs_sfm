@@ -238,6 +238,41 @@ protected:
         y_covariance_inverse.AddConstraint(skew_constraint);
         y_covariance_inverse.AddConstraint(pixel_ratio_constaint);
       }
+      if (itr_camera_constraint->radial_mask.all() &&
+          itr_camera_constraint->decentering_mask.all() &&
+          itr_camera_constraint->intrinsic_mask.all())
+      {
+        Scalar k1_stddev = Scalar(1e-3);
+        Scalar k2_stddev = Scalar(1e-2);
+        Scalar k3_stddev = Scalar(1e-2);
+        Scalar d1_stddev = Scalar(1e-4);
+        Scalar d2_stddev = Scalar(1e-4);
+        Scalar focal_stddev = Scalar(1e-1);
+        Scalar px_stddev = Scalar(1e-1);
+        Scalar py_stddev = Scalar(1e-1);
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (k1_stddev * k1_stddev));
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (k2_stddev * k2_stddev));
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (k3_stddev * k3_stddev));
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (d1_stddev * d1_stddev));
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (d2_stddev * d2_stddev));
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (focal_stddev * focal_stddev));
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (camera_skew_stddev_ *
+                                            camera_skew_stddev_));
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (px_stddev * px_stddev));
+        y_covariance_inverse.AddConstraint(Scalar(1) /
+                                           (py_stddev * py_stddev));
+        y_covariance_inverse.AddConstraint(
+          Scalar(1) / (camera_pixel_ratio_stddev_ *
+                       camera_pixel_ratio_stddev_));
+      }
     }
 
     return 0;
@@ -345,6 +380,40 @@ protected:
           camera_pixel_ratio_stddev_ * camera_pixel_ratio_stddev_;
         y_covariance_inverse_dense.block(offset, offset, 2, 2) = camera_block;
         offset += 2;
+      }
+      if (itr_camera_constraint->radial_mask.all() &&
+          itr_camera_constraint->decentering_mask.all() &&
+          itr_camera_constraint->intrinsic_mask.all())
+      {
+        Scalar k1_stddev = Scalar(1e-3);
+        Scalar k2_stddev = Scalar(1e-2);
+        Scalar k3_stddev = Scalar(1e-2);
+        Scalar d1_stddev = Scalar(1e-4);
+        Scalar d2_stddev = Scalar(1e-4);
+        Scalar focal_stddev = Scalar(1e-1);
+        Scalar px_stddev = Scalar(1e-1);
+        Scalar py_stddev = Scalar(1e-1);
+        y_covariance_inverse_dense(offset + 0, offset + 0) =
+          Scalar(1) / (k1_stddev * k1_stddev);
+        y_covariance_inverse_dense(offset + 1, offset + 1) =
+          Scalar(1) / (k2_stddev * k2_stddev);
+        y_covariance_inverse_dense(offset + 2, offset + 2) =
+          Scalar(1) / (k3_stddev * k3_stddev);
+        y_covariance_inverse_dense(offset + 3, offset + 3) =
+          Scalar(1) / (d1_stddev * d1_stddev);
+        y_covariance_inverse_dense(offset + 4, offset + 4) =
+          Scalar(1) / (d2_stddev * d2_stddev);
+        y_covariance_inverse_dense(offset + 5, offset + 5) =
+          Scalar(1) / (focal_stddev * focal_stddev);
+        y_covariance_inverse_dense(offset + 6, offset + 6) =
+          Scalar(1) / (camera_skew_stddev_ * camera_skew_stddev_);
+        y_covariance_inverse_dense(offset + 7, offset + 7) =
+          Scalar(1) / (px_stddev * px_stddev);
+        y_covariance_inverse_dense(offset + 8, offset + 8) =
+          Scalar(1) / (py_stddev * py_stddev);
+        y_covariance_inverse_dense(offset + 9, offset + 9) =
+          Scalar(1) / (camera_pixel_ratio_stddev_ * camera_pixel_ratio_stddev_);
+        offset += 10;
       }
     }
 
@@ -504,7 +573,7 @@ protected:
         Scalar value_dense = normal_matrix_dense(i, j);
         Scalar error_abs = std::abs(value - value_dense);
         Scalar error_rel = error_abs;
-        if (value_dense != 0) error_rel /= std::abs(value_dense);
+        if (value_dense != 0) error_rel = std::abs(error_rel / value_dense);
         if (error_abs > threshold && error_rel > threshold)
         {
 #ifdef IMAGE_TEST
@@ -528,7 +597,7 @@ protected:
       Scalar value_dense = gradient_dense[i];
       Scalar error_abs = std::abs(value - value_dense);
         Scalar error_rel = error_abs;
-        if (value_dense != 0) error_rel /= std::abs(value_dense);
+        if (value_dense != 0) error_rel = std::abs(error_rel / value_dense);
         if (error_abs > threshold && error_rel > threshold)
         {
           std::cout<<"error_abs:"<<error_abs<<"\n";

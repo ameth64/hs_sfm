@@ -390,12 +390,12 @@ public:
 
       if (itr_camera_constraint->decentering_mask[DECENTERING_CONSTRAIN_D1])
       {
-        y[y_offset] = x[x_offset + 1];
+        y[y_offset] = x[x_offset + 0];
         y_offset++;
       }
       if (itr_camera_constraint->decentering_mask[DECENTERING_CONSTRAIN_D2])
       {
-        y[y_offset] = x[x_offset + 2];
+        y[y_offset] = x[x_offset + 1];
         y_offset++;
       }
 

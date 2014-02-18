@@ -455,10 +455,15 @@ private:
         {
           CameraConstraint camera_constraint;
           camera_constraint.camera_id = camera_id;
-          camera_constraint.radial_mask.reset();
-          camera_constraint.decentering_mask.reset();
-          camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_SKEW);
-          camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+          camera_constraint.radial_mask.set();
+          camera_constraint.decentering_mask.set();
+          camera_constraint.intrinsic_mask.set();
+          //camera_constraint.radial_mask.reset();
+          //camera_constraint.decentering_mask.reset();
+          //camera_constraint.intrinsic_mask.reset();
+          //camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_SKEW);
+          //camera_constraint.intrinsic_mask.set(
+          //  INTRINSIC_CONSTRAIN_PIXEL_RATIO);
           camera_constraints.push_back(camera_constraint);
           break;
         }

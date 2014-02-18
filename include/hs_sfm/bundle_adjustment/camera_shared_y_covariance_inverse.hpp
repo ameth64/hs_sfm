@@ -44,7 +44,9 @@ public:
                            size_t number_of_keys)
   {
     if (key_std_dev == Scalar(0)) return -1;
-    return 0;
+    KeyBlock key_covariance = KeyBlock::Identity();
+    key_covariance /= key_std_dev * key_std_dev;
+    return SetKeysUniformCovariance(key_covariance, number_of_keys);
   }
 
   Err SetKeysUniformCovariance(const KeyBlock& key_covariance,

@@ -30,6 +30,9 @@ set(BA_UTEST_SOURCES
   "unit_test/bundle_adjustment/test_camera_shared_analytical_derivative.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_normal_equation_builder.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_normal_equation_solver.cpp"
+  "unit_test/bundle_adjustment/test_camera_shared_monte_carlo_simulate.cpp"
+  "unit_test/bundle_adjustment/test_camera_shared_levenberg_marquardt_optimizor.cpp"
+  "unit_test/bundle_adjustment/test_camera_shared_relative_pair.cpp"
   )
 hslib_add_utest(${BA_NAME} SOURCES ${BA_UTEST_SOURCES})
 hslib_add_dep(${BA_NAME}_utest

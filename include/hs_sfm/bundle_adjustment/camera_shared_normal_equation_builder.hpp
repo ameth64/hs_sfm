@@ -107,7 +107,7 @@ public:
     return 0;
   }
 
-private:
+public:
   Err ComputeNormalMatrix(const JacobianMatrix& jacobian_matrix,
                           const YCovarianceInverse& y_covariance_inverse,
                           NormalMatrix& normal_matrix) const
