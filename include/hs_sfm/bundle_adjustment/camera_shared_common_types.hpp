@@ -94,6 +94,15 @@ struct CameraConstraint
 };
 typedef std::vector<CameraConstraint> CameraConstraintContainer;
 
+enum
+{
+  FIX_POINTS = 0,
+  FIX_IMAGES,
+  FIX_CAMERAS,
+  NUMBER_OF_FIX_PARAMS
+};
+typedef std::bitset<NUMBER_OF_FIX_PARAMS> FixMask;
+
 }
 }
 }

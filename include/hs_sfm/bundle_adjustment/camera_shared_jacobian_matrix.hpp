@@ -116,9 +116,20 @@ public:
       Index points_params_size = GetPointParamsSize();
       Index extrinsic_params_size = GetExtrinsicParamsSize();
       Index intrinsic_params_size = GetIntrinsicParamsSize();
-      if (j < points_params_size)
+      Index points_params_begin = 0;
+      Index points_params_end =
+        point_derivatives_.empty() ? 0 : points_params_size;
+      Index images_params_begin = points_params_end;
+      Index images_params_end =
+        images_params_begin +
+        (image_derivatives_.empty() ? 0 : extrinsic_params_size);
+      Index cameras_params_begin = images_params_end;
+      Index cameras_params_end =
+        cameras_params_begin +
+        (camera_derivatives_.empty() ? 0 : intrinsic_params_size);
+      if ((!point_derivatives_.empty()) && j < points_params_end)
       {
-        Index offset = j;
+        Index offset = j - points_params_begin;
         Index point_id = offset / VectorFunction::params_per_point_;
         Index point_param_id = offset % VectorFunction::params_per_point_;
         const PointDerivativeBlock& point_derivative_block =
@@ -133,9 +144,9 @@ public:
           return Scalar(0);
         }
       }
-      else if (j < points_params_size + extrinsic_params_size)
+      else if ((!image_derivatives_.empty()) && j < images_params_end)
       {
-        Index offset = j - points_params_size;
+        Index offset = j - images_params_begin;
         Index image_id = offset / VectorFunction::extrinsic_params_per_image_;
         Index image_param_id =
           offset % VectorFunction::extrinsic_params_per_image_;
@@ -151,9 +162,9 @@ public:
           return Scalar(0);
         }
       }
-      else
+      else if ((!camera_derivatives_.empty()) && j < cameras_params_end)
       {
-        Index offset = j - points_params_size - extrinsic_params_size;
+        Index offset = j - cameras_params_begin;
         Index camera_id = offset / GetIntrinsicParamsSizePerCamera();
         Index camera_param_id = offset % GetIntrinsicParamsSizePerCamera();
         const CameraDerivativeBlock& camera_derivative_block =
@@ -167,6 +178,10 @@ public:
         {
           return Scalar(0);
         }
+      }
+      else
+      {
+        return std::numeric_limits<Scalar>::signaling_NaN();
       }
     }// if (i < keys_params_size)
     else if (i < point_constraints_end)
@@ -242,17 +257,7 @@ public:
 
   inline Index GetNumberOfKeys() const
   {
-    size_t number_of_keys = key_maps_.size();
-    if (point_derivatives_.size() != number_of_keys ||
-        image_derivatives_.size() != number_of_keys ||
-        camera_derivatives_.size() != number_of_keys)
-    {
-      return 0;
-    }
-    else
-    {
-      return Index(number_of_keys);
-    }
+    return Index(key_maps_.size());
   }
 
   inline Index GetKeysParamsSize() const
@@ -262,24 +267,45 @@ public:
 
   inline Index GetPointConstraintsSize() const
   {
-    return Index(point_constraints_map_.size());
+    if (point_derivatives_.empty())
+    {
+      return 0;
+    }
+    else
+    {
+      return Index(point_constraints_map_.size());
+    }
   }
 
   inline Index GetImageConstraintsSize() const
   {
-    return Index(image_constraints_map_.size());
+    if (image_derivatives_.empty())
+    {
+      return 0;
+    }
+    else
+    {
+      return Index(image_constraints_map_.size());
+    }
   }
 
   inline Index GetCameraConstraintsSize() const
   {
-    return Index(camera_constraints_map_.size());
+    if (camera_derivatives_.empty())
+    {
+      return 0;
+    }
+    else
+    {
+      return Index(camera_constraints_map_.size());
+    }
   }
 
   inline Index GetXSize() const
   {
-    return GetPointParamsSize() +
-           GetExtrinsicParamsSize() +
-           GetIntrinsicParamsSize();
+    return ((point_derivatives_.empty() ? 0 : GetPointParamsSize()) +
+            (image_derivatives_.empty() ? 0 : GetExtrinsicParamsSize()) +
+            (camera_derivatives_.empty() ? 0 : GetIntrinsicParamsSize()));
   }
 
   inline Index GetYSize() const
@@ -391,7 +417,8 @@ public:
     image_constraints_map_.clear();
     auto itr_image = image_constraints.begin();
     auto itr_image_end = image_constraints.end();
-    Index image_params_begin = GetPointParamsSize();
+    Index image_params_begin =
+      point_derivatives_.empty() ? 0 : GetPointParamsSize();
     for (; itr_image != itr_image_end; ++itr_image)
     {
       Index image_id = Index(itr_image->image_id);
@@ -423,8 +450,9 @@ public:
     camera_constraints_map_.clear();
     auto itr_camera = camera_constraints.begin();
     auto itr_camera_end = camera_constraints.end();
-    Index camera_params_begin = GetPointParamsSize() +
-                                GetExtrinsicParamsSize();
+    Index camera_params_begin =
+      (point_derivatives_.empty() ? 0 : GetPointParamsSize()) +
+      (image_derivatives_.empty() ? 0 : GetExtrinsicParamsSize());
     Index intrinsic_params_per_camera = GetIntrinsicParamsSizePerCamera();
     for (; itr_camera != itr_camera_end; ++itr_camera)
     {
@@ -495,25 +523,33 @@ public:
 
   Index GetImageConstraintImageID(Index offset) const
   {
-    return (image_constraints_map_[offset] - GetPointParamsSize()) /
+    Index image_params_begin =
+      point_derivatives_.empty() ? 0 : GetPointParamsSize();
+    return (image_constraints_map_[offset] - image_params_begin) /
            VectorFunction::extrinsic_params_per_image_;
   }
   Index GetImageConstraintParamID(Index offset) const
   {
-    return (image_constraints_map_[offset] - GetPointParamsSize()) %
+    Index image_params_begin =
+      point_derivatives_.empty() ? 0 : GetPointParamsSize();
+    return (image_constraints_map_[offset] - image_params_begin) %
            VectorFunction::extrinsic_params_per_image_;
   }
 
   Index GetCameraConstraintCameraID(Index offset) const
   {
-    Index camera_begin = GetPointParamsSize() + GetExtrinsicParamsSize();
-    return (camera_constraints_map_[offset] - camera_begin) /
+    Index camera_params_begin =
+      (point_derivatives_.empty() ? 0 : GetPointParamsSize()) +
+      (image_derivatives_.empty() ? 0 : GetExtrinsicParamsSize());
+    return (camera_constraints_map_[offset] - camera_params_begin) /
            GetIntrinsicParamsSizePerCamera();
   }
   Index GetCameraConstraintParamID(Index offset) const
   {
-    Index camera_begin = GetPointParamsSize() + GetExtrinsicParamsSize();
-    return (camera_constraints_map_[offset] - camera_begin) %
+    Index camera_params_begin =
+      (point_derivatives_.empty() ? 0 : GetPointParamsSize()) +
+      (image_derivatives_.empty() ? 0 : GetExtrinsicParamsSize());
+    return (camera_constraints_map_[offset] - camera_params_begin) %
            GetIntrinsicParamsSizePerCamera();
   }
 

@@ -633,19 +633,39 @@ private:
     image_camera_map.push_back(is_uniform_camera_ ? 0 : 1);
     vector_function.set_image_camera_map(image_camera_map);
     vector_function.intrinsic_computations_mask().set();
+    vector_function.set_fix_points(points_initial);
+
+    hs::sfm::ba::CameraConstraint camera_constraint_identity;
+    camera_constraint_identity.camera_id = 0;
+    camera_constraint_identity.intrinsic_mask.set(
+      hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
+    camera_constraint_identity.intrinsic_mask.set(
+      hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+    vector_function.camera_constraints().push_back(camera_constraint_identity);
+    if (!is_uniform_camera_)
+    {
+      hs::sfm::ba::CameraConstraint camera_constraint_relative;
+      camera_constraint_relative.camera_id = 1;
+      camera_constraint_relative.intrinsic_mask.set(
+        hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
+      camera_constraint_relative.intrinsic_mask.set(
+        hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+      vector_function.camera_constraints().push_back(
+        camera_constraint_relative);
+    }
 
     Index x_size = vector_function.GetXSize();
     Index y_size = vector_function.GetYSize();
     XVector x_initial(x_size);
     YVector y_initial(y_size);
-    auto itr_point = points_initial.begin();
-    auto itr_point_end = points_initial.end();
-    for (Index i = 0; itr_point != itr_point_end; ++itr_point, i++)
-    {
-      x_initial.segment(i * VectorFunction::params_per_point_,
-                        VectorFunction::params_per_point_) = *itr_point;
-    }
-    Index x_offset = vector_function.GetPointParamsSize();
+    //auto itr_point = points_initial.begin();
+    //auto itr_point_end = points_initial.end();
+    //for (Index i = 0; itr_point != itr_point_end; ++itr_point, i++)
+    //{
+    //  x_initial.segment(i * VectorFunction::params_per_point_,
+    //                    VectorFunction::params_per_point_) = *itr_point;
+    //}
+    Index x_offset = /*vector_function.GetPointParamsSize()*/0;
     Vector3 t_identity = extrinsic_params_identity_initial.rotation() *
                          extrinsic_params_identity_initial.position();
     t_identity *= Scalar(-1);
@@ -669,102 +689,102 @@ private:
     x_offset += vector_function.GetExtrinsicParamsSize();
     const IntrinsicParams& intrinsic_params_identity =
       relative_pair_generator_.intrinsic_params_identity();
-    //x_initial[x_offset + 0] = Scalar(0);
-    //x_initial[x_offset + 1] = Scalar(0);
-    //x_initial[x_offset + 2] = Scalar(0);
-    //x_initial[x_offset + 3] = Scalar(0);
-    //x_initial[x_offset + 4] = Scalar(0);
-    //x_initial[x_offset + 5] = intrinsic_params_identity.focal_length();
-    //x_initial[x_offset + 6] = Scalar(0);
-    //x_initial[x_offset + 7] = Scalar(0);
-    //x_initial[x_offset + 8] = Scalar(0);
-    //x_initial[x_offset + 9] = Scalar(1);
-    Scalar k1_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.1), k1_noise);
-    Scalar k2_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.1), k2_noise);
-    Scalar k3_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.1), k3_noise);
-    Scalar d1_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.1), d1_noise);
-    Scalar d2_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.1), d2_noise);
-    Scalar focal_length_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.001), focal_length_noise);
-    Scalar skew_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.1), skew_noise);
-    Scalar principal_point_x_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.1), principal_point_x_noise);
-    Scalar principal_point_y_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.1), principal_point_y_noise);
-    Scalar pixel_ratio_noise;
-    hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-      Scalar(1), Scalar(0.001), pixel_ratio_noise);
-    x_initial[x_offset + 0] = intrinsic_params_identity.k1() *
-                              k1_noise;
-    x_initial[x_offset + 1] = intrinsic_params_identity.k2() *
-                              k2_noise;
-    x_initial[x_offset + 2] = intrinsic_params_identity.k3() *
-                              k3_noise;
-    x_initial[x_offset + 3] = intrinsic_params_identity.d1() *
-                              d1_noise;
-    x_initial[x_offset + 4] = intrinsic_params_identity.d2() *
-                              d2_noise;
-    x_initial[x_offset + 5] = intrinsic_params_identity.focal_length() *
-                              focal_length_noise;
-    x_initial[x_offset + 6] = intrinsic_params_identity.skew() *
-                              skew_noise;
-    x_initial[x_offset + 7] = intrinsic_params_identity.principal_point_x() *
-                              principal_point_x_noise;
-    x_initial[x_offset + 8] = intrinsic_params_identity.principal_point_y() *
-                              principal_point_y_noise;
-    x_initial[x_offset + 9] = intrinsic_params_identity.pixel_ratio() *
-                              pixel_ratio_noise;
+    x_initial[x_offset + 0] = Scalar(0);
+    x_initial[x_offset + 1] = Scalar(0);
+    x_initial[x_offset + 2] = Scalar(0);
+    x_initial[x_offset + 3] = Scalar(0);
+    x_initial[x_offset + 4] = Scalar(0);
+    x_initial[x_offset + 5] = intrinsic_params_identity.focal_length();
+    x_initial[x_offset + 6] = Scalar(0);
+    x_initial[x_offset + 7] = Scalar(0);
+    x_initial[x_offset + 8] = Scalar(0);
+    x_initial[x_offset + 9] = Scalar(1);
+    //Scalar k1_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.1), k1_noise);
+    //Scalar k2_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.1), k2_noise);
+    //Scalar k3_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.1), k3_noise);
+    //Scalar d1_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.1), d1_noise);
+    //Scalar d2_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.1), d2_noise);
+    //Scalar focal_length_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.001), focal_length_noise);
+    //Scalar skew_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.1), skew_noise);
+    //Scalar principal_point_x_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.1), principal_point_x_noise);
+    //Scalar principal_point_y_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.1), principal_point_y_noise);
+    //Scalar pixel_ratio_noise;
+    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
+    //  Scalar(1), Scalar(0.001), pixel_ratio_noise);
+    //x_initial[x_offset + 0] = intrinsic_params_identity.k1() *
+    //                          k1_noise;
+    //x_initial[x_offset + 1] = intrinsic_params_identity.k2() *
+    //                          k2_noise;
+    //x_initial[x_offset + 2] = intrinsic_params_identity.k3() *
+    //                          k3_noise;
+    //x_initial[x_offset + 3] = intrinsic_params_identity.d1() *
+    //                          d1_noise;
+    //x_initial[x_offset + 4] = intrinsic_params_identity.d2() *
+    //                          d2_noise;
+    //x_initial[x_offset + 5] = intrinsic_params_identity.focal_length() *
+    //                          focal_length_noise;
+    //x_initial[x_offset + 6] = intrinsic_params_identity.skew() *
+    //                          skew_noise;
+    //x_initial[x_offset + 7] = intrinsic_params_identity.principal_point_x() *
+    //                          principal_point_x_noise;
+    //x_initial[x_offset + 8] = intrinsic_params_identity.principal_point_y() *
+    //                          principal_point_y_noise;
+    //x_initial[x_offset + 9] = intrinsic_params_identity.pixel_ratio() *
+    //                          pixel_ratio_noise;
     if (!is_uniform_camera_)
     {
       const IntrinsicParams& intrinsic_params_relative =
         relative_pair_generator_.intrinsic_params_relative();
-      //x_initial[x_offset + 10] = Scalar(0);
-      //x_initial[x_offset + 11] = Scalar(0);
-      //x_initial[x_offset + 12] = Scalar(0);
-      //x_initial[x_offset + 13] = Scalar(0);
-      //x_initial[x_offset + 14] = Scalar(0);
-      //x_initial[x_offset + 15] = intrinsic_params_relative.focal_length();
-      //x_initial[x_offset + 16] = Scalar(0);
-      //x_initial[x_offset + 17] = Scalar(0);
-      //x_initial[x_offset + 18] = Scalar(0);
-      //x_initial[x_offset + 19] = Scalar(1);
-      x_initial[x_offset + 10] = intrinsic_params_relative.k1() *
-                                 k1_noise;
-      x_initial[x_offset + 11] = intrinsic_params_relative.k2() *
-                                 k2_noise;
-      x_initial[x_offset + 12] = intrinsic_params_relative.k3() *
-                                 k3_noise;
-      x_initial[x_offset + 13] = intrinsic_params_relative.d1() *
-                                 d1_noise;
-      x_initial[x_offset + 14] = intrinsic_params_relative.d2() *
-                                 d2_noise;
-      x_initial[x_offset + 15] = intrinsic_params_relative.focal_length() *
-                                 focal_length_noise;
-      x_initial[x_offset + 16] = intrinsic_params_relative.skew() *
-                                 skew_noise;
-      x_initial[x_offset + 17] =
-        intrinsic_params_relative.principal_point_x() *
-        principal_point_x_noise;
-      x_initial[x_offset + 18] =
-        intrinsic_params_relative.principal_point_y() *
-        principal_point_y_noise;
-      x_initial[x_offset + 19] = intrinsic_params_relative.pixel_ratio() *
-                                 pixel_ratio_noise;
+      x_initial[x_offset + 10] = Scalar(0);
+      x_initial[x_offset + 11] = Scalar(0);
+      x_initial[x_offset + 12] = Scalar(0);
+      x_initial[x_offset + 13] = Scalar(0);
+      x_initial[x_offset + 14] = Scalar(0);
+      x_initial[x_offset + 15] = intrinsic_params_relative.focal_length();
+      x_initial[x_offset + 16] = Scalar(0);
+      x_initial[x_offset + 17] = Scalar(0);
+      x_initial[x_offset + 18] = Scalar(0);
+      x_initial[x_offset + 19] = Scalar(1);
+      //x_initial[x_offset + 10] = intrinsic_params_relative.k1() *
+      //                           k1_noise;
+      //x_initial[x_offset + 11] = intrinsic_params_relative.k2() *
+      //                           k2_noise;
+      //x_initial[x_offset + 12] = intrinsic_params_relative.k3() *
+      //                           k3_noise;
+      //x_initial[x_offset + 13] = intrinsic_params_relative.d1() *
+      //                           d1_noise;
+      //x_initial[x_offset + 14] = intrinsic_params_relative.d2() *
+      //                           d2_noise;
+      //x_initial[x_offset + 15] = intrinsic_params_relative.focal_length() *
+      //                           focal_length_noise;
+      //x_initial[x_offset + 16] = intrinsic_params_relative.skew() *
+      //                           skew_noise;
+      //x_initial[x_offset + 17] =
+      //  intrinsic_params_relative.principal_point_x() *
+      //  principal_point_x_noise;
+      //x_initial[x_offset + 18] =
+      //  intrinsic_params_relative.principal_point_y() *
+      //  principal_point_y_noise;
+      //x_initial[x_offset + 19] = intrinsic_params_relative.pixel_ratio() *
+      //                           pixel_ratio_noise;
     }
 
     for (Index i = 0; i < Index(number_of_points); i++)
@@ -776,8 +796,30 @@ private:
                         VectorFunction::params_per_key_) = keysets[1][i];
     }
 
+    Index key_params_size = Index(number_of_points * 4);
+    y_initial[key_params_size + 0] = Scalar(0);
+    y_initial[key_params_size + 1] = Scalar(0);
+    if (!is_uniform_camera_)
+    {
+      y_initial[key_params_size + 2] = Scalar(0);
+      y_initial[key_params_size + 3] = Scalar(0);
+    }
+
+    Scalar skew_stddev = Scalar(1e-3);
+    Scalar pixel_ratio_stddev = Scalar(1e-2);
+    Scalar skew_constraint = Scalar(1) / (skew_stddev * skew_stddev);
+    Scalar pixel_ratio_constraint = Scalar(1) / (pixel_ratio_stddev *
+                                                pixel_ratio_stddev);
+
     YCovarianceInverse y_covariance_inverse;
     y_covariance_inverse.SetKeysUniformStdDev(key_stddev_, number_of_keys);
+    y_covariance_inverse.AddConstraint(skew_constraint);
+    y_covariance_inverse.AddConstraint(pixel_ratio_constraint);
+    if (!is_uniform_camera_)
+    {
+      y_covariance_inverse.AddConstraint(skew_constraint);
+      y_covariance_inverse.AddConstraint(pixel_ratio_constraint);
+    }
 
     Optimizor optimizor(x_initial, 50,
                         Scalar(1e-3),
@@ -790,19 +832,20 @@ private:
       return -1;
     }
 
-    points_bundle.resize(number_of_points);
-    auto itr_point_bundle = points_bundle.begin();
-    auto itr_point_bundle_end = points_bundle.end();
-    for (Index i = 0;
-         itr_point_bundle != itr_point_bundle_end;
-         ++itr_point_bundle, ++i)
-    {
-      (*itr_point_bundle) =
-        x_bundle.segment(i * VectorFunction::params_per_point_,
-                         VectorFunction::params_per_point_);
-    }
+    //points_bundle.resize(number_of_points);
+    //auto itr_point_bundle = points_bundle.begin();
+    //auto itr_point_bundle_end = points_bundle.end();
+    //for (Index i = 0;
+    //     itr_point_bundle != itr_point_bundle_end;
+    //     ++itr_point_bundle, ++i)
+    //{
+    //  (*itr_point_bundle) =
+    //    x_bundle.segment(i * VectorFunction::params_per_point_,
+    //                     VectorFunction::params_per_point_);
+    //}
+    points_bundle = points_initial;
 
-    x_offset = vector_function.GetPointParamsSize();
+    x_offset = /*vector_function.GetPointParamsSize()*/0;
     extrinsic_params_identity_bundle.rotation()[0] = x_bundle[x_offset + 0];
     extrinsic_params_identity_bundle.rotation()[1] = x_bundle[x_offset + 1];
     extrinsic_params_identity_bundle.rotation()[2] = x_bundle[x_offset + 2];
@@ -970,11 +1013,11 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
   Scalar focal_length_in_metre_identity = 0.018858358970276164;
   IntrinsicParams intrinsic_params_identity(focal_length_in_metre_identity /
                                             pixel_size,
-                                            0, 0, 0, 1,
-                                            //0,
-                                            //-42.4095312016,
-                                            //-31.699212823,
-                                            //1,
+                                            //0, 0, 0, 1,
+                                            0,
+                                            -42.4095312016,
+                                            -31.699212823,
+                                            1,
                                             -0.0050490462006048831,
                                             //0, 0, 0, 0
                                             0.031293804298609881,
@@ -987,11 +1030,11 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
   Scalar focal_length_in_metre_relative = 0.02995452167701055;
   IntrinsicParams intrinsic_params_relative(focal_length_in_metre_relative /
                                             pixel_size,
-                                            0, 0, 0, 1,
-                                            //0,
-                                            //-21.669436058,
-                                            //-44.8644764322,
-                                            //1,
+                                            //0, 0, 0, 1,
+                                            0,
+                                            -21.669436058,
+                                            -44.8644764322,
+                                            1,
                                             -0.02529179096221609,
                                             //0, 0, 0, 0
                                             0.23762413973445157,
@@ -1010,7 +1053,7 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
   Scalar camera_rotation_stddev = 10;
 
   size_t number_of_points = 2000;
-  bool is_uniform_camera = false;
+  bool is_uniform_camera = true;
   Scalar key_stddev = 1.0;
 
   Tester tester(ground_resolution,

@@ -42,6 +42,13 @@ public:
   typedef EIGEN_VECTOR(Scalar, 2) Vector2;
   typedef EIGEN_VECTOR(Scalar, Eigen::Dynamic) VectorX;
 
+  typedef EIGEN_VECTOR(Scalar, params_per_point_) Point;
+  typedef EIGEN_STD_VECTOR(Point) PointContainer;
+  typedef EIGEN_VECTOR(Scalar, extrinsic_params_per_image_) Image;
+  typedef EIGEN_STD_VECTOR(Image) ImageContainer;
+  typedef EIGEN_VECTOR(Scalar, Eigen::Dynamic) Camera;
+  typedef EIGEN_STD_VECTOR(Camera) CameraContainer;
+
 public:
   CameraSharedVectorFunction()
     : number_of_images_(0),
@@ -146,6 +153,87 @@ public:
     return camera_constraints_;
   }
 
+  inline Err set_fix_points(const PointContainer& fix_points)
+  {
+    if (Index(fix_points.size()) != number_of_points_)
+    {
+      return -1;
+    }
+    fix_mask_.set(FIX_POINTS);
+    fix_points_ = fix_points;
+    return 0;
+  }
+
+  inline void unset_fix_points()
+  {
+    fix_mask_.reset(FIX_POINTS);
+    PointContainer().swap(fix_points_);
+  }
+
+  inline bool is_fix_points() const
+  {
+    return fix_mask_[FIX_POINTS];
+  }
+
+  inline const PointContainer& fix_points() const
+  {
+    return fix_points_;
+  }
+
+  inline Err set_fix_images(const ImageContainer& fix_images)
+  {
+    if (Index(fix_images.size()) != number_of_images_)
+    {
+      return -1;
+    }
+    fix_mask_.set(FIX_IMAGES);
+    fix_images_ = fix_images;
+    return 0;
+  }
+
+  inline void unset_fix_images()
+  {
+    fix_mask_.reset(FIX_IMAGES);
+    ImageContainer().swap(fix_images_);
+  }
+
+  inline bool is_fix_images() const
+  {
+    return fix_mask_[FIX_IMAGES];
+  }
+
+  inline const ImageContainer& fix_images() const
+  {
+    return fix_images_;
+  }
+
+  inline Err set_fix_cameras(const CameraContainer& fix_cameras)
+  {
+    if (Index(fix_cameras.size()) != number_of_cameras_)
+    {
+      return -1;
+    }
+    fix_mask_.set(FIX_CAMERAS);
+    fix_cameras_ = fix_cameras;
+    return 0;
+  }
+
+  inline void unset_fix_cameras()
+  {
+    fix_mask_.reset(FIX_CAMERAS);
+    CameraContainer().swap(fix_cameras_);
+  }
+
+  inline bool is_fix_cameras() const
+  {
+    return fix_mask_[FIX_CAMERAS];
+  }
+
+  inline const CameraContainer& fix_cameras() const
+  {
+    return fix_cameras_;
+  }
+
   inline Index GetExtrinsicParamsSize() const
   {
     return number_of_images_ * extrinsic_params_per_image_;
@@ -186,62 +274,83 @@ public:
 
   inline Index GetYPointConstraintsSize() const
   {
-    Index point_constraints_size = 0;
-    auto itr_point = point_constraints_.begin();
-    auto itr_point_end = point_constraints_.end();
-    for (; itr_point != itr_point_end; ++itr_point)
+    if (!is_fix_points())
     {
-      point_constraints_size += itr_point->mask.count();
+      Index point_constraints_size = 0;
+      auto itr_point = point_constraints_.begin();
+      auto itr_point_end = point_constraints_.end();
+      for (; itr_point != itr_point_end; ++itr_point)
+      {
+        point_constraints_size += itr_point->mask.count();
+      }
+      return point_constraints_size;
     }
-    return point_constraints_size;
+    else
+    {
+      return 0;
+    }
   }
 
   inline Index GetYImageConstraintsSize() const
   {
-    Index image_constraints_size = 0;
-    auto itr_image = image_constraints_.begin();
-    auto itr_image_end = image_constraints_.end();
-    for (; itr_image != itr_image_end; ++itr_image)
+    if (!is_fix_images())
     {
-      if (itr_image->mask[IMAGE_CONSTRAIN_ROTATION])
+      Index image_constraints_size = 0;
+      auto itr_image = image_constraints_.begin();
+      auto itr_image_end = image_constraints_.end();
+      for (; itr_image != itr_image_end; ++itr_image)
       {
-        image_constraints_size += 3;
+        if (itr_image->mask[IMAGE_CONSTRAIN_ROTATION])
+        {
+          image_constraints_size += 3;
+        }
+        if (itr_image->mask[IMAGE_CONSTRAIN_POSITION_X])
+        {
+          image_constraints_size++;
+        }
+        if (itr_image->mask[IMAGE_CONSTRAIN_POSITION_Y])
+        {
+          image_constraints_size++;
+        }
+        if (itr_image->mask[IMAGE_CONSTRAIN_POSITION_Z])
+        {
+          image_constraints_size++;
+        }
       }
-      if (itr_image->mask[IMAGE_CONSTRAIN_POSITION_X])
-      {
-        image_constraints_size++;
-      }
-      if (itr_image->mask[IMAGE_CONSTRAIN_POSITION_Y])
-      {
-        image_constraints_size++;
-      }
-      if (itr_image->mask[IMAGE_CONSTRAIN_POSITION_Z])
-      {
-        image_constraints_size++;
-      }
+      return image_constraints_size;
     }
-    return image_constraints_size;
+    else
+    {
+      return 0;
+    }
   }
 
   inline Index GetYCameraConstraintsSize() const
   {
-    Index camera_constraints_size = 0;
-    auto itr_camera = camera_constraints_.begin();
-    auto itr_camera_end = camera_constraints_.end();
-    for (; itr_camera != itr_camera_end; ++itr_camera)
+    if (!is_fix_cameras())
     {
-      camera_constraints_size += itr_camera->radial_mask.count() +
-                                 itr_camera->decentering_mask.count() +
-                                 itr_camera->intrinsic_mask.count();
+      Index camera_constraints_size = 0;
+      auto itr_camera = camera_constraints_.begin();
+      auto itr_camera_end = camera_constraints_.end();
+      for (; itr_camera != itr_camera_end; ++itr_camera)
+      {
+        camera_constraints_size += itr_camera->radial_mask.count() +
+                                   itr_camera->decentering_mask.count() +
+                                   itr_camera->intrinsic_mask.count();
+      }
+      return camera_constraints_size;
     }
-    return camera_constraints_size;
+    else
+    {
+      return 0;
+    }
   }
 
   inline Index GetXSize() const
   {
-    return (GetExtrinsicParamsSize() +
-            GetPointParamsSize() +
-            GetIntrinsicParamsSize());
+    return ((is_fix_points() ? 0 : GetPointParamsSize()) +
+            (is_fix_images() ? 0 : GetExtrinsicParamsSize()) +
+            (is_fix_cameras() ? 0 : GetIntrinsicParamsSize()));
   }
 
   inline Index GetYSize() const
@@ -267,25 +376,53 @@ public:
     Index extrinsic_params_size = GetExtrinsicParamsSize();
     Index intrinsic_params_size_per_camera =
       GetIntrinsicParamsSizePerCamera();
+    Index x_point_begin = 0;
+    Index x_image_begin = is_fix_points() ? 0 : point_params_size;
+    Index x_camera_begin = (is_fix_points() ? 0 : point_params_size) +
+                           (is_fix_images() ? 0 : extrinsic_params_size);
     for (Index i = 0; i < number_of_keys_; i++)
     {
       Index image_id = feature_maps_[i].first;
       Index point_id = feature_maps_[i].second;
       Index camera_id = image_camera_map_[image_id];
 
-      Vector3 point = x.segment(point_id * params_per_point_,
-                                params_per_point_);
-      Vector3 rotation =
-        x.segment(point_params_size +
-                  image_id * extrinsic_params_per_image_, 3);
-      Vector3 translation =
-        x.segment(point_params_size +
-                  image_id * extrinsic_params_per_image_ + 3, 3);
+      Vector3 point;
+      if (is_fix_points())
+      {
+        point = fix_points_[point_id];
+      }
+      else
+      {
+        point = x.segment(point_id * params_per_point_, params_per_point_);
+      }
+      Vector3 rotation, translation;
+      if (is_fix_images())
+      {
+        rotation = fix_images_[image_id].segment(0, 3);
+        translation = fix_images_[image_id].segment(3, 3);
+      }
+      else
+      {
+        rotation =
+          x.segment(x_image_begin +
+                    image_id * extrinsic_params_per_image_, 3);
+        translation =
+          x.segment(x_image_begin +
+                    image_id * extrinsic_params_per_image_ + 3, 3);
+      }
 
-      VectorX intrinsic_params =
-        x.segment(point_params_size + extrinsic_params_size +
-                  camera_id * intrinsic_params_size_per_camera,
-                  intrinsic_params_size_per_camera);
+      VectorX intrinsic_params(intrinsic_params_size_per_camera);
+      if (is_fix_cameras())
+      {
+        intrinsic_params = fix_cameras_[camera_id];
+      }
+      else
+      {
+        intrinsic_params =
+          x.segment(x_camera_begin +
+                    camera_id * intrinsic_params_size_per_camera,
+                    intrinsic_params_size_per_camera);
+      }
 
       Vector2 image_key = WorldPointToImageKey(point,
                                                rotation,
@@ -296,143 +433,150 @@ public:
     }
 
     Index y_offset = GetYKeysSize();
-    Index x_point_begin = 0;
-    auto itr_point_constraint = point_constraints_.begin();
-    auto itr_point_constraint_end = point_constraints_.end();
-    for (; itr_point_constraint != itr_point_constraint_end;
-         ++itr_point_constraint)
+
+    if (!is_fix_points())
     {
-      Index point_id = Index(itr_point_constraint->point_id);
-      Index x_offset = x_point_begin + point_id * params_per_point_;
-      if (itr_point_constraint->mask[POINT_CONSTRAIN_X])
+      auto itr_point_constraint = point_constraints_.begin();
+      auto itr_point_constraint_end = point_constraints_.end();
+      for (; itr_point_constraint != itr_point_constraint_end;
+           ++itr_point_constraint)
       {
-        y[y_offset] = x[x_offset + 0];
-        y_offset++;
-      }
-      if (itr_point_constraint->mask[POINT_CONSTRAIN_Y])
-      {
-        y[y_offset] = x[x_offset + 1];
-        y_offset++;
-      }
-      if (itr_point_constraint->mask[POINT_CONSTRAIN_Z])
-      {
-        y[y_offset] = x[x_offset + 2];
-        y_offset++;
+        Index point_id = Index(itr_point_constraint->point_id);
+        Index x_offset = x_point_begin + point_id * params_per_point_;
+        if (itr_point_constraint->mask[POINT_CONSTRAIN_X])
+        {
+          y[y_offset] = x[x_offset + 0];
+          y_offset++;
+        }
+        if (itr_point_constraint->mask[POINT_CONSTRAIN_Y])
+        {
+          y[y_offset] = x[x_offset + 1];
+          y_offset++;
+        }
+        if (itr_point_constraint->mask[POINT_CONSTRAIN_Z])
+        {
+          y[y_offset] = x[x_offset + 2];
+          y_offset++;
+        }
       }
     }
-    Index x_image_begin = point_params_size;
-    auto itr_image_constraint = image_constraints_.begin();
-    auto itr_image_constraint_end = image_constraints_.end();
-    for (; itr_image_constraint != itr_image_constraint_end;
-         ++itr_image_constraint)
+    if (!is_fix_images())
     {
-      Index image_id = Index(itr_image_constraint->image_id);
-      Index x_offset = x_image_begin + image_id * extrinsic_params_per_image_;
-      if (itr_image_constraint->mask[IMAGE_CONSTRAIN_ROTATION])
+      auto itr_image_constraint = image_constraints_.begin();
+      auto itr_image_constraint_end = image_constraints_.end();
+      for (; itr_image_constraint != itr_image_constraint_end;
+           ++itr_image_constraint)
       {
-        y.segment(y_offset, 3) = x.segment(x_offset, 3);
-        y_offset += 3;
-      }
-      if (itr_image_constraint->mask[IMAGE_CONSTRAIN_POSITION_X])
-      {
-        y[y_offset] = x[x_offset + 3];
-        y_offset++;
-      }
-      if (itr_image_constraint->mask[IMAGE_CONSTRAIN_POSITION_Y])
-      {
-        y[y_offset] = x[x_offset + 4];
-        y_offset++;
-      }
-      if (itr_image_constraint->mask[IMAGE_CONSTRAIN_POSITION_Z])
-      {
-        y[y_offset] = x[x_offset + 5];
-        y_offset++;
+        Index image_id = Index(itr_image_constraint->image_id);
+        Index x_offset = x_image_begin + image_id * extrinsic_params_per_image_;
+        if (itr_image_constraint->mask[IMAGE_CONSTRAIN_ROTATION])
+        {
+          y.segment(y_offset, 3) = x.segment(x_offset, 3);
+          y_offset += 3;
+        }
+        if (itr_image_constraint->mask[IMAGE_CONSTRAIN_POSITION_X])
+        {
+          y[y_offset] = x[x_offset + 3];
+          y_offset++;
+        }
+        if (itr_image_constraint->mask[IMAGE_CONSTRAIN_POSITION_Y])
+        {
+          y[y_offset] = x[x_offset + 4];
+          y_offset++;
+        }
+        if (itr_image_constraint->mask[IMAGE_CONSTRAIN_POSITION_Z])
+        {
+          y[y_offset] = x[x_offset + 5];
+          y_offset++;
+        }
       }
     }
-    Index x_camera_begin = point_params_size + extrinsic_params_size;
-    auto itr_camera_constraint = camera_constraints_.begin();
-    auto itr_camera_constraint_end = camera_constraints_.end();
-    for (; itr_camera_constraint != itr_camera_constraint_end;
-         ++itr_camera_constraint)
+    if (!is_fix_cameras())
     {
-      if ((itr_camera_constraint->radial_mask.any() &&
-           !intrinsic_computations_mask_[COMPUTE_RADIAL_DISTORTION]) ||
-          (itr_camera_constraint->decentering_mask.any() &&
-           !intrinsic_computations_mask_[COMPUTE_DECENTERING_DISTORTION]) ||
-          (itr_camera_constraint->intrinsic_mask.any() &&
-           !intrinsic_computations_mask_[COMPUTE_INTRINSIC_PARAMS]))
+      auto itr_camera_constraint = camera_constraints_.begin();
+      auto itr_camera_constraint_end = camera_constraints_.end();
+      for (; itr_camera_constraint != itr_camera_constraint_end;
+           ++itr_camera_constraint)
       {
-        return -1;
-      }
-      Index camera_id = Index(itr_camera_constraint->camera_id);
-      Index x_offset = x_camera_begin +
-                       camera_id * intrinsic_params_size_per_camera;
-      if (itr_camera_constraint->radial_mask[RADIAL_CONSTRAIN_K1])
-      {
-        y[y_offset] = x[x_offset + 0];
-        y_offset++;
-      }
-      if (itr_camera_constraint->radial_mask[RADIAL_CONSTRAIN_K2])
-      {
-        y[y_offset] = x[x_offset + 1];
-        y_offset++;
-      }
-      if (itr_camera_constraint->radial_mask[RADIAL_CONSTRAIN_K3])
-      {
-        y[y_offset] = x[x_offset + 2];
-        y_offset++;
-      }
+        if ((itr_camera_constraint->radial_mask.any() &&
+             !intrinsic_computations_mask_[COMPUTE_RADIAL_DISTORTION]) ||
+            (itr_camera_constraint->decentering_mask.any() &&
+             !intrinsic_computations_mask_[COMPUTE_DECENTERING_DISTORTION]) ||
+            (itr_camera_constraint->intrinsic_mask.any() &&
+             !intrinsic_computations_mask_[COMPUTE_INTRINSIC_PARAMS]))
+        {
+          return -1;
+        }
+        Index camera_id = Index(itr_camera_constraint->camera_id);
+        Index x_offset = x_camera_begin +
+                         camera_id * intrinsic_params_size_per_camera;
+        if (itr_camera_constraint->radial_mask[RADIAL_CONSTRAIN_K1])
+        {
+          y[y_offset] = x[x_offset + 0];
+          y_offset++;
+        }
+        if (itr_camera_constraint->radial_mask[RADIAL_CONSTRAIN_K2])
+        {
+          y[y_offset] = x[x_offset + 1];
+          y_offset++;
+        }
+        if (itr_camera_constraint->radial_mask[RADIAL_CONSTRAIN_K3])
+        {
+          y[y_offset] = x[x_offset + 2];
+          y_offset++;
+        }
 
-      if (intrinsic_computations_mask_[COMPUTE_RADIAL_DISTORTION])
-      {
-        x_offset += 3;
-      }
+        if (intrinsic_computations_mask_[COMPUTE_RADIAL_DISTORTION])
+        {
+          x_offset += 3;
+        }
 
-      if (itr_camera_constraint->decentering_mask[DECENTERING_CONSTRAIN_D1])
-      {
-        y[y_offset] = x[x_offset + 0];
-        y_offset++;
-      }
-      if (itr_camera_constraint->decentering_mask[DECENTERING_CONSTRAIN_D2])
-      {
-        y[y_offset] = x[x_offset + 1];
-        y_offset++;
-      }
+        if (itr_camera_constraint->decentering_mask[DECENTERING_CONSTRAIN_D1])
+        {
+          y[y_offset] = x[x_offset + 0];
+          y_offset++;
+        }
+        if (itr_camera_constraint->decentering_mask[DECENTERING_CONSTRAIN_D2])
+        {
+          y[y_offset] = x[x_offset + 1];
+          y_offset++;
+        }
 
-      if (intrinsic_computations_mask_[COMPUTE_DECENTERING_DISTORTION])
-      {
-        x_offset += 2;
-      }
+        if (intrinsic_computations_mask_[COMPUTE_DECENTERING_DISTORTION])
+        {
+          x_offset += 2;
+        }
 
-      if (itr_camera_constraint->intrinsic_mask[
-            INTRINSIC_CONSTRAIN_FOCAL_LENGTH])
-      {
-        y[y_offset] = x[x_offset + 0];
-        y_offset++;
-      }
-      if (itr_camera_constraint->intrinsic_mask[
-            INTRINSIC_CONSTRAIN_SKEW])
-      {
-        y[y_offset] = x[x_offset + 1];
-        y_offset++;
-      }
-      if (itr_camera_constraint->intrinsic_mask[
-            INTRINSIC_CONSTRAIN_PRINCIPAL_X])
-      {
-        y[y_offset] = x[x_offset + 2];
-        y_offset++;
-      }
-      if (itr_camera_constraint->intrinsic_mask[
-            INTRINSIC_CONSTRAIN_PRINCIPAL_Y])
-      {
-        y[y_offset] = x[x_offset + 3];
-        y_offset++;
-      }
-      if (itr_camera_constraint->intrinsic_mask[
-            INTRINSIC_CONSTRAIN_PIXEL_RATIO])
-      {
-        y[y_offset] = x[x_offset + 4];
-        y_offset++;
+        if (itr_camera_constraint->intrinsic_mask[
+              INTRINSIC_CONSTRAIN_FOCAL_LENGTH])
+        {
+          y[y_offset] = x[x_offset + 0];
+          y_offset++;
+        }
+        if (itr_camera_constraint->intrinsic_mask[
+              INTRINSIC_CONSTRAIN_SKEW])
+        {
+          y[y_offset] = x[x_offset + 1];
+          y_offset++;
+        }
+        if (itr_camera_constraint->intrinsic_mask[
+              INTRINSIC_CONSTRAIN_PRINCIPAL_X])
+        {
+          y[y_offset] = x[x_offset + 2];
+          y_offset++;
+        }
+        if (itr_camera_constraint->intrinsic_mask[
+              INTRINSIC_CONSTRAIN_PRINCIPAL_Y])
+        {
+          y[y_offset] = x[x_offset + 3];
+          y_offset++;
+        }
+        if (itr_camera_constraint->intrinsic_mask[
+              INTRINSIC_CONSTRAIN_PIXEL_RATIO])
+        {
+          y[y_offset] = x[x_offset + 4];
+          y_offset++;
+        }
       }
     }
 
@@ -564,6 +708,11 @@ private:
   PointConstraintContainer point_constraints_;
   ImageConstraintContainer image_constraints_;
   CameraConstraintContainer camera_constraints_;
+
+  FixMask fix_mask_;
+  PointContainer fix_points_;
+  ImageContainer fix_images_;
+  CameraContainer fix_cameras_;
 };
 
 }

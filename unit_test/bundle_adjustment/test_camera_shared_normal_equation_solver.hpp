@@ -164,80 +164,80 @@ public:
       return -1;
     }
 
-#ifdef IMAGE_TEST
-    Index x_size = vector_function.GetXSize();
-    Index point_size = vector_function.GetPointParamsSize();
-    MatrixXX reduced_matrix_dense =
-      augmented_normal_matrix_dense.block(
-        point_size, point_size,
-        x_size - point_size, x_size - point_size) -
-      augmented_normal_matrix_dense.block(
-        point_size, 0,
-        x_size - point_size, point_size) *
-      augmented_normal_matrix_dense.block(0, 0,
-                                          point_size, point_size).inverse() *
-      augmented_normal_matrix_dense.block(
-        0, point_size,
-        point_size, x_size - point_size);
-    SaveMatrixImage(reduced_matrix_dense, "reduced_matrix_dense.png");
-    SaveMatrixImage(augmented_normal_matrix_dense,
-                    "augmented_normal_matrix_dense.png");
-    VectorX reduced_rhs_dense =
-      gradient_dense.segment(point_size, x_size - point_size) -
-      augmented_normal_matrix_dense.block(
-        point_size, 0,
-        x_size - point_size, point_size) *
-      augmented_normal_matrix_dense.block(0, 0,
-                                          point_size, point_size).inverse() *
-      gradient_dense.segment(0, point_size);
-
-    NormalEquationSolver solver;
-    typename NormalEquationSolver::ReducedMatrix reduced_matrix;
-    typename NormalEquationSolver::ReducedRHS reduced_rhs;
-    solver.ComputeReducedSystem(augmented_normal_matrix,
-                                gradient,
-                                reduced_matrix,
-                                reduced_rhs);
-
-    MatrixXX reduced_diff = MatrixXX::Zero(reduced_matrix_dense.rows(),
-                                           reduced_matrix_dense.cols());
-    std::cout.setf(std::ios::fixed);
-    std::cout<<std::setprecision(10);
-    for (Index i = 0; i < reduced_matrix_dense.rows(); i++)
-    {
-      for (Index j = 0; j < reduced_matrix_dense.cols(); j++)
-      {
-        Scalar value = reduced_matrix.coeff(i, j);
-        Scalar value_dense = reduced_matrix_dense.coeff(i, j);
-        Scalar error = std::abs(value - value_dense);
-        if (error > 1e-5)
-        {
-          std::cout<<"error:"<<error<<"\n";
-          std::cout<<"reduced_matrix_dense["<<i<<","<<j<<"]="<<value_dense<<"\n"
-                   <<"      reduced_matrix["<<i<<","<<j<<"]="<<value<<"\n";
-          reduced_diff(i, j) = error;
-        }
-      }
-    }
-    SaveMatrixImage(reduced_diff, "reduced_diff.png");
-
-    for (Index i = 0; i < reduced_rhs_dense.rows(); i++)
-    {
-      Scalar value = reduced_rhs[i];
-      Scalar value_dense = reduced_rhs_dense[i];
-      Scalar abs_error = std::abs(value - value_dense);
-      Scalar rel_error = abs_error;
-      if (value != Scalar(0)) rel_error = std::abs(rel_error / value);
-      if (abs_error > 1e-6 && rel_error > 1e-6)
-      {
-        std::cout<<"abs_error:"<<abs_error<<"\n"
-                 <<"rel_error:"<<rel_error<<"\n"
-                 <<"reduced_rhs_dense["<<i<<"]="<<value_dense<<"\n"
-                 <<"      reduced_rhs["<<i<<"]="<<value<<"\n";
-      }
-    }
-
-#endif
+//#ifdef IMAGE_TEST
+//    Index x_size = vector_function.GetXSize();
+//    Index point_size = vector_function.GetPointParamsSize();
+//    MatrixXX reduced_matrix_dense =
+//      augmented_normal_matrix_dense.block(
+//        point_size, point_size,
+//        x_size - point_size, x_size - point_size) -
+//      augmented_normal_matrix_dense.block(
+//        point_size, 0,
+//        x_size - point_size, point_size) *
+//      augmented_normal_matrix_dense.block(0, 0,
+//                                          point_size, point_size).inverse() *
+//      augmented_normal_matrix_dense.block(
+//        0, point_size,
+//        point_size, x_size - point_size);
+//    SaveMatrixImage(reduced_matrix_dense, "reduced_matrix_dense.png");
+//    SaveMatrixImage(augmented_normal_matrix_dense,
+//                    "augmented_normal_matrix_dense.png");
+//    VectorX reduced_rhs_dense =
+//      gradient_dense.segment(point_size, x_size - point_size) -
+//      augmented_normal_matrix_dense.block(
+//        point_size, 0,
+//        x_size - point_size, point_size) *
+//      augmented_normal_matrix_dense.block(0, 0,
+//                                          point_size, point_size).inverse() *
+//      gradient_dense.segment(0, point_size);
+//
+//    NormalEquationSolver solver;
+//    typename NormalEquationSolver::ReducedMatrix reduced_matrix;
+//    typename NormalEquationSolver::ReducedRHS reduced_rhs;
+//    solver.ComputeReducedSystem(augmented_normal_matrix,
+//                                gradient,
+//                                reduced_matrix,
+//                                reduced_rhs);
+//
+//    MatrixXX reduced_diff = MatrixXX::Zero(reduced_matrix_dense.rows(),
+//                                           reduced_matrix_dense.cols());
+//    std::cout.setf(std::ios::fixed);
+//    std::cout<<std::setprecision(10);
+//    for (Index i = 0; i < reduced_matrix_dense.rows(); i++)
+//    {
+//      for (Index j = 0; j < reduced_matrix_dense.cols(); j++)
+//      {
+//        Scalar value = reduced_matrix.coeff(i, j);
+//        Scalar value_dense = reduced_matrix_dense.coeff(i, j);
+//        Scalar error = std::abs(value - value_dense);
+//        if (error > 1e-5)
+//        {
+//          std::cout<<"error:"<<error<<"\n";
+//          std::cout<<"reduced_matrix_dense["<<i<<","<<j<<"]="<<value_dense<<"\n"
+//                   <<"      reduced_matrix["<<i<<","<<j<<"]="<<value<<"\n";
+//          reduced_diff(i, j) = error;
+//        }
+//      }
+//    }
+//    SaveMatrixImage(reduced_diff, "reduced_diff.png");
+//
+//    for (Index i = 0; i < reduced_rhs_dense.rows(); i++)
+//    {
+//      Scalar value = reduced_rhs[i];
+//      Scalar value_dense = reduced_rhs_dense[i];
+//      Scalar abs_error = std::abs(value - value_dense);
+//      Scalar rel_error = abs_error;
+//      if (value != Scalar(0)) rel_error = std::abs(rel_error / value);
+//      if (abs_error > 1e-6 && rel_error > 1e-6)
+//      {
+//        std::cout<<"abs_error:"<<abs_error<<"\n"
+//                 <<"rel_error:"<<rel_error<<"\n"
+//                 <<"reduced_rhs_dense["<<i<<"]="<<value_dense<<"\n"
+//                 <<"      reduced_rhs["<<i<<"]="<<value<<"\n";
+//      }
+//    }
+//
+//#endif
 
     DeltaXVector delta_x;
     if (SolveAugmentedNormalEquation(augmented_normal_matrix,

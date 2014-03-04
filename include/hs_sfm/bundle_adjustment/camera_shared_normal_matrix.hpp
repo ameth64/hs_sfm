@@ -3,6 +3,7 @@
 
 #include <limits>
 #include <algorithm>
+#include <cassert>
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
@@ -72,19 +73,22 @@ private:
 public:
   Scalar coeff(Index i, Index j) const
   {
-    Index points_end = Index(number_of_points_) * params_per_point_;
-    Index images_end =
-      points_end + Index(number_of_images_) * extrinsic_params_per_image_;
-    Index cameras_end =
-      images_end + Index(number_of_cameras_) * camera_params_size_;
+    Index x_size = GetXSize();
+    Index points_end = fix_mask_[FIX_POINTS] ?
+      0 : (Index(number_of_points_) * params_per_point_);
+    Index images_end = points_end + (fix_mask_[FIX_IMAGES] ?
+       0 : Index(number_of_images_) * extrinsic_params_per_image_);
+    Index cameras_end = images_end + (fix_mask_[FIX_CAMERAS] ?
+       0 : Index(number_of_cameras_) * camera_params_size_);
 
-    if (i < 0 || i >= cameras_end ||
-        j < 0 || j >= cameras_end)
+    if (i < 0 || i >= x_size ||
+        j < 0 || j >= x_size)
     {
       return std::numeric_limits<Scalar>::signaling_NaN();
     }
     else if (i < points_end && j < points_end &&
-             i / params_per_point_ == j / params_per_point_)
+             i / params_per_point_ == j / params_per_point_ &&
+             !fix_mask_[FIX_POINTS])
     {
       Index point_id = i / params_per_point_;
       Index point_row_offset = i % params_per_point_;
@@ -94,7 +98,8 @@ public:
     else if (i >= points_end && j >= points_end &&
              i < images_end && j < images_end &&
              (i - points_end) / extrinsic_params_per_image_ ==
-             (j - points_end) / extrinsic_params_per_image_)
+             (j - points_end) / extrinsic_params_per_image_ &&
+             !fix_mask_[FIX_IMAGES])
     {
       Index image_id = (i - points_end) / extrinsic_params_per_image_;
       Index image_row_offset = (i - points_end) % extrinsic_params_per_image_;
@@ -104,14 +109,16 @@ public:
     else if (i >= images_end && j >= images_end &&
              i < cameras_end && j < cameras_end &&
              (i - images_end) / camera_params_size_ ==
-             (j - images_end) / camera_params_size_)
+             (j - images_end) / camera_params_size_ &&
+             !fix_mask_[FIX_CAMERAS])
     {
       Index camera_id = (i - images_end) / camera_params_size_;
       Index camera_row_offset = (i - images_end) % camera_params_size_;
       Index camera_col_offset = (j - images_end) % camera_params_size_;
       return camera_blocks_[camera_id](camera_row_offset, camera_col_offset);
     }
-    else if (i < points_end && j >= points_end && j < images_end)
+    else if (i < points_end && j >= points_end && j < images_end &&
+             !fix_mask_[FIX_POINTS] && !fix_mask_[FIX_IMAGES])
     {
       Index point_id = i / params_per_point_;
       Index image_id = (j - points_end) / extrinsic_params_per_image_;
@@ -128,7 +135,8 @@ public:
         return (*block_ptr)(row_offset, col_offset);
       }
     }
-    else if (j < points_end && i >= points_end && i < images_end)
+    else if (j < points_end && i >= points_end && i < images_end &&
+             !fix_mask_[FIX_POINTS] && !fix_mask_[FIX_IMAGES])
     {
       Index point_id = j / params_per_point_;
       Index image_id = (i - points_end) / extrinsic_params_per_image_;
@@ -145,7 +153,8 @@ public:
         return (*block_ptr)(row_offset, col_offset);
       }
     }
-    else if (i < points_end && j >= images_end && j < cameras_end)
+    else if (i < points_end && j >= images_end && j < cameras_end &&
+             !fix_mask_[FIX_POINTS] && !fix_mask_[FIX_CAMERAS])
     {
       Index point_id = i / params_per_point_;
       Index camera_id = (j - images_end) / camera_params_size_;
@@ -162,7 +171,8 @@ public:
         return (*block_ptr)(row_offset, col_offset);
       }
     }
-    else if (j < points_end && i >= images_end && i < cameras_end)
+    else if (j < points_end && i >= images_end && i < cameras_end &&
+             !fix_mask_[FIX_POINTS] && !fix_mask_[FIX_CAMERAS])
     {
       Index point_id = j / params_per_point_;
       Index camera_id = (i - images_end) / camera_params_size_;
@@ -179,7 +189,8 @@ public:
         return (*block_ptr)(row_offset, col_offset);
       }
     }
-    else if (i >= points_end && i < images_end && j >= images_end)
+    else if (i >= points_end && i < images_end && j >= images_end &&
+             !fix_mask_[FIX_IMAGES] && !fix_mask_[FIX_CAMERAS])
     {
       Index image_id = (i - points_end) / extrinsic_params_per_image_;
       Index camera_id = (j - images_end) / camera_params_size_;
@@ -196,7 +207,8 @@ public:
         return (*block_ptr)(row_offset, col_offset);
       }
     }
-    else if (j >= points_end && j < images_end && i >= images_end)
+    else if (j >= points_end && j < images_end && i >= images_end &&
+             !fix_mask_[FIX_IMAGES] && !fix_mask_[FIX_CAMERAS])
     {
       Index image_id = (j - points_end) / extrinsic_params_per_image_;
       Index camera_id = (i - images_end) / camera_params_size_;
@@ -222,25 +234,34 @@ public:
   void Resize(size_t number_of_points,
               size_t number_of_images,
               size_t number_of_cameras,
-              Index camera_params_size)
+              Index camera_params_size,
+              const FixMask& fix_mask)
   {
     number_of_points_ = number_of_points;
     number_of_images_ = number_of_images;
     number_of_cameras_ = number_of_cameras;
     camera_params_size_ = camera_params_size;
 
-    point_blocks_.resize(number_of_points_, PointBlock::Zero());
-    image_blocks_.resize(number_of_images_, ImageBlock::Zero());
-    camera_blocks_.resize(number_of_cameras_,
-                          CameraBlock::Zero(camera_params_size_,
-                                            camera_params_size_));
+    fix_mask_ = fix_mask;
 
-    point_image_map_.resize(Index(number_of_points_),
-                            Index(number_of_images_));
-    point_camera_map_.resize(Index(number_of_points_),
-                             Index(number_of_cameras_));
-    image_camera_map_.resize(Index(number_of_images_),
-                             Index(number_of_cameras_));
+    if (!fix_mask_[FIX_POINTS])
+      point_blocks_.resize(number_of_points_, PointBlock::Zero());
+    if (!fix_mask_[FIX_IMAGES])
+      image_blocks_.resize(number_of_images_, ImageBlock::Zero());
+    if (!fix_mask_[FIX_CAMERAS])
+      camera_blocks_.resize(number_of_cameras_,
+                            CameraBlock::Zero(camera_params_size_,
+                                              camera_params_size_));
+
+    if (!fix_mask_[FIX_POINTS] && !fix_mask_[FIX_IMAGES])
+      point_image_map_.resize(Index(number_of_points_),
+                              Index(number_of_images_));
+    if (!fix_mask_[FIX_POINTS] && !fix_mask_[FIX_CAMERAS])
+      point_camera_map_.resize(Index(number_of_points_),
+                               Index(number_of_cameras_));
+    if (!fix_mask_[FIX_IMAGES] && !fix_mask_[FIX_CAMERAS])
+      image_camera_map_.resize(Index(number_of_images_),
+                               Index(number_of_cameras_));
 
     point_image_blocks_.clear();
     point_camera_blocks_.clear();
@@ -249,43 +270,53 @@ public:
 
   Index GetXSize() const
   {
-    return Index(number_of_points_) * VectorFunction::params_per_point_ +
-           Index(number_of_images_) *
-           VectorFunction::extrinsic_params_per_image_ +
-           Index(number_of_cameras_) * camera_params_size_;
+    return (fix_mask_[FIX_POINTS] ?
+           0 : (Index(number_of_points_) * VectorFunction::params_per_point_)) +
+           (fix_mask_[FIX_IMAGES] ?
+           0 : (Index(number_of_images_) *
+                VectorFunction::extrinsic_params_per_image_)) +
+           (fix_mask_[FIX_CAMERAS] ?
+           0 : (Index(number_of_cameras_) * camera_params_size_));
   }
 
   const PointBlock& GetPointBlock(Index point_id) const
   {
+    assert(!fix_mask_[FIX_POINTS]);
     return point_blocks_[point_id];
   }
   PointBlock& GetPointBlock(Index point_id)
   {
+    assert(!fix_mask_[FIX_POINTS]);
     return point_blocks_[point_id];
   }
 
   const ImageBlock& GetImageBlock(Index image_id) const
   {
+    assert(!fix_mask_[FIX_IMAGES]);
     return image_blocks_[image_id];
   }
   ImageBlock& GetImageBlock(Index image_id)
   {
+    assert(!fix_mask_[FIX_IMAGES]);
     return image_blocks_[image_id];
   }
 
   const CameraBlock& GetCameraBlock(Index camera_id) const
   {
+    assert(!fix_mask_[FIX_CAMERAS]);
     return camera_blocks_[camera_id];
   }
   CameraBlock& GetCameraBlock(Index camera_id)
   {
+    assert(!fix_mask_[FIX_CAMERAS]);
     return camera_blocks_[camera_id];
   }
 
   Err AddPointImageBlock(Index point_id,
-                          Index image_id,
-                          const PointImageBlock& point_image_block)
+                         Index image_id,
+                         const PointImageBlock& point_image_block)
   {
+    assert(!fix_mask_[FIX_POINTS] && !fix_mask_[FIX_IMAGES]);
     BlockIdx block_id = point_image_map_.coeff(point_id, image_id);
     if (block_id == 0)
     {
@@ -302,6 +333,7 @@ public:
                           Index camera_id,
                           const PointCameraBlock& point_camera_block)
   {
+    assert(!fix_mask_[FIX_POINTS] && !fix_mask_[FIX_CAMERAS]);
     BlockIdx block_id = point_camera_map_.coeff(point_id, camera_id);
     if (block_id == 0)
     {
@@ -316,9 +348,10 @@ public:
   }
 
   Err AddImageCameraBlock(Index image_id,
-                           Index camera_id,
-                           const ImageCameraBlock& image_camera_block)
+                          Index camera_id,
+                          const ImageCameraBlock& image_camera_block)
   {
+    assert(!fix_mask_[FIX_IMAGES] && !fix_mask_[FIX_CAMERAS]);
     BlockIdx block_id = image_camera_map_.coeff(image_id, camera_id);
     if (block_id == 0)
     {
@@ -335,6 +368,7 @@ public:
   void SetPointImageMap(const InputIterators& begin,
                         const InputIterators& end)
   {
+    assert(!fix_mask_[FIX_POINTS] && !fix_mask_[FIX_IMAGES]);
     point_image_map_.setFromTriplets(begin, end);
     point_image_blocks_.resize(size_t(point_image_map_.nonZeros()),
                                PointImageBlock::Zero());
@@ -344,16 +378,18 @@ public:
   void SetPointCameraMap(const InputIterators& begin,
                          const InputIterators& end)
   {
+    assert(!fix_mask_[FIX_POINTS] && !fix_mask_[FIX_CAMERAS]);
     point_camera_map_.setFromTriplets(begin, end);
     point_camera_blocks_.resize(size_t(point_camera_map_.nonZeros()),
-                             PointCameraBlock::Zero(params_per_point_,
-                                                    camera_params_size_));
+                                PointCameraBlock::Zero(params_per_point_,
+                                                       camera_params_size_));
   }
 
   template <typename InputIterators>
   void SetImageCameraMap(const InputIterators& begin,
                          const InputIterators& end)
   {
+    assert(!fix_mask_[FIX_IMAGES] && !fix_mask_[FIX_CAMERAS]);
     image_camera_map_.setFromTriplets(begin, end);
     image_camera_blocks_.resize(
       size_t(image_camera_map_.nonZeros()),
@@ -364,6 +400,7 @@ public:
   const PointImageBlock* GetPointImageBlock(Index point_id,
                                             Index image_id) const
   {
+    assert(!fix_mask_[FIX_POINTS] && !fix_mask_[FIX_IMAGES]);
     BlockIdx block_id = point_image_map_.coeff(point_id, image_id);
     if (block_id == 0)
     {
@@ -378,6 +415,7 @@ public:
   const PointCameraBlock* GetPointCameraBlock(Index point_id,
                                               Index camera_id) const
   {
+    assert(!fix_mask_[FIX_POINTS] && !fix_mask_[FIX_CAMERAS]);
     BlockIdx block_id = point_camera_map_.coeff(point_id, camera_id);
     if (block_id == 0)
     {
@@ -392,6 +430,7 @@ public:
   const ImageCameraBlock* GetImageCameraBlock(Index image_id,
                                               Index camera_id) const
   {
+    assert(!fix_mask_[FIX_IMAGES] && !fix_mask_[FIX_CAMERAS]);
     BlockIdx block_id = image_camera_map_.coeff(image_id, camera_id);
     if (block_id == 0)
     {
@@ -423,6 +462,11 @@ public:
     return camera_params_size_;
   }
 
+  const FixMask& fix_mask() const
+  {
+    return fix_mask_;
+  }
+
 private:
   size_t number_of_points_;
   size_t number_of_images_;
@@ -437,6 +481,7 @@ private:
   SparseBlockMap point_image_map_;
   SparseBlockMap point_camera_map_;
   SparseBlockMap image_camera_map_;
+  FixMask fix_mask_;
 
 };
 

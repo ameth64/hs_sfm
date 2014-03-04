@@ -69,6 +69,12 @@ public:
     Index extrinsic_params_size = vector_function.GetExtrinsicParamsSize();
     Index intrinsic_params_size_per_camera =
       vector_function.GetIntrinsicParamsSizePerCamera();
+    Index x_point_begin = 0;
+    Index x_image_begin =
+      vector_function.is_fix_points() ? 0 : point_params_size;
+    Index x_camera_begin =
+      (vector_function.is_fix_points() ? 0 : point_params_size) +
+      (vector_function.is_fix_images() ? 0 : extrinsic_params_size);
     for (Index i = 0; i < number_of_keys; i++)
     {
       const FeatureMap& feature_map = feature_maps[i];
@@ -81,116 +87,144 @@ public:
       key_map.camera_id = camera_id;
       jacobian_matrix.key_maps().push_back(key_map);
 
-      Vector3 point = x.segment(point_id * VectorFunction::params_per_point_,
-                                VectorFunction::params_per_point_);
-      Vector3 rotation =
-        x.segment(point_params_size +
-                  image_id * VectorFunction::extrinsic_params_per_image_, 3);
-      Vector3 translation =
-        x.segment(point_params_size +
-                  image_id * VectorFunction::extrinsic_params_per_image_ + 3,
-                  3);
+      Vector3 point =
+        vector_function.is_fix_points() ?
+        vector_function.fix_points()[point_id] :
+        x.segment(point_id * VectorFunction::params_per_point_,
+                  VectorFunction::params_per_point_);
+      Vector3 rotation, translation;
+      if (vector_function.is_fix_images())
+      {
+        rotation = vector_function.fix_images()[image_id].segment(0, 3);
+        translation = vector_function.fix_images()[image_id].segment(3, 3);
+      }
+      else
+      {
+        rotation =
+          x.segment(x_image_begin +
+                   image_id * VectorFunction::extrinsic_params_per_image_, 3);
+        translation =
+          x.segment(x_image_begin +
+                   image_id * VectorFunction::extrinsic_params_per_image_ + 3,
+                   3);
+      }
 
       VectorX intrinsic_params =
-        x.segment(point_params_size + extrinsic_params_size +
+        vector_function.is_fix_cameras() ?
+        vector_function.fix_cameras()[camera_id] :
+        x.segment(x_camera_begin +
                   camera_id * intrinsic_params_size_per_camera,
                   intrinsic_params_size_per_camera);
+
       Vector2 image_key = vector_function.WorldPointToImageKey(
                             point, rotation, translation, intrinsic_params);
 
-      typename JacobianMatrix::PointDerivativeBlock point_block;
-      point_block.point_id = point_id;
-      point_block.key_id = i;
-      Vector3 point_delta = point;
-      for (Index j = 0; j < VectorFunction::params_per_point_; j++)
+      if (!vector_function.is_fix_points())
       {
-        Scalar d = std::max(std::abs(delta_ * point[j]),
-                            min_delta_);
-        point_delta[j] += d;
-        Vector2 image_key_delta =
-          vector_function.WorldPointToImageKey(point_delta,
-                                               rotation,
-                                               translation,
-                                               intrinsic_params);
-        for (Index k = 0; k < VectorFunction::params_per_key_; k++)
+        typename JacobianMatrix::PointDerivativeBlock point_block;
+        point_block.point_id = point_id;
+        point_block.key_id = i;
+        Vector3 point_delta = point;
+        for (Index j = 0; j < VectorFunction::params_per_point_; j++)
         {
-          point_block.derivative_block.col(j)[k] =
-            (image_key_delta[k] - image_key[k]) / d;
+          Scalar d = std::max(std::abs(delta_ * point[j]),
+                              min_delta_);
+          point_delta[j] += d;
+          Vector2 image_key_delta =
+            vector_function.WorldPointToImageKey(point_delta,
+                                                 rotation,
+                                                 translation,
+                                                 intrinsic_params);
+          for (Index k = 0; k < VectorFunction::params_per_key_; k++)
+          {
+            point_block.derivative_block.col(j)[k] =
+              (image_key_delta[k] - image_key[k]) / d;
+          }
+          point_delta[j] = point[j];
         }
-        point_delta[j] = point[j];
+        jacobian_matrix.point_derivatives().push_back(point_block);
       }
-      jacobian_matrix.point_derivatives().push_back(point_block);
 
-      typename JacobianMatrix::ImageDerivativeBlock image_block;
-      image_block.image_id = image_id;
-      image_block.key_id = i;
-      Vector3 rotation_delta = rotation;
-      for (Index j = 0; j < 3; j++)
+      if (!vector_function.is_fix_images())
       {
-        Scalar d = std::max(std::abs(delta_ * rotation[j]),
-                            min_delta_);
-        rotation_delta[j] += d;
-        Vector2 image_key_delta =
-          vector_function.WorldPointToImageKey(point,
-                                               rotation_delta,
-                                               translation,
-                                               intrinsic_params);
-        for(Index k = 0; k < VectorFunction::params_per_key_; k++)
+        typename JacobianMatrix::ImageDerivativeBlock image_block;
+        image_block.image_id = image_id;
+        image_block.key_id = i;
+        Vector3 rotation_delta = rotation;
+        for (Index j = 0; j < 3; j++)
         {
-          image_block.derivative_block.col(j)[k] =
-            (image_key_delta[k] - image_key[k]) / d;
+          Scalar d = std::max(std::abs(delta_ * rotation[j]),
+                              min_delta_);
+          rotation_delta[j] += d;
+          Vector2 image_key_delta =
+            vector_function.WorldPointToImageKey(point,
+                                                 rotation_delta,
+                                                 translation,
+                                                 intrinsic_params);
+          for(Index k = 0; k < VectorFunction::params_per_key_; k++)
+          {
+            image_block.derivative_block.col(j)[k] =
+              (image_key_delta[k] - image_key[k]) / d;
+          }
+          rotation_delta[j] = rotation[j];
         }
-        rotation_delta[j] = rotation[j];
-      }
-      Vector3 translation_delta = translation;
-      for (Index j = 0; j < 3; j++)
-      {
-        Scalar d = std::max(std::abs(delta_ * translation[j]),
-                            min_delta_);
-        translation_delta[j] += d;
-        Vector2 image_key_delta =
-          vector_function.WorldPointToImageKey(point,
-                                               rotation,
-                                               translation_delta,
-                                               intrinsic_params);
-        for (Index k = 0; k < VectorFunction::params_per_key_; k++)
+        Vector3 translation_delta = translation;
+        for (Index j = 0; j < 3; j++)
         {
-          image_block.derivative_block.col(3 + j)[k] =
-            (image_key_delta[k] - image_key[k]) / d;
+          Scalar d = std::max(std::abs(delta_ * translation[j]),
+                              min_delta_);
+          translation_delta[j] += d;
+          Vector2 image_key_delta =
+            vector_function.WorldPointToImageKey(point,
+                                                 rotation,
+                                                 translation_delta,
+                                                 intrinsic_params);
+          for (Index k = 0; k < VectorFunction::params_per_key_; k++)
+          {
+            image_block.derivative_block.col(3 + j)[k] =
+              (image_key_delta[k] - image_key[k]) / d;
+          }
+          translation_delta[j] = translation[j];
         }
-        translation_delta[j] = translation[j];
+        jacobian_matrix.image_derivatives().push_back(image_block);
       }
-      jacobian_matrix.image_derivatives().push_back(image_block);
 
-      typename JacobianMatrix::CameraDerivativeBlock camera_block;
-      camera_block.derivative_block.resize(VectorFunction::params_per_key_,
-                                           intrinsic_params_size_per_camera);
-      camera_block.camera_id = camera_id;
-      camera_block.key_id = i;
-      VectorX intrinsic_params_delta = intrinsic_params;
-      for (Index j = 0; j < intrinsic_params_size_per_camera; j++)
+      if (!vector_function.is_fix_cameras())
       {
-        Scalar d = std::max(std::abs(delta_ * intrinsic_params[j]),
-                            min_delta_);
-        intrinsic_params_delta[j] += d;
-        Vector2 image_key_delta =
-          vector_function.WorldPointToImageKey(point,
-                                               rotation,
-                                               translation,
-                                               intrinsic_params_delta);
-        for (Index k = 0; k < VectorFunction::params_per_key_; k++)
+        typename JacobianMatrix::CameraDerivativeBlock camera_block;
+        camera_block.derivative_block.resize(VectorFunction::params_per_key_,
+                                             intrinsic_params_size_per_camera);
+        camera_block.camera_id = camera_id;
+        camera_block.key_id = i;
+        VectorX intrinsic_params_delta = intrinsic_params;
+        for (Index j = 0; j < intrinsic_params_size_per_camera; j++)
         {
-          camera_block.derivative_block.col(j)[k] =
-            (image_key_delta[k] - image_key[k]) / d;
+          Scalar d = std::max(std::abs(delta_ * intrinsic_params[j]),
+                              min_delta_);
+          intrinsic_params_delta[j] += d;
+          Vector2 image_key_delta =
+            vector_function.WorldPointToImageKey(point,
+                                                 rotation,
+                                                 translation,
+                                                 intrinsic_params_delta);
+          for (Index k = 0; k < VectorFunction::params_per_key_; k++)
+          {
+            camera_block.derivative_block.col(j)[k] =
+              (image_key_delta[k] - image_key[k]) / d;
+          }
+          intrinsic_params_delta[j] = intrinsic_params[j];
         }
-        intrinsic_params_delta[j] = intrinsic_params[j];
+        jacobian_matrix.camera_derivatives().push_back(camera_block);
       }
-      jacobian_matrix.camera_derivatives().push_back(camera_block);
     }// for (Index i = 0; i < number_of_keys; i++)
 
-    jacobian_matrix.SetPointConstraints(vector_function.point_constraints());
-    jacobian_matrix.SetImageConstraints(vector_function.image_constraints());
-    jacobian_matrix.SetCameraConstraints(vector_function.camera_constraints());
+    if (!vector_function.is_fix_points())
+      jacobian_matrix.SetPointConstraints(vector_function.point_constraints());
+    if (!vector_function.is_fix_images())
+      jacobian_matrix.SetImageConstraints(vector_function.image_constraints());
+    if (!vector_function.is_fix_cameras())
+      jacobian_matrix.SetCameraConstraints(
+        vector_function.camera_constraints());
 
     return 0;
   }

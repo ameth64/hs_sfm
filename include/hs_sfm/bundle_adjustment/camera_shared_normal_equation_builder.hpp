@@ -118,129 +118,234 @@ public:
     size_t number_of_cameras = size_t(jacobian_matrix.number_of_cameras());
     Index camera_params_size =
       jacobian_matrix.GetIntrinsicParamsSizePerCamera();
+    FixMask fix_mask;
+    if (jacobian_matrix.point_derivatives().empty())
+      fix_mask.set(FIX_POINTS);
+    if (jacobian_matrix.image_derivatives().empty())
+      fix_mask.set(FIX_IMAGES);
+    if (jacobian_matrix.camera_derivatives().empty())
+      fix_mask.set(FIX_CAMERAS);
     normal_matrix.Resize(number_of_points,
                          number_of_images,
                          number_of_cameras,
-                         camera_params_size);
+                         camera_params_size,
+                         fix_mask);
     SparseTripletVector point_image_triplets;
     SparseTripletSet point_camera_triplets_set;
     SparseTripletSet image_camera_triplets_set;
+
     //first pass, get triplets
-    for (Index i = 0; i < number_of_keys; i++)
+    if (!fix_mask[FIX_POINTS] && !fix_mask[FIX_IMAGES])
     {
-      const PointDerivativeBlock& point_derivative =
-        jacobian_matrix.point_derivatives()[i];
-      const ImageDerivativeBlock& image_derivative =
-        jacobian_matrix.image_derivatives()[i];
-      const CameraDerivativeBlock& camera_derivative =
-        jacobian_matrix.camera_derivatives()[i];
 
-      Index point_id = point_derivative.point_id;
-      Index image_id = image_derivative.image_id;
-      Index camera_id = camera_derivative.camera_id;
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const PointDerivativeBlock& point_derivative =
+          jacobian_matrix.point_derivatives()[i];
+        const ImageDerivativeBlock& image_derivative =
+          jacobian_matrix.image_derivatives()[i];
 
-      point_image_triplets.push_back(
-        SparseTriplet(point_id, image_id, point_image_triplets.size() + 1));
-      point_camera_triplets_set.insert(
-        SparseTriplet(point_id, camera_id,
-                      point_camera_triplets_set.size() + 1));
-      image_camera_triplets_set.insert(
-        SparseTriplet(image_id, camera_id,
-                      image_camera_triplets_set.size() + 1));
+        Index point_id = point_derivative.point_id;
+        Index image_id = image_derivative.image_id;
+
+        point_image_triplets.push_back(
+          SparseTriplet(point_id, image_id, point_image_triplets.size() + 1));
+      }
+      normal_matrix.SetPointImageMap(point_image_triplets.begin(),
+                                     point_image_triplets.end());
     }
-    //TODO:FIX ME!!Is copying elements to a vector nessasery?
-    SparseTripletVector point_camera_triplets_vector(
-      point_camera_triplets_set.size());
-    std::copy(point_camera_triplets_set.begin(),
-              point_camera_triplets_set.end(),
-              point_camera_triplets_vector.begin());
-    SparseTripletVector image_camera_triplets_vector(
-      image_camera_triplets_set.size());
-    std::copy(image_camera_triplets_set.begin(),
-              image_camera_triplets_set.end(),
-              image_camera_triplets_vector.begin());
-    normal_matrix.SetPointImageMap(point_image_triplets.begin(),
-                                   point_image_triplets.end());
-    normal_matrix.SetPointCameraMap(point_camera_triplets_vector.begin(),
-                                    point_camera_triplets_vector.end());
-    normal_matrix.SetImageCameraMap(image_camera_triplets_vector.begin(),
-                                    image_camera_triplets_vector.end());
-    for (Index i = 0; i < number_of_keys; i++)
+    if (!fix_mask[FIX_POINTS] && !fix_mask[FIX_CAMERAS])
     {
-      const KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(i);
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const PointDerivativeBlock& point_derivative =
+          jacobian_matrix.point_derivatives()[i];
+        const CameraDerivativeBlock& camera_derivative =
+          jacobian_matrix.camera_derivatives()[i];
 
-      const PointDerivativeBlock& point_derivative =
-        jacobian_matrix.point_derivatives()[i];
-      const ImageDerivativeBlock& image_derivative =
-        jacobian_matrix.image_derivatives()[i];
-      const CameraDerivativeBlock& camera_derivative =
-        jacobian_matrix.camera_derivatives()[i];
+        Index point_id = point_derivative.point_id;
+        Index camera_id = camera_derivative.camera_id;
 
-      Index point_id = point_derivative.point_id;
-      Index image_id = image_derivative.image_id;
-      Index camera_id = camera_derivative.camera_id;
+        point_camera_triplets_set.insert(
+          SparseTriplet(point_id, camera_id,
+                        point_camera_triplets_set.size() + 1));
+      }
+      //TODO:FIX ME!!Is copying elements to a vector nessasery?
+      SparseTripletVector point_camera_triplets_vector(
+        point_camera_triplets_set.size());
+      std::copy(point_camera_triplets_set.begin(),
+                point_camera_triplets_set.end(),
+                point_camera_triplets_vector.begin());
+      normal_matrix.SetPointCameraMap(point_camera_triplets_vector.begin(),
+                                      point_camera_triplets_vector.end());
+    }
+    if (!fix_mask[FIX_IMAGES] && !fix_mask[FIX_CAMERAS])
+    {
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const ImageDerivativeBlock& image_derivative =
+          jacobian_matrix.image_derivatives()[i];
+        const CameraDerivativeBlock& camera_derivative =
+          jacobian_matrix.camera_derivatives()[i];
 
-      PointBlock& point_block = normal_matrix.GetPointBlock(point_id);
-      ImageBlock& image_block = normal_matrix.GetImageBlock(image_id);
-      CameraBlock& camera_block = normal_matrix.GetCameraBlock(camera_id);
+        Index image_id = image_derivative.image_id;
+        Index camera_id = camera_derivative.camera_id;
 
-      point_block += point_derivative.derivative_block.transpose() *
-                     key_block *
-                     point_derivative.derivative_block;
-      image_block += image_derivative.derivative_block.transpose() *
-                     key_block *
-                     image_derivative.derivative_block;
-      camera_block += camera_derivative.derivative_block.transpose() *
-                      key_block *
-                      camera_derivative.derivative_block;
-
-      PointImageBlock point_image_block =
-        point_derivative.derivative_block.transpose() *
-        key_block *
-        image_derivative.derivative_block;
-      if (normal_matrix.AddPointImageBlock(point_id, image_id,
-                                           point_image_block) != 0) return -1;
-      PointCameraBlock point_camera_block =
-        point_derivative.derivative_block.transpose() *
-        key_block *
-        camera_derivative.derivative_block;
-      if (normal_matrix.AddPointCameraBlock(point_id, camera_id,
-                                            point_camera_block) != 0) return -1;
-      ImageCameraBlock image_camera_block =
-        image_derivative.derivative_block.transpose() *
-        key_block *
-        camera_derivative.derivative_block;
-      if (normal_matrix.AddImageCameraBlock(image_id, camera_id,
-                                            image_camera_block) != 0) return -1;
+        image_camera_triplets_set.insert(
+          SparseTriplet(image_id, camera_id,
+                        image_camera_triplets_set.size() + 1));
+      }
+      SparseTripletVector image_camera_triplets_vector(
+        image_camera_triplets_set.size());
+      std::copy(image_camera_triplets_set.begin(),
+                image_camera_triplets_set.end(),
+                image_camera_triplets_vector.begin());
+      normal_matrix.SetImageCameraMap(image_camera_triplets_vector.begin(),
+                                      image_camera_triplets_vector.end());
     }
 
-    Index point_constaints_size = jacobian_matrix.GetPointConstraintsSize();
-    for (Index offset = 0; offset < point_constaints_size; offset++)
+    if (!fix_mask[FIX_POINTS])
     {
-      Index point_id = jacobian_matrix.GetPointConstraintPointID(offset);
-      Index param_id = jacobian_matrix.GetPointConstraintParamID(offset);
-      normal_matrix.GetPointBlock(point_id)(param_id, param_id) +=
-        y_covariance_inverse.GetConstraint(offset);
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(i);
+        const PointDerivativeBlock& point_derivative =
+          jacobian_matrix.point_derivatives()[i];
+        Index point_id = point_derivative.point_id;
+        PointBlock& point_block = normal_matrix.GetPointBlock(point_id);
+        point_block += point_derivative.derivative_block.transpose() *
+                       key_block *
+                       point_derivative.derivative_block;
+      }
+    }
+    if (!fix_mask[FIX_IMAGES])
+    {
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(i);
+        const ImageDerivativeBlock& image_derivative =
+          jacobian_matrix.image_derivatives()[i];
+        Index image_id = image_derivative.image_id;
+        ImageBlock& image_block = normal_matrix.GetImageBlock(image_id);
+        image_block += image_derivative.derivative_block.transpose() *
+                       key_block *
+                       image_derivative.derivative_block;
+      }
+    }
+    if (!fix_mask[FIX_CAMERAS])
+    {
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(i);
+        const CameraDerivativeBlock& camera_derivative =
+          jacobian_matrix.camera_derivatives()[i];
+        Index camera_id = camera_derivative.camera_id;
+        CameraBlock& camera_block = normal_matrix.GetCameraBlock(camera_id);
+        camera_block += camera_derivative.derivative_block.transpose() *
+                        key_block *
+                        camera_derivative.derivative_block;
+      }
+    }
+    if (!fix_mask[FIX_POINTS] && !fix_mask[FIX_IMAGES])
+    {
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(i);
+        const PointDerivativeBlock& point_derivative =
+          jacobian_matrix.point_derivatives()[i];
+        const ImageDerivativeBlock& image_derivative =
+          jacobian_matrix.image_derivatives()[i];
+        Index point_id = point_derivative.point_id;
+        Index image_id = image_derivative.image_id;
+        PointImageBlock point_image_block =
+          point_derivative.derivative_block.transpose() *
+          key_block *
+          image_derivative.derivative_block;
+        if (normal_matrix.AddPointImageBlock(point_id, image_id,
+                                             point_image_block) != 0) return -1;
+      }
+    }
+    if (!fix_mask[FIX_POINTS] && !fix_mask[FIX_CAMERAS])
+    {
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(i);
+        const PointDerivativeBlock& point_derivative =
+          jacobian_matrix.point_derivatives()[i];
+        const CameraDerivativeBlock& camera_derivative =
+          jacobian_matrix.camera_derivatives()[i];
+        Index point_id = point_derivative.point_id;
+        Index camera_id = camera_derivative.camera_id;
+        PointCameraBlock point_camera_block =
+          point_derivative.derivative_block.transpose() *
+          key_block *
+          camera_derivative.derivative_block;
+        if (normal_matrix.AddPointCameraBlock(point_id, camera_id,
+                                              point_camera_block) != 0)
+          return -1;
+      }
+    }
+    if (!fix_mask[FIX_IMAGES] && !fix_mask[FIX_CAMERAS])
+    {
+      for (Index i = 0; i < number_of_keys; i++)
+      {
+        const KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(i);
+        const ImageDerivativeBlock& image_derivative =
+          jacobian_matrix.image_derivatives()[i];
+        const CameraDerivativeBlock& camera_derivative =
+          jacobian_matrix.camera_derivatives()[i];
+        Index image_id = image_derivative.image_id;
+        Index camera_id = camera_derivative.camera_id;
+        ImageCameraBlock image_camera_block =
+          image_derivative.derivative_block.transpose() *
+          key_block *
+          camera_derivative.derivative_block;
+        if (normal_matrix.AddImageCameraBlock(image_id, camera_id,
+                                              image_camera_block) != 0)
+          return -1;
+      }
     }
 
-    Index image_constaints_size = jacobian_matrix.GetImageConstraintsSize();
-    for (Index offset = 0; offset < image_constaints_size; offset++)
+    if (!fix_mask[FIX_POINTS])
     {
-      Index image_id = jacobian_matrix.GetImageConstraintImageID(offset);
-      Index param_id = jacobian_matrix.GetImageConstraintParamID(offset);
-      normal_matrix.GetImageBlock(image_id)(param_id, param_id) +=
-        y_covariance_inverse.GetConstraint(point_constaints_size + offset);
+      Index point_constaints_size = jacobian_matrix.GetPointConstraintsSize();
+      for (Index offset = 0; offset < point_constaints_size; offset++)
+      {
+        Index point_id = jacobian_matrix.GetPointConstraintPointID(offset);
+        Index param_id = jacobian_matrix.GetPointConstraintParamID(offset);
+        normal_matrix.GetPointBlock(point_id)(param_id, param_id) +=
+          y_covariance_inverse.GetConstraint(offset);
+      }
     }
 
-    Index camera_constraints_size = jacobian_matrix.GetCameraConstraintsSize();
-    for (Index offset = 0; offset < camera_constraints_size; offset++)
+    if (!fix_mask[FIX_IMAGES])
     {
-      Index camera_id = jacobian_matrix.GetCameraConstraintCameraID(offset);
-      Index param_id = jacobian_matrix.GetCameraConstraintParamID(offset);
-      normal_matrix.GetCameraBlock(camera_id)(param_id, param_id) +=
-        y_covariance_inverse.GetConstraint(point_constaints_size +
-                                           image_constaints_size +
-                                           offset);
+      Index point_constaints_size = jacobian_matrix.GetPointConstraintsSize();
+      Index image_constaints_size = jacobian_matrix.GetImageConstraintsSize();
+      for (Index offset = 0; offset < image_constaints_size; offset++)
+      {
+        Index image_id = jacobian_matrix.GetImageConstraintImageID(offset);
+        Index param_id = jacobian_matrix.GetImageConstraintParamID(offset);
+        normal_matrix.GetImageBlock(image_id)(param_id, param_id) +=
+          y_covariance_inverse.GetConstraint(point_constaints_size + offset);
+      }
+    }
+
+    if (!fix_mask[FIX_CAMERAS])
+    {
+      Index point_constaints_size = jacobian_matrix.GetPointConstraintsSize();
+      Index image_constaints_size = jacobian_matrix.GetImageConstraintsSize();
+      Index camera_constraints_size =
+        jacobian_matrix.GetCameraConstraintsSize();
+      for (Index offset = 0; offset < camera_constraints_size; offset++)
+      {
+        Index camera_id = jacobian_matrix.GetCameraConstraintCameraID(offset);
+        Index param_id = jacobian_matrix.GetCameraConstraintParamID(offset);
+        normal_matrix.GetCameraBlock(camera_id)(param_id, param_id) +=
+          y_covariance_inverse.GetConstraint(point_constaints_size +
+                                             image_constaints_size +
+                                             offset);
+      }
     }
 
     return 0;
@@ -257,74 +362,100 @@ public:
     size_t number_of_cameras = size_t(jacobian_matrix.number_of_cameras());
     Index camera_params_size =
       jacobian_matrix.GetIntrinsicParamsSizePerCamera();
+    FixMask fix_mask;
+    if (jacobian_matrix.point_derivatives().empty())
+      fix_mask.set(FIX_POINTS);
+    if (jacobian_matrix.image_derivatives().empty())
+      fix_mask.set(FIX_IMAGES);
+    if (jacobian_matrix.camera_derivatives().empty())
+      fix_mask.set(FIX_CAMERAS);
     gradient.Resize(number_of_points,
                     number_of_images,
                     number_of_cameras,
-                    camera_params_size);
+                    camera_params_size,
+                    fix_mask);
     for (Index i = 0; i < number_of_keys; i++)
     {
       const KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(i);
 
-      const PointDerivativeBlock& point_derivative =
-        jacobian_matrix.point_derivatives()[i];
-      const ImageDerivativeBlock& image_derivative =
-        jacobian_matrix.image_derivatives()[i];
-      const CameraDerivativeBlock& camera_derivative =
-        jacobian_matrix.camera_derivatives()[i];
+      if (!fix_mask[FIX_POINTS])
+      {
+        const PointDerivativeBlock& point_derivative =
+          jacobian_matrix.point_derivatives()[i];
+        Index point_id = point_derivative.point_id;
+        gradient.GetPointSegment(point_id) +=
+          point_derivative.derivative_block.transpose() *
+          key_block *
+          residuals.segment(i * VectorFunction::params_per_key_,
+                            VectorFunction::params_per_key_);
+      }
+      if (!fix_mask[FIX_IMAGES])
+      {
+        const ImageDerivativeBlock& image_derivative =
+          jacobian_matrix.image_derivatives()[i];
+        Index image_id = image_derivative.image_id;
+        gradient.GetImageSegment(image_id) +=
+          image_derivative.derivative_block.transpose() *
+          key_block *
+          residuals.segment(i * VectorFunction::params_per_key_,
+                            VectorFunction::params_per_key_);
+      }
+      if (!fix_mask[FIX_CAMERAS])
+      {
+        const CameraDerivativeBlock& camera_derivative =
+          jacobian_matrix.camera_derivatives()[i];
 
-      Index point_id = point_derivative.point_id;
-      Index image_id = image_derivative.image_id;
-      Index camera_id = camera_derivative.camera_id;
+        Index camera_id = camera_derivative.camera_id;
 
-      gradient.GetPointSegment(point_id) +=
-        point_derivative.derivative_block.transpose() *
-        key_block *
-        residuals.segment(i * VectorFunction::params_per_key_,
-                          VectorFunction::params_per_key_);
-      gradient.GetImageSegment(image_id) +=
-        image_derivative.derivative_block.transpose() *
-        key_block *
-        residuals.segment(i * VectorFunction::params_per_key_,
-                          VectorFunction::params_per_key_);
-      gradient.GetCameraSegment(camera_id) +=
-        camera_derivative.derivative_block.transpose() *
-        key_block *
-        residuals.segment(i * VectorFunction::params_per_key_,
-                          VectorFunction::params_per_key_);
+        gradient.GetCameraSegment(camera_id) +=
+          camera_derivative.derivative_block.transpose() *
+          key_block *
+          residuals.segment(i * VectorFunction::params_per_key_,
+                            VectorFunction::params_per_key_);
+      }
     }
 
     Index key_params_size = y_covariance_inverse.GetKeyParamsSize();
     Index point_constaints_size = jacobian_matrix.GetPointConstraintsSize();
-    for (Index offset = 0; offset < point_constaints_size; offset++)
-    {
-      Index point_id = jacobian_matrix.GetPointConstraintPointID(offset);
-      Index param_id = jacobian_matrix.GetPointConstraintParamID(offset);
-      Index y_id = key_params_size + offset;
-      gradient.GetPointSegment(point_id)[param_id] +=
-        y_covariance_inverse.GetConstraint(offset) * residuals[y_id];
-    }
-
     Index image_constaints_size = jacobian_matrix.GetImageConstraintsSize();
-    for (Index offset = 0; offset < image_constaints_size; offset++)
+    Index camera_constraints_size = jacobian_matrix.GetCameraConstraintsSize();
+    if (!fix_mask[FIX_POINTS])
     {
-      Index image_id = jacobian_matrix.GetImageConstraintImageID(offset);
-      Index param_id = jacobian_matrix.GetImageConstraintParamID(offset);
-      Index constraint_id = point_constaints_size + offset;
-      Index y_id = key_params_size + constraint_id;
-      gradient.GetImageSegment(image_id)[param_id] +=
-        y_covariance_inverse.GetConstraint(constraint_id) * residuals[y_id];
+      for (Index offset = 0; offset < point_constaints_size; offset++)
+      {
+        Index point_id = jacobian_matrix.GetPointConstraintPointID(offset);
+        Index param_id = jacobian_matrix.GetPointConstraintParamID(offset);
+        Index y_id = key_params_size + offset;
+        gradient.GetPointSegment(point_id)[param_id] +=
+          y_covariance_inverse.GetConstraint(offset) * residuals[y_id];
+      }
     }
 
-    Index camera_constraints_size = jacobian_matrix.GetCameraConstraintsSize();
-    for (Index offset = 0; offset < camera_constraints_size; offset++)
+    if (!fix_mask[FIX_IMAGES])
     {
-      Index camera_id = jacobian_matrix.GetCameraConstraintCameraID(offset);
-      Index param_id = jacobian_matrix.GetCameraConstraintParamID(offset);
-      Index constraint_id =
-        point_constaints_size + image_constaints_size + offset;
-      Index y_id = key_params_size + constraint_id;
-      gradient.GetCameraSegment(camera_id)[param_id] +=
-        y_covariance_inverse.GetConstraint(constraint_id) * residuals[y_id];
+      for (Index offset = 0; offset < image_constaints_size; offset++)
+      {
+        Index image_id = jacobian_matrix.GetImageConstraintImageID(offset);
+        Index param_id = jacobian_matrix.GetImageConstraintParamID(offset);
+        Index constraint_id = point_constaints_size + offset;
+        Index y_id = key_params_size + constraint_id;
+        gradient.GetImageSegment(image_id)[param_id] +=
+          y_covariance_inverse.GetConstraint(constraint_id) * residuals[y_id];
+      }
+    }
+
+    if (!fix_mask[FIX_CAMERAS])
+    {
+      for (Index offset = 0; offset < camera_constraints_size; offset++)
+      {
+        Index camera_id = jacobian_matrix.GetCameraConstraintCameraID(offset);
+        Index param_id = jacobian_matrix.GetCameraConstraintParamID(offset);
+        Index constraint_id =
+          point_constaints_size + image_constaints_size + offset;
+        Index y_id = key_params_size + constraint_id;
+        gradient.GetCameraSegment(camera_id)[param_id] +=
+          y_covariance_inverse.GetConstraint(constraint_id) * residuals[y_id];
+      }
     }
 
     return 0;

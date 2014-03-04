@@ -167,26 +167,6 @@ TEST(TestCameraSharedNormalEquationBuilder, SimpleTest)
   size_t number_of_constrained_images = 10;
   size_t number_of_constrained_cameras = 2;
 
-  DataGenerator data_generator(flight_longitudinal_overlap_ratio,
-                               flight_lateral_overlap_ratio,
-                               north_west_angle,
-                               north_west_angle_stddev,
-                               offset_stddev,
-                               flight_generators,
-                               number_of_points,
-                               number_of_planar_constrained_points,
-                               number_of_full_constrained_points,
-                               number_of_constrained_images,
-                               number_of_constrained_cameras,
-                               intrinsic_params_set);
-
-  VectorFunction vector_function;
-  XVector x;
-  YVector y_synthetic, y;
-
-  ASSERT_EQ(0, data_generator(vector_function, x, y_synthetic));
-  ASSERT_EQ(0, vector_function(x, y));
-
   Scalar point_planar_stddev = 0.05;
   Scalar point_height_stddev = 0.1;
   Scalar image_rotation_stddev = 0.5;
@@ -201,7 +181,35 @@ TEST(TestCameraSharedNormalEquationBuilder, SimpleTest)
                 camera_pixel_ratio_stddev);
   KeyCovariance feature_covariance = KeyCovariance::Identity();
   feature_covariance *= Scalar(4);
-  ASSERT_EQ(0, tester.Test(vector_function, x, feature_covariance));
+
+  int number_of_fix_masks = (1 << hs::sfm::ba::NUMBER_OF_FIX_PARAMS) - 1;
+  for (int i = number_of_fix_masks - 1; i >= 0; i--)
+  {
+    hs::sfm::ba::FixMask fix_mask(i);
+    DataGenerator data_generator(flight_longitudinal_overlap_ratio,
+                                 flight_lateral_overlap_ratio,
+                                 north_west_angle,
+                                 north_west_angle_stddev,
+                                 offset_stddev,
+                                 flight_generators,
+                                 number_of_points,
+                                 number_of_planar_constrained_points,
+                                 number_of_full_constrained_points,
+                                 number_of_constrained_images,
+                                 number_of_constrained_cameras,
+                                 intrinsic_params_set,
+                                 fix_mask);
+
+    VectorFunction vector_function;
+    XVector x;
+    YVector y_synthetic, y;
+
+    ASSERT_EQ(0, data_generator(vector_function, x, y_synthetic));
+    ASSERT_EQ(0, vector_function(x, y));
+
+    ASSERT_EQ(0, tester.Test(vector_function, x, feature_covariance));
+  }
+
 }
 
 }

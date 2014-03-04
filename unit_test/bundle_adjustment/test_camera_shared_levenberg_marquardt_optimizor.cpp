@@ -601,6 +601,7 @@ TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
   size_t number_of_constrained_images = 0;
   size_t number_of_constrained_cameras = 0;
 
+  hs::sfm::ba::FixMask fix_mask(0);
   DataGenerator data_generator(flight_longitudinal_overlap_ratio,
                                flight_lateral_overlap_ratio,
                                north_west_angle,
@@ -612,7 +613,8 @@ TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
                                number_of_full_constrained_points,
                                number_of_constrained_images,
                                number_of_constrained_cameras,
-                               intrinsic_params_set);
+                               intrinsic_params_set,
+                               fix_mask);
 
   VectorFunction vector_function;
   XVector x;

@@ -80,6 +80,12 @@ public:
   typedef typename VectorFunction::FeatureMap FeatureMap;
   typedef typename VectorFunction::FeatureMapContainer FeatureMapContainer;
   typedef typename VectorFunction::ImageCameraMap ImageCameraMap;
+  typedef typename VectorFunction::Point BAPoint;
+  typedef typename VectorFunction::PointContainer BAPointContainer;
+  typedef typename VectorFunction::Image BAImage;
+  typedef typename VectorFunction::ImageContainer BAImageContainer;
+  typedef typename VectorFunction::Camera BACamera;
+  typedef typename VectorFunction::CameraContainer BACameraContainer;
 
 private:
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
@@ -97,7 +103,8 @@ public:
     size_t number_of_full_constrained_points,
     size_t number_of_constrained_images,
     size_t number_of_constrained_cameras,
-    const IntrinsicParamsContainer& intrinsic_params_set)
+    const IntrinsicParamsContainer& intrinsic_params_set,
+    const FixMask& fix_mask)
     : multiple_flight_generator_(flight_longitudinal_overlap_ratio,
                                  flight_lateral_overlap_ratio,
                                  north_west_angle,
@@ -110,7 +117,8 @@ public:
       number_of_full_constrained_points_(number_of_full_constrained_points),
       number_of_constrained_images_(number_of_constrained_images),
       number_of_constrained_cameras_(number_of_constrained_cameras),
-      intrinsic_params_set_(intrinsic_params_set) {}
+      intrinsic_params_set_(intrinsic_params_set),
+      fix_mask_(fix_mask) {}
 
   Err operator() (VectorFunction& vector_function,
                   XVector& x,
@@ -163,6 +171,8 @@ public:
                                camera_views,
                                feature_maps,
                                image_camera_map,
+                               points,
+                               extrinsic_params_set,
                                constrained_image_ids,
                                constrained_point_ids,
                                vector_function) != 0)
@@ -316,18 +326,21 @@ private:
     return 0;
   }
 
-  Err GenerateVectorFunction(size_t number_of_available_images,
-                             size_t number_of_available_points,
-                             size_t number_of_keys,
-                             const std::vector<size_t>& image_map,
-                             const std::vector<size_t>& point_map,
-                             const TrackContainer& tracks,
-                             const CameraViewContainer& camera_views,
-                             const FeatureMapContainer& feature_maps,
-                             const ImageCameraMap& image_camera_map,
-                             std::vector<size_t>& constrained_image_ids,
-                             std::vector<size_t>& constrained_point_ids,
-                             VectorFunction& vector_function) const
+  Err GenerateVectorFunction(
+    size_t number_of_available_images,
+    size_t number_of_available_points,
+    size_t number_of_keys,
+    const std::vector<size_t>& image_map,
+    const std::vector<size_t>& point_map,
+    const TrackContainer& tracks,
+    const CameraViewContainer& camera_views,
+    const FeatureMapContainer& feature_maps,
+    const ImageCameraMap& image_camera_map,
+    const Point3DContainer& points,
+    const ExtrinsicParamsContainer& extrinsic_params_set,
+    std::vector<size_t>& constrained_image_ids,
+    std::vector<size_t>& constrained_point_ids,
+    VectorFunction& vector_function) const
   {
     vector_function.set_number_of_images(Index(number_of_available_images));
     vector_function.set_number_of_points(Index(number_of_available_points));
@@ -337,141 +350,217 @@ private:
     vector_function.set_image_camera_map(image_camera_map);
     //TODO:目前是计算所有的内参数，应根据mask选择性计算畸变和内参数
     vector_function.intrinsic_computations_mask().set();
-    //生成constraints
-    PointConstraintContainer point_constraints;
-    for (size_t i = 0; i < number_of_planar_constrained_points_; i++)
+    if (fix_mask_[FIX_POINTS])
     {
-      while (1)
+      //生成固定点
+      BAPointContainer ba_points(number_of_available_points);
+      auto itr_point = points.begin();
+      auto itr_point_end = points.end();
+      auto itr_track = tracks.begin();
+      for (size_t i = 0; itr_point != itr_point_end; ++itr_point, ++itr_track)
       {
-        size_t point_id;
-        IntegerUniformRandomGenerator<size_t>::Generate(
-          0, tracks.size() - 1, point_id);
-        auto itr_point = constrained_point_ids.begin();
-        auto itr_point_end = constrained_point_ids.end();
-        bool existed = false;
-        for (; itr_point != itr_point_end; ++itr_point)
+        if (!itr_track->empty())
         {
-          if (*itr_point == point_id)
+          ba_points[i] = *itr_point;
+          i++;
+        }
+      }
+      vector_function.set_fix_points(ba_points);
+    }
+    else
+    {
+      //生成点约束
+      PointConstraintContainer point_constraints;
+      for (size_t i = 0; i < number_of_planar_constrained_points_; i++)
+      {
+        while (1)
+        {
+          size_t point_id;
+          IntegerUniformRandomGenerator<size_t>::Generate(
+            0, tracks.size() - 1, point_id);
+          auto itr_point = constrained_point_ids.begin();
+          auto itr_point_end = constrained_point_ids.end();
+          bool existed = false;
+          for (; itr_point != itr_point_end; ++itr_point)
           {
-            existed = true;
+            if (*itr_point == point_id)
+            {
+              existed = true;
+              break;
+            }
+          }
+          if (!existed && !tracks[point_id].empty())
+          {
+            PointConstraint point_constraint;
+            point_constraint.point_id = point_map[point_id] - 1;
+            point_constraint.mask.set(POINT_CONSTRAIN_X);
+            point_constraint.mask.set(POINT_CONSTRAIN_Y);
+            point_constraints.push_back(point_constraint);
+            constrained_point_ids.push_back(point_id);
             break;
           }
         }
-        if (!existed && !tracks[point_id].empty())
-        {
-          PointConstraint point_constraint;
-          point_constraint.point_id = point_map[point_id] - 1;
-          point_constraint.mask.set(POINT_CONSTRAIN_X);
-          point_constraint.mask.set(POINT_CONSTRAIN_Y);
-          point_constraints.push_back(point_constraint);
-          constrained_point_ids.push_back(point_id);
-          break;
-        }
-      }
-    }// for (size_t i = 0; i < number_of_planar_constrained_points_; i++)
-    for (size_t i = 0; i < number_of_full_constrained_points_; i++)
-    {
-      while (1)
+      }// for (size_t i = 0; i < number_of_planar_constrained_points_; i++)
+      for (size_t i = 0; i < number_of_full_constrained_points_; i++)
       {
-        size_t point_id;
-        IntegerUniformRandomGenerator<size_t>::Generate(
-          0, tracks.size() - 1, point_id);
-        auto itr_point = constrained_point_ids.begin();
-        auto itr_point_end = constrained_point_ids.end();
-        bool existed = false;
-        for (; itr_point != itr_point_end; ++itr_point)
+        while (1)
         {
-          if (*itr_point == point_id)
+          size_t point_id;
+          IntegerUniformRandomGenerator<size_t>::Generate(
+            0, tracks.size() - 1, point_id);
+          auto itr_point = constrained_point_ids.begin();
+          auto itr_point_end = constrained_point_ids.end();
+          bool existed = false;
+          for (; itr_point != itr_point_end; ++itr_point)
           {
-            existed = true;
+            if (*itr_point == point_id)
+            {
+              existed = true;
+              break;
+            }
+          }
+          if (!existed && !tracks[point_id].empty())
+          {
+            PointConstraint point_constraint;
+            point_constraint.point_id = point_map[point_id] - 1;
+            point_constraint.mask.set(POINT_CONSTRAIN_X);
+            point_constraint.mask.set(POINT_CONSTRAIN_Y);
+            point_constraint.mask.set(POINT_CONSTRAIN_Z);
+            point_constraints.push_back(point_constraint);
+            constrained_point_ids.push_back(point_id);
             break;
           }
         }
-        if (!existed && !tracks[point_id].empty())
-        {
-          PointConstraint point_constraint;
-          point_constraint.point_id = point_map[point_id] - 1;
-          point_constraint.mask.set(POINT_CONSTRAIN_X);
-          point_constraint.mask.set(POINT_CONSTRAIN_Y);
-          point_constraint.mask.set(POINT_CONSTRAIN_Z);
-          point_constraints.push_back(point_constraint);
-          constrained_point_ids.push_back(point_id);
-          break;
-        }
-      }
-    }// for (size_t i = 0; i < number_of_full_constrained_points_; i++)
+      }// for (size_t i = 0; i < number_of_full_constrained_points_; i++)
+      vector_function.point_constraints() = point_constraints;
+    }
 
-    ImageConstraintContainer image_constraints;
-    for (size_t i = 0; i < number_of_constrained_images_; i++)
+    if (fix_mask_[FIX_IMAGES])
     {
-      while (1)
+      //生成固定影像
+      BAImageContainer ba_images(number_of_available_images);
+      auto itr_extrin = extrinsic_params_set.begin();
+      auto itr_extrin_end = extrinsic_params_set.end();
+      auto itr_camera_view = camera_views.begin();
+      for (size_t i = 0;
+           itr_extrin != itr_extrin_end;
+           ++itr_extrin, ++itr_camera_view)
       {
-        size_t image_id;
-        IntegerUniformRandomGenerator<size_t>::Generate(
-          0, camera_views.size() - 1, image_id);
-        auto itr_image = constrained_image_ids.begin();
-        auto itr_image_end = constrained_image_ids.end();
-        bool existed = false;
-        for (; itr_image != itr_image_end; ++itr_image)
+        if (!itr_camera_view->empty())
         {
-          if (*itr_image == image_id)
+          Vector3 t = -(itr_extrin->rotation() * itr_extrin->position());
+          ba_images[i][0] = itr_extrin->rotation()[0];
+          ba_images[i][1] = itr_extrin->rotation()[1];
+          ba_images[i][2] = itr_extrin->rotation()[2];
+          ba_images[i][3] = t[0];
+          ba_images[i][4] = t[1];
+          ba_images[i][5] = t[2];
+          i++;
+        }
+      }
+      vector_function.set_fix_images(ba_images);
+    }
+    else
+    {
+      //生成影像约束
+      ImageConstraintContainer image_constraints;
+      for (size_t i = 0; i < number_of_constrained_images_; i++)
+      {
+        while (1)
+        {
+          size_t image_id;
+          IntegerUniformRandomGenerator<size_t>::Generate(
+            0, camera_views.size() - 1, image_id);
+          auto itr_image = constrained_image_ids.begin();
+          auto itr_image_end = constrained_image_ids.end();
+          bool existed = false;
+          for (; itr_image != itr_image_end; ++itr_image)
           {
-            existed = true;
+            if (*itr_image == image_id)
+            {
+              existed = true;
+              break;
+            }
+          }
+          if (!existed)
+          {
+            ImageConstraint image_constraint;
+            image_constraint.image_id = image_map[image_id] - 1;
+            image_constraint.mask.set();
+            image_constraints.push_back(image_constraint);
+            constrained_image_ids.push_back(image_id);
             break;
           }
         }
-        if (!existed)
-        {
-          ImageConstraint image_constraint;
-          image_constraint.image_id = image_map[image_id] - 1;
-          image_constraint.mask.set();
-          image_constraints.push_back(image_constraint);
-          constrained_image_ids.push_back(image_id);
-          break;
-        }
-      }
-    }// for (size_t i = 0; i < number_of_constrained_images_; i++)
+      }// for (size_t i = 0; i < number_of_constrained_images_; i++)
+      vector_function.image_constraints() = image_constraints;
+    }
 
-    CameraConstraintContainer camera_constraints;
-    for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+    if (fix_mask_[FIX_CAMERAS])
     {
-      while (1)
+      //生成固定相机
+      Index intrinsic_params_per_camera =
+        vector_function.GetIntrinsicParamsSizePerCamera();
+      BACameraContainer ba_cameras(intrinsic_params_set_.size(),
+                                   BACamera(intrinsic_params_per_camera));
+      for (size_t i = 0; i < intrinsic_params_set_.size(); i++)
       {
-        size_t camera_id;
-        IntegerUniformRandomGenerator<size_t>::Generate(
-          0, intrinsic_params_set_.size() - 1, camera_id);
-        auto itr_camera = camera_constraints.begin();
-        auto itr_camera_end = camera_constraints.end();
-        bool existed = false;
-        for (; itr_camera != itr_camera_end; ++itr_camera)
+        //TODO:目前是计算所有的内参数，应根据mask选择性计算畸变和内参数
+        ba_cameras[i][0] = intrinsic_params_set_[i].k1();
+        ba_cameras[i][1] = intrinsic_params_set_[i].k2();
+        ba_cameras[i][2] = intrinsic_params_set_[i].k3();
+        ba_cameras[i][3] = intrinsic_params_set_[i].d1();
+        ba_cameras[i][4] = intrinsic_params_set_[i].d2();
+        ba_cameras[i][5] = intrinsic_params_set_[i].focal_length();
+        ba_cameras[i][6] = intrinsic_params_set_[i].skew();
+        ba_cameras[i][7] = intrinsic_params_set_[i].principal_point_x();
+        ba_cameras[i][8] = intrinsic_params_set_[i].principal_point_y();
+        ba_cameras[i][9] = intrinsic_params_set_[i].pixel_ratio();
+      }
+      vector_function.set_fix_cameras(ba_cameras);
+    }
+    else
+    {
+      //生成相机约束
+      CameraConstraintContainer camera_constraints;
+      for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+      {
+        while (1)
         {
-          if (itr_camera->camera_id == camera_id)
+          size_t camera_id;
+          IntegerUniformRandomGenerator<size_t>::Generate(
+            0, intrinsic_params_set_.size() - 1, camera_id);
+          auto itr_camera = camera_constraints.begin();
+          auto itr_camera_end = camera_constraints.end();
+          bool existed = false;
+          for (; itr_camera != itr_camera_end; ++itr_camera)
           {
-            existed = true;
+            if (itr_camera->camera_id == camera_id)
+            {
+              existed = true;
+              break;
+            }
+          }
+          if (!existed)
+          {
+            CameraConstraint camera_constraint;
+            camera_constraint.camera_id = camera_id;
+            camera_constraint.radial_mask.set();
+            camera_constraint.decentering_mask.set();
+            camera_constraint.intrinsic_mask.set();
+            //camera_constraint.radial_mask.reset();
+            //camera_constraint.decentering_mask.reset();
+            //camera_constraint.intrinsic_mask.reset();
+            //camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_SKEW);
+            //camera_constraint.intrinsic_mask.set(
+            //  INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+            camera_constraints.push_back(camera_constraint);
             break;
           }
         }
-        if (!existed)
-        {
-          CameraConstraint camera_constraint;
-          camera_constraint.camera_id = camera_id;
-          camera_constraint.radial_mask.set();
-          camera_constraint.decentering_mask.set();
-          camera_constraint.intrinsic_mask.set();
-          //camera_constraint.radial_mask.reset();
-          //camera_constraint.decentering_mask.reset();
-          //camera_constraint.intrinsic_mask.reset();
-          //camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_SKEW);
-          //camera_constraint.intrinsic_mask.set(
-          //  INTRINSIC_CONSTRAIN_PIXEL_RATIO);
-          camera_constraints.push_back(camera_constraint);
-          break;
-        }
-      }
-    }// for (size_t i = 0; i < number_of_constrained_cameras_; i++)
-    vector_function.point_constraints() = point_constraints;
-    vector_function.image_constraints() = image_constraints;
-    vector_function.camera_constraints() = camera_constraints;
+      }// for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+      vector_function.camera_constraints() = camera_constraints;
+    }
 
     return 0;
   }
@@ -486,76 +575,87 @@ private:
     Index x_size = vector_function.GetXSize();
     x.resize(x_size);
 
-    auto itr_point = points.begin();
-    auto itr_point_end = points.end();
-    auto itr_track = tracks.begin();
-    auto itr_track_end = tracks.end();
-    for (Index i = 0; itr_point != itr_point_end; ++itr_point, ++itr_track)
+    if (!fix_mask_[FIX_POINTS])
     {
-      if (!itr_track->empty())
+      auto itr_point = points.begin();
+      auto itr_point_end = points.end();
+      auto itr_track = tracks.begin();
+      auto itr_track_end = tracks.end();
+      for (Index i = 0; itr_point != itr_point_end; ++itr_point, ++itr_track)
       {
-        x.segment(i * VectorFunction::params_per_point_,
-                  VectorFunction::params_per_point_) = *itr_point;
-        ++i;
+        if (!itr_track->empty())
+        {
+          x.segment(i * VectorFunction::params_per_point_,
+                    VectorFunction::params_per_point_) = *itr_point;
+          ++i;
+        }
       }
     }
 
-    Index x_offset = vector_function.GetPointParamsSize();
-    auto itr_extrin = extrinsic_params_set.begin();
-    auto itr_extrin_end = extrinsic_params_set.end();
-    auto itr_camera_view = camera_views.begin();
-    auto itr_camera_view_end = camera_views.end();
-    for (Index i = 0;
-         itr_extrin != itr_extrin_end;
-         ++itr_extrin, ++itr_camera_view)
+    Index x_offset =
+      fix_mask_[FIX_POINTS] ? 0 : vector_function.GetPointParamsSize();
+    if (!fix_mask_[FIX_IMAGES])
     {
-      if (!itr_camera_view->empty())
+      auto itr_extrin = extrinsic_params_set.begin();
+      auto itr_extrin_end = extrinsic_params_set.end();
+      auto itr_camera_view = camera_views.begin();
+      auto itr_camera_view_end = camera_views.end();
+      for (Index i = 0;
+           itr_extrin != itr_extrin_end;
+           ++itr_extrin, ++itr_camera_view)
       {
-        Vector3 t = -(itr_extrin->rotation() * itr_extrin->position());
-        x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 0] =
-          itr_extrin->rotation()[0];
-        x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 1] =
-          itr_extrin->rotation()[1];
-        x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 2] =
-          itr_extrin->rotation()[2];
-        x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 3] =
-          t[0];
-        x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 4] =
-          t[1];
-        x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 5] =
-          t[2];
+        if (!itr_camera_view->empty())
+        {
+          Vector3 t = -(itr_extrin->rotation() * itr_extrin->position());
+          x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 0] =
+            itr_extrin->rotation()[0];
+          x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 1] =
+            itr_extrin->rotation()[1];
+          x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 2] =
+            itr_extrin->rotation()[2];
+          x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 3] =
+            t[0];
+          x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 4] =
+            t[1];
+          x[x_offset + i * VectorFunction::extrinsic_params_per_image_ + 5] =
+            t[2];
 
-        i++;
+          i++;
+        }
       }
     }
 
-    x_offset += vector_function.GetExtrinsicParamsSize();
-    Index intrinsic_params_size_per_camera =
-      vector_function.GetIntrinsicParamsSizePerCamera();
-    for (Index i = 0; i < Index(intrinsic_params_set_.size()); i++)
+    x_offset +=
+      fix_mask_[FIX_IMAGES] ? 0 : vector_function.GetExtrinsicParamsSize();
+    if (!fix_mask_[FIX_CAMERAS])
     {
-      const IntrinsicParams& intrinsic_params = intrinsic_params_set_[i];
-      //TODO:目前是计算所有的内参数，应根据mask选择性计算畸变和内参数
-      x[x_offset + i * intrinsic_params_size_per_camera + 0] =
-        intrinsic_params.k1();
-      x[x_offset + i * intrinsic_params_size_per_camera + 1] =
-        intrinsic_params.k2();
-      x[x_offset + i * intrinsic_params_size_per_camera + 2] =
-        intrinsic_params.k3();
-      x[x_offset + i * intrinsic_params_size_per_camera + 3] =
-        intrinsic_params.d1();
-      x[x_offset + i * intrinsic_params_size_per_camera + 4] =
-        intrinsic_params.d2();
-      x[x_offset + i * intrinsic_params_size_per_camera + 5] =
-        intrinsic_params.focal_length();
-      x[x_offset + i * intrinsic_params_size_per_camera + 6] =
-        intrinsic_params.skew();
-      x[x_offset + i * intrinsic_params_size_per_camera + 7] =
-        intrinsic_params.principal_point_x();
-      x[x_offset + i * intrinsic_params_size_per_camera + 8] =
-        intrinsic_params.principal_point_y();
-      x[x_offset + i * intrinsic_params_size_per_camera + 9] =
-        intrinsic_params.pixel_ratio();
+      Index intrinsic_params_size_per_camera =
+        vector_function.GetIntrinsicParamsSizePerCamera();
+      for (Index i = 0; i < Index(intrinsic_params_set_.size()); i++)
+      {
+        const IntrinsicParams& intrinsic_params = intrinsic_params_set_[i];
+        //TODO:目前是计算所有的内参数，应根据mask选择性计算畸变和内参数
+        x[x_offset + i * intrinsic_params_size_per_camera + 0] =
+          intrinsic_params.k1();
+        x[x_offset + i * intrinsic_params_size_per_camera + 1] =
+          intrinsic_params.k2();
+        x[x_offset + i * intrinsic_params_size_per_camera + 2] =
+          intrinsic_params.k3();
+        x[x_offset + i * intrinsic_params_size_per_camera + 3] =
+          intrinsic_params.d1();
+        x[x_offset + i * intrinsic_params_size_per_camera + 4] =
+          intrinsic_params.d2();
+        x[x_offset + i * intrinsic_params_size_per_camera + 5] =
+          intrinsic_params.focal_length();
+        x[x_offset + i * intrinsic_params_size_per_camera + 6] =
+          intrinsic_params.skew();
+        x[x_offset + i * intrinsic_params_size_per_camera + 7] =
+          intrinsic_params.principal_point_x();
+        x[x_offset + i * intrinsic_params_size_per_camera + 8] =
+          intrinsic_params.principal_point_y();
+        x[x_offset + i * intrinsic_params_size_per_camera + 9] =
+          intrinsic_params.pixel_ratio();
+      }
     }
 
     return 0;
@@ -589,118 +689,129 @@ private:
     }
 
     Index y_offset = vector_function.GetYKeysSize();
-    auto itr_point_id = constrained_point_ids.begin();
-    auto itr_point_id_end = constrained_point_ids.end();
-    for (size_t i = 0; itr_point_id != itr_point_id_end; ++itr_point_id, ++i)
-    {
-      const PointConstraint& point_constraint =
-        vector_function.point_constraints()[i];
-      if (point_constraint.mask[POINT_CONSTRAIN_X])
-      {
-        y[y_offset] = points[*itr_point_id][0];
-        y_offset++;
-      }
-      if (point_constraint.mask[POINT_CONSTRAIN_Y])
-      {
-        y[y_offset] = points[*itr_point_id][1];
-        y_offset++;
-      }
-      if (point_constraint.mask[POINT_CONSTRAIN_Z])
-      {
-        y[y_offset] = points[*itr_point_id][2];
-        y_offset++;
-      }
-    }//for (size_t i = 0; itr_point_id != itr_point_id_end; ++itr_point_id, ++i)
 
-    auto itr_image_id = constrained_image_ids.begin();
-    auto itr_image_id_end = constrained_image_ids.end();
-    for (size_t i = 0; itr_image_id != itr_image_id_end; ++itr_image_id, ++i)
+    if (!fix_mask_[FIX_POINTS])
     {
-      const ImageConstraint& image_constraint =
-        vector_function.image_constraints()[i];
-      const ExtrinsicParams& extrinsic_params =
-        extrinsic_params_set[*itr_image_id];
-      Vector3 t = -(extrinsic_params.rotation() * extrinsic_params.position());
-      if (image_constraint.mask[IMAGE_CONSTRAIN_ROTATION])
+      auto itr_point_id = constrained_point_ids.begin();
+      auto itr_point_id_end = constrained_point_ids.end();
+      for (size_t i = 0; itr_point_id != itr_point_id_end; ++itr_point_id, ++i)
       {
-        y[y_offset + 0] = extrinsic_params.rotation()[0];
-        y[y_offset + 1] = extrinsic_params.rotation()[1];
-        y[y_offset + 2] = extrinsic_params.rotation()[2];
-        y_offset += 3;
+        const PointConstraint& point_constraint =
+          vector_function.point_constraints()[i];
+        if (point_constraint.mask[POINT_CONSTRAIN_X])
+        {
+          y[y_offset] = points[*itr_point_id][0];
+          y_offset++;
+        }
+        if (point_constraint.mask[POINT_CONSTRAIN_Y])
+        {
+          y[y_offset] = points[*itr_point_id][1];
+          y_offset++;
+        }
+        if (point_constraint.mask[POINT_CONSTRAIN_Z])
+        {
+          y[y_offset] = points[*itr_point_id][2];
+          y_offset++;
+        }
       }
-      if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_X])
-      {
-        y[y_offset] = t[0];
-        y_offset++;
-      }
-      if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_Y])
-      {
-        y[y_offset] = t[1];
-        y_offset++;
-      }
-      if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_Z])
-      {
-        y[y_offset] = t[2];
-        y_offset++;
-      }
-    }//for (size_t i = 0; itr_image_id != itr_image_id_end; ++itr_image_id, ++i)
+    }
 
-    for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+    if (!fix_mask_[FIX_IMAGES])
     {
-      const CameraConstraint& camera_constraint =
-        vector_function.camera_constraints()[i];
-      size_t camera_id = camera_constraint.camera_id;
-      if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K1])
+      auto itr_image_id = constrained_image_ids.begin();
+      auto itr_image_id_end = constrained_image_ids.end();
+      for (size_t i = 0; itr_image_id != itr_image_id_end; ++itr_image_id, ++i)
       {
-        y[y_offset] = intrinsic_params_set_[camera_id].k1();
-        y_offset++;
+        const ImageConstraint& image_constraint =
+          vector_function.image_constraints()[i];
+        const ExtrinsicParams& extrinsic_params =
+          extrinsic_params_set[*itr_image_id];
+        Vector3 t =
+          -(extrinsic_params.rotation() * extrinsic_params.position());
+        if (image_constraint.mask[IMAGE_CONSTRAIN_ROTATION])
+        {
+          y[y_offset + 0] = extrinsic_params.rotation()[0];
+          y[y_offset + 1] = extrinsic_params.rotation()[1];
+          y[y_offset + 2] = extrinsic_params.rotation()[2];
+          y_offset += 3;
+        }
+        if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_X])
+        {
+          y[y_offset] = t[0];
+          y_offset++;
+        }
+        if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_Y])
+        {
+          y[y_offset] = t[1];
+          y_offset++;
+        }
+        if (image_constraint.mask[IMAGE_CONSTRAIN_POSITION_Z])
+        {
+          y[y_offset] = t[2];
+          y_offset++;
+        }
       }
-      if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K2])
+    }
+
+    if (!fix_mask_[FIX_CAMERAS])
+    {
+      for (size_t i = 0; i < number_of_constrained_cameras_; i++)
       {
-        y[y_offset] = intrinsic_params_set_[camera_id].k2();
-        y_offset++;
-      }
-      if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K3])
-      {
-        y[y_offset] = intrinsic_params_set_[camera_id].k3();
-        y_offset++;
-      }
-      if (camera_constraint.decentering_mask[DECENTERING_CONSTRAIN_D1])
-      {
-        y[y_offset] = intrinsic_params_set_[camera_id].d1();
-        y_offset++;
-      }
-      if (camera_constraint.decentering_mask[DECENTERING_CONSTRAIN_D2])
-      {
-        y[y_offset] = intrinsic_params_set_[camera_id].d2();
-        y_offset++;
-      }
-      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_FOCAL_LENGTH])
-      {
-        y[y_offset] = intrinsic_params_set_[camera_id].focal_length();
-        y_offset++;
-      }
-      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_SKEW])
-      {
-        y[y_offset] = intrinsic_params_set_[camera_id].skew();
-        y_offset++;
-      }
-      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PRINCIPAL_X])
-      {
-        y[y_offset] = intrinsic_params_set_[camera_id].principal_point_x();
-        y_offset++;
-      }
-      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PRINCIPAL_Y])
-      {
-        y[y_offset] = intrinsic_params_set_[camera_id].principal_point_y();
-        y_offset++;
-      }
-      if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PIXEL_RATIO])
-      {
-        y[y_offset] = intrinsic_params_set_[camera_id].pixel_ratio();
-        y_offset++;
-      }
-    }// for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+        const CameraConstraint& camera_constraint =
+          vector_function.camera_constraints()[i];
+        size_t camera_id = camera_constraint.camera_id;
+        if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K1])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].k1();
+          y_offset++;
+        }
+        if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K2])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].k2();
+          y_offset++;
+        }
+        if (camera_constraint.radial_mask[RADIAL_CONSTRAIN_K3])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].k3();
+          y_offset++;
+        }
+        if (camera_constraint.decentering_mask[DECENTERING_CONSTRAIN_D1])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].d1();
+          y_offset++;
+        }
+        if (camera_constraint.decentering_mask[DECENTERING_CONSTRAIN_D2])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].d2();
+          y_offset++;
+        }
+        if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_FOCAL_LENGTH])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].focal_length();
+          y_offset++;
+        }
+        if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_SKEW])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].skew();
+          y_offset++;
+        }
+        if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PRINCIPAL_X])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].principal_point_x();
+          y_offset++;
+        }
+        if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PRINCIPAL_Y])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].principal_point_y();
+          y_offset++;
+        }
+        if (camera_constraint.intrinsic_mask[INTRINSIC_CONSTRAIN_PIXEL_RATIO])
+        {
+          y[y_offset] = intrinsic_params_set_[camera_id].pixel_ratio();
+          y_offset++;
+        }
+      }// for (size_t i = 0; i < number_of_constrained_cameras_; i++)
+    }
 
     return 0;
   }
@@ -714,6 +825,7 @@ private:
   size_t number_of_constrained_images_;
   size_t number_of_constrained_cameras_;
   IntrinsicParamsContainer intrinsic_params_set_;
+  FixMask fix_mask_;
 };
 
 }
