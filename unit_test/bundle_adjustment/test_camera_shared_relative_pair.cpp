@@ -68,6 +68,10 @@ public:
   typedef typename VectorFunction::FeatureMap FeatureMap;
   typedef typename VectorFunction::FeatureMapContainer FeatureMapContainer;
   typedef typename VectorFunction::ImageCameraMap ImageCameraMap;
+  typedef typename VectorFunction::Image BAImage;
+  typedef typename VectorFunction::ImageContainer BAImageContainer;
+  typedef typename VectorFunction::Camera BACamera;
+  typedef typename VectorFunction::CameraContainer BACameraContainer;
   typedef hs::sfm::ba::CameraSharedLevenbergMarquardtOptimizor<VectorFunction>
           Optimizor;
   typedef typename Optimizor::YCovarianceInverse YCovarianceInverse;
@@ -100,7 +104,7 @@ public:
                                image_height,
                                pixel_size,
                                intrinsic_params_identity,
-                               is_uniform_camera_ ?
+                               is_uniform_camera ?
                                intrinsic_params_identity :
                                intrinsic_params_relative,
                                lateral_overlap_ratio,
@@ -132,6 +136,28 @@ public:
       return -1;
     }
 
+    const IntrinsicParams& intrinsic_params_identity_true =
+      relative_pair_generator_.intrinsic_params_identity();
+    const IntrinsicParams& intrinsic_params_relative_true =
+      is_uniform_camera_ ?
+      relative_pair_generator_.intrinsic_params_identity() :
+      relative_pair_generator_.intrinsic_params_relative();
+
+    IntrinsicParams intrinsic_params_identity_essential;
+    intrinsic_params_identity_essential.set_focal_length(
+      intrinsic_params_identity_true.focal_length() + 10);
+    IntrinsicParams intrinsic_params_relative_essential;
+    if (is_uniform_camera_)
+    {
+      intrinsic_params_relative_essential.set_focal_length(
+        intrinsic_params_identity_true.focal_length() + 10);
+    }
+    else
+    {
+      intrinsic_params_relative_essential.set_focal_length(
+        intrinsic_params_relative_true.focal_length() + 10);
+    }
+
     KeysetContainer keysets_noised;
     if (GenerateNoisedKeysets(keysets, keysets_noised) != 0)
     {
@@ -139,7 +165,10 @@ public:
     }
 
     HKeyPairContainer hkey_pairs;
-    if (GenerateHomogenerousKeyPairs(keysets_noised, hkey_pairs) != 0)
+    if (GenerateHomogenerousKeyPairs(keysets_noised,
+                                     intrinsic_params_identity_essential,
+                                     intrinsic_params_relative_essential,
+                                     hkey_pairs) != 0)
     {
       return -1;
     }
@@ -162,17 +191,14 @@ public:
     Vector3 zero = Vector3::Zero();
     extrinsic_params_identity_essential.rotation() = ortho_matrix_identity;
     extrinsic_params_identity_essential.position() = zero;
-    const IntrinsicParams& intrinsic_params_identity_essential =
-      relative_pair_generator_.intrinsic_params_identity();
-    const IntrinsicParams& intrinsic_params_relative_essential =
-      is_uniform_camera_ ?
-      relative_pair_generator_.intrinsic_params_identity() :
-      relative_pair_generator_.intrinsic_params_relative();
+
     if (TestError(points_essential, points_abs,
                   intrinsic_params_identity_essential,
                   intrinsic_params_relative_essential,
                   extrinsic_params_identity_essential,
                   extrinsic_params_relative_essential,
+                  intrinsic_params_identity_true,
+                  intrinsic_params_relative_true,
                   extrinsic_params_identity_true,
                   extrinsic_params_relative_true,
                   keysets_noised,
@@ -204,36 +230,21 @@ public:
       points_essential[i] = rotation_extra * point;
     }
 
-    //extrinsic_params_identity_essential.rotation() =
-    //  extrinsic_params_identity_essential.rotation() *
-    //  rotation_similar.Inverse();
-    //extrinsic_params_identity_essential.position() =
-    //  scale_similar * (rotation_similar *
-    //                   extrinsic_params_identity_essential.position()) +
-    //  translate_similar;
-    //extrinsic_params_relative_essential.rotation() =
-    //  extrinsic_params_relative_essential.rotation() *
-    //  rotation_similar.Inverse();
-    //extrinsic_params_relative_essential.position() =
-    //  scale_similar * (rotation_similar *
-    //                   extrinsic_params_relative_essential.position()) +
-    //  translate_similar;
-
-    //for (size_t i = 0; i < points_essential.size(); i++)
-    //{
-    //  Point3D& point = points_essential[i];
-    //  point = scale_similar * (rotation_similar * point) + translate_similar;
-    //}
-
     ExtrinsicParams extrinsic_params_identity_bundle,
                     extrinsic_params_relative_bundle;
     IntrinsicParams intrinsic_params_identity_bundle,
                     intrinsic_params_relative_bundle;
     Point3DContainer points_bundle;
+    hs::sfm::ba::FixMask fix_mask;
+    fix_mask.set(hs::sfm::ba::FIX_POINTS);
+    fix_mask.set(hs::sfm::ba::FIX_IMAGES);
     if (BundleAdjustment(extrinsic_params_identity_essential,
                          extrinsic_params_relative_essential,
+                         intrinsic_params_identity_essential,
+                         intrinsic_params_relative_essential,
                          points_essential,
                          keysets_noised,
+                         fix_mask,
                          extrinsic_params_identity_bundle,
                          extrinsic_params_relative_bundle,
                          intrinsic_params_identity_bundle,
@@ -247,6 +258,8 @@ public:
                   intrinsic_params_relative_bundle,
                   extrinsic_params_identity_bundle,
                   extrinsic_params_relative_bundle,
+                  intrinsic_params_identity_true,
+                  intrinsic_params_relative_true,
                   extrinsic_params_identity_true,
                   extrinsic_params_relative_true,
                   keysets_noised,
@@ -403,8 +416,11 @@ private:
     return 0;
   }
 
-  Err GenerateHomogenerousKeyPairs(const KeysetContainer& keysets,
-                                   HKeyPairContainer& hkey_pairs) const
+  Err GenerateHomogenerousKeyPairs(
+    const KeysetContainer& keysets,
+    const IntrinsicParams& intrinsic_params_identity,
+    const IntrinsicParams& intrinsic_params_relative,
+    HKeyPairContainer& hkey_pairs) const
   {
     if (keysets.size() != 2)
     {
@@ -416,13 +432,8 @@ private:
       return -1;
     }
 
-    const IntrinsicParams& intrinsic_params_0 =
-      relative_pair_generator_.intrinsic_params_identity();
-    const IntrinsicParams& intrinsic_params_1 =
-      relative_pair_generator_.intrinsic_params_relative();
-
-    KMatrix K0_inverse = intrinsic_params_0.GetKMatrix().inverse();
-    KMatrix K1_inverse = intrinsic_params_1.GetKMatrix().inverse();
+    KMatrix K0_inverse = intrinsic_params_identity.GetKMatrix().inverse();
+    KMatrix K1_inverse = intrinsic_params_relative.GetKMatrix().inverse();
 
     hkey_pairs.resize(number_of_keys);
     for (size_t i = 0; i < number_of_keys; i++)
@@ -470,6 +481,8 @@ private:
                 const IntrinsicParams& intrinsic_params_relative_estimate,
                 const ExtrinsicParams& extrinsic_params_identity_estimate,
                 const ExtrinsicParams& extrinsic_params_relative_estimate,
+                const IntrinsicParams& intrinsic_params_identity_true,
+                const IntrinsicParams& intrinsic_params_relative_true,
                 const ExtrinsicParams& extrinsic_params_identity_true,
                 const ExtrinsicParams& extrinsic_params_relative_true,
                 const KeysetContainer& keysets,
@@ -516,8 +529,9 @@ private:
     Scalar point_height_mean = Scalar(0);
     for (size_t i = 0; i < points_true.size(); i++)
     {
-      Point3D point_estimate =
-        scale_similar * (rotation_similar * points_estimate[i]) +
+      Point3D point_estimate = points_estimate[i];
+      point_estimate =
+        scale_similar * (rotation_similar * point_estimate) +
         translate_similar;
       Point3D diff = points_true[i] - point_estimate;
       point_planar_mean += diff.segment(0, 2).norm();
@@ -596,19 +610,108 @@ private:
     std::cout<<"position_diff_identity:\n"<<position_diff_identity<<"\n";
     std::cout<<"position_diff_relative:\n"<<position_diff_relative<<"\n";
 
+    std::cout<<"k1_identity_true:\n"
+             <<intrinsic_params_identity_true.k1()<<"\n";
+    std::cout<<"k1_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.k1()<<"\n";
+    std::cout<<"k2_identity_true:\n"
+             <<intrinsic_params_identity_true.k2()<<"\n";
+    std::cout<<"k2_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.k2()<<"\n";
+    std::cout<<"k3_identity_true:\n"
+             <<intrinsic_params_identity_true.k3()<<"\n";
+    std::cout<<"k3_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.k3()<<"\n";
+    std::cout<<"d1_identity_true:\n"
+             <<intrinsic_params_identity_true.d1()<<"\n";
+    std::cout<<"d1_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.d1()<<"\n";
+    std::cout<<"d2_identity_true:\n"
+             <<intrinsic_params_identity_true.d2()<<"\n";
+    std::cout<<"d2_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.d2()<<"\n";
+    std::cout<<"focal_length_identity_true:\n"
+             <<intrinsic_params_identity_true.focal_length()<<"\n";
+    std::cout<<"focal_length_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.focal_length()<<"\n";
+    std::cout<<"skew_identity_true:\n"
+             <<intrinsic_params_identity_true.skew()<<"\n";
+    std::cout<<"skew_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.skew()<<"\n";
+    std::cout<<"principal_point_x_identity_true:\n"
+             <<intrinsic_params_identity_true.principal_point_x()<<"\n";
+    std::cout<<"principal_point_x_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.principal_point_x()<<"\n";
+    std::cout<<"principal_point_y_identity_true:\n"
+             <<intrinsic_params_identity_true.principal_point_y()<<"\n";
+    std::cout<<"principal_point_y_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.principal_point_y()<<"\n";
+    std::cout<<"pixel_ratio_identity_true:\n"
+             <<intrinsic_params_identity_true.pixel_ratio()<<"\n";
+    std::cout<<"pixel_ratio_identity_estimate:\n"
+             <<intrinsic_params_identity_estimate.pixel_ratio()<<"\n";
+
+    if (!is_uniform_camera_)
+    {
+      std::cout<<"k1_relative_true:\n"
+               <<intrinsic_params_relative_true.k1()<<"\n";
+      std::cout<<"k1_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.k1()<<"\n";
+      std::cout<<"k2_relative_true:\n"
+               <<intrinsic_params_relative_true.k2()<<"\n";
+      std::cout<<"k2_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.k2()<<"\n";
+      std::cout<<"k3_relative_true:\n"
+               <<intrinsic_params_relative_true.k3()<<"\n";
+      std::cout<<"k3_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.k3()<<"\n";
+      std::cout<<"d1_relative_true:\n"
+               <<intrinsic_params_relative_true.d1()<<"\n";
+      std::cout<<"d1_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.d1()<<"\n";
+      std::cout<<"d2_relative_true:\n"
+               <<intrinsic_params_relative_true.d2()<<"\n";
+      std::cout<<"d2_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.d2()<<"\n";
+      std::cout<<"focal_length_relative_true:\n"
+               <<intrinsic_params_relative_true.focal_length()<<"\n";
+      std::cout<<"focal_length_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.focal_length()<<"\n";
+      std::cout<<"skew_relative_true:\n"
+               <<intrinsic_params_relative_true.skew()<<"\n";
+      std::cout<<"skew_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.skew()<<"\n";
+      std::cout<<"principal_point_x_relative_true:\n"
+               <<intrinsic_params_relative_true.principal_point_x()<<"\n";
+      std::cout<<"principal_point_x_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.principal_point_x()<<"\n";
+      std::cout<<"principal_point_y_relative_true:\n"
+               <<intrinsic_params_relative_true.principal_point_y()<<"\n";
+      std::cout<<"principal_point_y_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.principal_point_y()<<"\n";
+      std::cout<<"pixel_ratio_relative_true:\n"
+               <<intrinsic_params_relative_true.pixel_ratio()<<"\n";
+      std::cout<<"pixel_ratio_relative_estimate:\n"
+               <<intrinsic_params_relative_estimate.pixel_ratio()<<"\n";
+    }
+
     return 0;
   }
 
   Err BundleAdjustment(const ExtrinsicParams& extrinsic_params_identity_initial,
                        const ExtrinsicParams& extrinsic_params_relative_initial,
+                       const IntrinsicParams& intrinsic_params_identity_initial,
+                       const IntrinsicParams& intrinsic_params_relative_initial,
                        const Point3DContainer& points_initial,
                        const KeysetContainer& keysets,
+                       const hs::sfm::ba::FixMask& fix_mask,
                        ExtrinsicParams& extrinsic_params_identity_bundle,
                        ExtrinsicParams& extrinsic_params_relative_bundle,
                        IntrinsicParams& intrinsic_params_identity_bundle,
                        IntrinsicParams& intrinsic_params_relative_bundle,
                        Point3DContainer& points_bundle) const
   {
+    using namespace hs::sfm::ba;
     size_t number_of_points = points_initial.size();
     size_t number_of_keys = number_of_points * 2;
     if (keysets.size() != 2 ||
@@ -633,158 +736,130 @@ private:
     image_camera_map.push_back(is_uniform_camera_ ? 0 : 1);
     vector_function.set_image_camera_map(image_camera_map);
     vector_function.intrinsic_computations_mask().set();
-    vector_function.set_fix_points(points_initial);
 
-    hs::sfm::ba::CameraConstraint camera_constraint_identity;
-    camera_constraint_identity.camera_id = 0;
-    camera_constraint_identity.intrinsic_mask.set(
-      hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
-    camera_constraint_identity.intrinsic_mask.set(
-      hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
-    vector_function.camera_constraints().push_back(camera_constraint_identity);
-    if (!is_uniform_camera_)
+    if (fix_mask[FIX_POINTS])
     {
-      hs::sfm::ba::CameraConstraint camera_constraint_relative;
-      camera_constraint_relative.camera_id = 1;
-      camera_constraint_relative.intrinsic_mask.set(
-        hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
-      camera_constraint_relative.intrinsic_mask.set(
-        hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
-      vector_function.camera_constraints().push_back(
-        camera_constraint_relative);
+      vector_function.set_fix_points(points_initial);
     }
 
-    Index x_size = vector_function.GetXSize();
-    Index y_size = vector_function.GetYSize();
-    XVector x_initial(x_size);
-    YVector y_initial(y_size);
-    //auto itr_point = points_initial.begin();
-    //auto itr_point_end = points_initial.end();
-    //for (Index i = 0; itr_point != itr_point_end; ++itr_point, i++)
-    //{
-    //  x_initial.segment(i * VectorFunction::params_per_point_,
-    //                    VectorFunction::params_per_point_) = *itr_point;
-    //}
-    Index x_offset = /*vector_function.GetPointParamsSize()*/0;
     Vector3 t_identity = extrinsic_params_identity_initial.rotation() *
                          extrinsic_params_identity_initial.position();
     t_identity *= Scalar(-1);
     Vector3 t_relative = extrinsic_params_relative_initial.rotation() *
                          extrinsic_params_relative_initial.position();
     t_relative *= Scalar(-1);
+    BAImageContainer ba_images(2);
+    ba_images[0][0] = extrinsic_params_identity_initial.rotation()[0];
+    ba_images[0][1] = extrinsic_params_identity_initial.rotation()[1];
+    ba_images[0][2] = extrinsic_params_identity_initial.rotation()[2];
+    ba_images[0][3] = t_identity[0];
+    ba_images[0][4] = t_identity[1];
+    ba_images[0][5] = t_identity[2];
+    ba_images[1][0] = extrinsic_params_relative_initial.rotation()[0];
+    ba_images[1][1] = extrinsic_params_relative_initial.rotation()[1];
+    ba_images[1][2] = extrinsic_params_relative_initial.rotation()[2];
+    ba_images[1][3] = t_relative[0];
+    ba_images[1][4] = t_relative[1];
+    ba_images[1][5] = t_relative[2];
 
-    x_initial[x_offset + 0] = extrinsic_params_identity_initial.rotation()[0];
-    x_initial[x_offset + 1] = extrinsic_params_identity_initial.rotation()[1];
-    x_initial[x_offset + 2] = extrinsic_params_identity_initial.rotation()[2];
-    x_initial[x_offset + 3] = t_identity[0];
-    x_initial[x_offset + 4] = t_identity[1];
-    x_initial[x_offset + 5] = t_identity[2];
-    x_initial[x_offset + 6] = extrinsic_params_relative_initial.rotation()[0];
-    x_initial[x_offset + 7] = extrinsic_params_relative_initial.rotation()[1];
-    x_initial[x_offset + 8] = extrinsic_params_relative_initial.rotation()[2];
-    x_initial[x_offset + 9] = t_relative[0];
-    x_initial[x_offset + 10] = t_relative[1];
-    x_initial[x_offset + 11] = t_relative[2];
+    if (fix_mask[FIX_IMAGES])
+    {
+      vector_function.set_fix_images(ba_images);
+    }
 
-    x_offset += vector_function.GetExtrinsicParamsSize();
-    const IntrinsicParams& intrinsic_params_identity =
-      relative_pair_generator_.intrinsic_params_identity();
-    x_initial[x_offset + 0] = Scalar(0);
-    x_initial[x_offset + 1] = Scalar(0);
-    x_initial[x_offset + 2] = Scalar(0);
-    x_initial[x_offset + 3] = Scalar(0);
-    x_initial[x_offset + 4] = Scalar(0);
-    x_initial[x_offset + 5] = intrinsic_params_identity.focal_length();
-    x_initial[x_offset + 6] = Scalar(0);
-    x_initial[x_offset + 7] = Scalar(0);
-    x_initial[x_offset + 8] = Scalar(0);
-    x_initial[x_offset + 9] = Scalar(1);
-    //Scalar k1_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.1), k1_noise);
-    //Scalar k2_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.1), k2_noise);
-    //Scalar k3_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.1), k3_noise);
-    //Scalar d1_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.1), d1_noise);
-    //Scalar d2_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.1), d2_noise);
-    //Scalar focal_length_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.001), focal_length_noise);
-    //Scalar skew_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.1), skew_noise);
-    //Scalar principal_point_x_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.1), principal_point_x_noise);
-    //Scalar principal_point_y_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.1), principal_point_y_noise);
-    //Scalar pixel_ratio_noise;
-    //hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
-    //  Scalar(1), Scalar(0.001), pixel_ratio_noise);
-    //x_initial[x_offset + 0] = intrinsic_params_identity.k1() *
-    //                          k1_noise;
-    //x_initial[x_offset + 1] = intrinsic_params_identity.k2() *
-    //                          k2_noise;
-    //x_initial[x_offset + 2] = intrinsic_params_identity.k3() *
-    //                          k3_noise;
-    //x_initial[x_offset + 3] = intrinsic_params_identity.d1() *
-    //                          d1_noise;
-    //x_initial[x_offset + 4] = intrinsic_params_identity.d2() *
-    //                          d2_noise;
-    //x_initial[x_offset + 5] = intrinsic_params_identity.focal_length() *
-    //                          focal_length_noise;
-    //x_initial[x_offset + 6] = intrinsic_params_identity.skew() *
-    //                          skew_noise;
-    //x_initial[x_offset + 7] = intrinsic_params_identity.principal_point_x() *
-    //                          principal_point_x_noise;
-    //x_initial[x_offset + 8] = intrinsic_params_identity.principal_point_y() *
-    //                          principal_point_y_noise;
-    //x_initial[x_offset + 9] = intrinsic_params_identity.pixel_ratio() *
-    //                          pixel_ratio_noise;
+    BACameraContainer ba_cameras(is_uniform_camera_ ? 1 : 2);
+    Index camera_params_size =
+      vector_function.GetIntrinsicParamsSizePerCamera();
+    ba_cameras[0].resize(camera_params_size);
+    ba_cameras[0][0] = intrinsic_params_identity_initial.k1();
+    ba_cameras[0][1] = intrinsic_params_identity_initial.k2();
+    ba_cameras[0][2] = intrinsic_params_identity_initial.k3();
+    ba_cameras[0][3] = intrinsic_params_identity_initial.d1();
+    ba_cameras[0][4] = intrinsic_params_identity_initial.d2();
+    ba_cameras[0][5] = intrinsic_params_identity_initial.focal_length();
+    ba_cameras[0][6] = intrinsic_params_identity_initial.skew();
+    ba_cameras[0][7] = intrinsic_params_identity_initial.principal_point_x();
+    ba_cameras[0][8] = intrinsic_params_identity_initial.principal_point_y();
+    ba_cameras[0][9] = intrinsic_params_identity_initial.pixel_ratio();
     if (!is_uniform_camera_)
     {
-      const IntrinsicParams& intrinsic_params_relative =
-        relative_pair_generator_.intrinsic_params_relative();
-      x_initial[x_offset + 10] = Scalar(0);
-      x_initial[x_offset + 11] = Scalar(0);
-      x_initial[x_offset + 12] = Scalar(0);
-      x_initial[x_offset + 13] = Scalar(0);
-      x_initial[x_offset + 14] = Scalar(0);
-      x_initial[x_offset + 15] = intrinsic_params_relative.focal_length();
-      x_initial[x_offset + 16] = Scalar(0);
-      x_initial[x_offset + 17] = Scalar(0);
-      x_initial[x_offset + 18] = Scalar(0);
-      x_initial[x_offset + 19] = Scalar(1);
-      //x_initial[x_offset + 10] = intrinsic_params_relative.k1() *
-      //                           k1_noise;
-      //x_initial[x_offset + 11] = intrinsic_params_relative.k2() *
-      //                           k2_noise;
-      //x_initial[x_offset + 12] = intrinsic_params_relative.k3() *
-      //                           k3_noise;
-      //x_initial[x_offset + 13] = intrinsic_params_relative.d1() *
-      //                           d1_noise;
-      //x_initial[x_offset + 14] = intrinsic_params_relative.d2() *
-      //                           d2_noise;
-      //x_initial[x_offset + 15] = intrinsic_params_relative.focal_length() *
-      //                           focal_length_noise;
-      //x_initial[x_offset + 16] = intrinsic_params_relative.skew() *
-      //                           skew_noise;
-      //x_initial[x_offset + 17] =
-      //  intrinsic_params_relative.principal_point_x() *
-      //  principal_point_x_noise;
-      //x_initial[x_offset + 18] =
-      //  intrinsic_params_relative.principal_point_y() *
-      //  principal_point_y_noise;
-      //x_initial[x_offset + 19] = intrinsic_params_relative.pixel_ratio() *
-      //                           pixel_ratio_noise;
+      ba_cameras[1].resize(camera_params_size);
+      ba_cameras[1][0] = intrinsic_params_relative_initial.k1();
+      ba_cameras[1][1] = intrinsic_params_relative_initial.k2();
+      ba_cameras[1][2] = intrinsic_params_relative_initial.k3();
+      ba_cameras[1][3] = intrinsic_params_relative_initial.d1();
+      ba_cameras[1][4] = intrinsic_params_relative_initial.d2();
+      ba_cameras[1][5] = intrinsic_params_relative_initial.focal_length();
+      ba_cameras[1][6] = intrinsic_params_relative_initial.skew();
+      ba_cameras[1][7] = intrinsic_params_relative_initial.principal_point_x();
+      ba_cameras[1][8] = intrinsic_params_relative_initial.principal_point_y();
+      ba_cameras[1][9] = intrinsic_params_relative_initial.pixel_ratio();
+    }
+
+    if (fix_mask[FIX_CAMERAS])
+    {
+      vector_function.set_fix_cameras(ba_cameras);
+    }
+    else
+    {
+      hs::sfm::ba::CameraConstraint camera_constraint_identity;
+      camera_constraint_identity.camera_id = 0;
+      camera_constraint_identity.intrinsic_mask.set(
+        hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
+      camera_constraint_identity.intrinsic_mask.set(
+        hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+      vector_function.camera_constraints().push_back(
+        camera_constraint_identity);
+      if (!is_uniform_camera_)
+      {
+        hs::sfm::ba::CameraConstraint camera_constraint_relative;
+        camera_constraint_relative.camera_id = 1;
+        camera_constraint_relative.intrinsic_mask.set(
+          hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
+        camera_constraint_relative.intrinsic_mask.set(
+          hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+        vector_function.camera_constraints().push_back(
+          camera_constraint_relative);
+      }
+    }
+
+    Index x_size = vector_function.GetXSize();
+    Index y_size = vector_function.GetYSize();
+    XVector x_initial(x_size);
+    YVector y_initial(y_size);
+
+    Index x_offset = 0;
+    if (!fix_mask[FIX_POINTS])
+    {
+      auto itr_point = points_initial.begin();
+      auto itr_point_end = points_initial.end();
+      for (Index i = 0; itr_point != itr_point_end; ++itr_point, i++)
+      {
+        x_initial.segment(i * VectorFunction::params_per_point_,
+                          VectorFunction::params_per_point_) = *itr_point;
+      }
+      Index x_offset = vector_function.GetPointParamsSize();
+    }
+
+    if (!fix_mask[FIX_IMAGES])
+    {
+      x_initial.segment(x_offset, VectorFunction::extrinsic_params_per_image_) =
+        ba_images[0];
+      x_initial.segment(x_offset +
+                        VectorFunction::extrinsic_params_per_image_,
+                        VectorFunction::extrinsic_params_per_image_) =
+        ba_images[1];
+      x_offset += vector_function.GetExtrinsicParamsSize();
+    }
+
+    if (!fix_mask[FIX_CAMERAS])
+    {
+      x_initial.segment(x_offset, camera_params_size) = ba_cameras[0];
+      if (!is_uniform_camera_)
+      {
+        x_initial.segment(x_offset + camera_params_size, camera_params_size) =
+          ba_cameras[1];
+      }
     }
 
     for (Index i = 0; i < Index(number_of_points); i++)
@@ -796,29 +871,32 @@ private:
                         VectorFunction::params_per_key_) = keysets[1][i];
     }
 
-    Index key_params_size = Index(number_of_points * 4);
-    y_initial[key_params_size + 0] = Scalar(0);
-    y_initial[key_params_size + 1] = Scalar(0);
-    if (!is_uniform_camera_)
-    {
-      y_initial[key_params_size + 2] = Scalar(0);
-      y_initial[key_params_size + 3] = Scalar(0);
-    }
-
-    Scalar skew_stddev = Scalar(1e-3);
-    Scalar pixel_ratio_stddev = Scalar(1e-2);
-    Scalar skew_constraint = Scalar(1) / (skew_stddev * skew_stddev);
-    Scalar pixel_ratio_constraint = Scalar(1) / (pixel_ratio_stddev *
-                                                pixel_ratio_stddev);
-
     YCovarianceInverse y_covariance_inverse;
     y_covariance_inverse.SetKeysUniformStdDev(key_stddev_, number_of_keys);
-    y_covariance_inverse.AddConstraint(skew_constraint);
-    y_covariance_inverse.AddConstraint(pixel_ratio_constraint);
-    if (!is_uniform_camera_)
+    if (!fix_mask[FIX_CAMERAS])
     {
+      Index key_params_size = Index(number_of_points * 4);
+      y_initial[key_params_size + 0] = Scalar(0);
+      y_initial[key_params_size + 1] = Scalar(0);
+      if (!is_uniform_camera_)
+      {
+        y_initial[key_params_size + 2] = Scalar(0);
+        y_initial[key_params_size + 3] = Scalar(0);
+      }
+
+      Scalar skew_stddev = Scalar(1e-3);
+      Scalar pixel_ratio_stddev = Scalar(1e-2);
+      Scalar skew_constraint = Scalar(1) / (skew_stddev * skew_stddev);
+      Scalar pixel_ratio_constraint = Scalar(1) / (pixel_ratio_stddev *
+                                                  pixel_ratio_stddev);
+
       y_covariance_inverse.AddConstraint(skew_constraint);
       y_covariance_inverse.AddConstraint(pixel_ratio_constraint);
+      if (!is_uniform_camera_)
+      {
+        y_covariance_inverse.AddConstraint(skew_constraint);
+        y_covariance_inverse.AddConstraint(pixel_ratio_constraint);
+      }
     }
 
     Optimizor optimizor(x_initial, 50,
@@ -832,160 +910,115 @@ private:
       return -1;
     }
 
-    //points_bundle.resize(number_of_points);
-    //auto itr_point_bundle = points_bundle.begin();
-    //auto itr_point_bundle_end = points_bundle.end();
-    //for (Index i = 0;
-    //     itr_point_bundle != itr_point_bundle_end;
-    //     ++itr_point_bundle, ++i)
-    //{
-    //  (*itr_point_bundle) =
-    //    x_bundle.segment(i * VectorFunction::params_per_point_,
-    //                     VectorFunction::params_per_point_);
-    //}
-    points_bundle = points_initial;
-
-    x_offset = /*vector_function.GetPointParamsSize()*/0;
-    extrinsic_params_identity_bundle.rotation()[0] = x_bundle[x_offset + 0];
-    extrinsic_params_identity_bundle.rotation()[1] = x_bundle[x_offset + 1];
-    extrinsic_params_identity_bundle.rotation()[2] = x_bundle[x_offset + 2];
-    Vector3 c_identity;
-    c_identity<<x_bundle[x_offset + 3],
-                x_bundle[x_offset + 4],
-                x_bundle[x_offset + 5];
-    extrinsic_params_relative_bundle.rotation()[0] = x_bundle[x_offset + 6];
-    extrinsic_params_relative_bundle.rotation()[1] = x_bundle[x_offset + 7];
-    extrinsic_params_relative_bundle.rotation()[2] = x_bundle[x_offset + 8];
-    Vector3 c_relative;
-    c_relative<<x_bundle[x_offset + 9],
-                x_bundle[x_offset + 10],
-                x_bundle[x_offset + 11];
-
-    extrinsic_params_identity_bundle.position() =
-      extrinsic_params_identity_bundle.rotation().Inverse() * c_identity;
-    extrinsic_params_identity_bundle.position() *= Scalar(-1);
-    extrinsic_params_relative_bundle.position() =
-      extrinsic_params_relative_bundle.rotation().Inverse() * c_relative;
-    extrinsic_params_relative_bundle.position() *= Scalar(-1);
-
-    x_offset += vector_function.GetExtrinsicParamsSize();
-    std::cout<<"k1_identity:\n"
-             <<x_bundle[x_offset + 0]<<"\n"
-             <<intrinsic_params_identity.k1()<<"\n"
-             <<"k2_identity:\n"
-             <<x_bundle[x_offset + 1]<<"\n"
-             <<intrinsic_params_identity.k2()<<"\n"
-             <<"k3_identity:\n"
-             <<x_bundle[x_offset + 2]<<"\n"
-             <<intrinsic_params_identity.k3()<<"\n"
-             <<"d1_identity:\n"
-             <<x_bundle[x_offset + 3]<<"\n"
-             <<intrinsic_params_identity.d1()<<"\n"
-             <<"d2_identity:\n"
-             <<x_bundle[x_offset + 4]<<"\n"
-             <<intrinsic_params_identity.d2()<<"\n"
-             <<"focal_length_identity:\n"
-             <<x_bundle[x_offset + 5]<<"\n"
-             <<intrinsic_params_identity.focal_length()<<"\n"
-             <<"skew_identity:\n"
-             <<x_bundle[x_offset + 6]<<"\n"
-             <<intrinsic_params_identity.skew()<<"\n"
-             <<"principal_point_x_identity:\n"
-             <<x_bundle[x_offset + 7]<<"\n"
-             <<intrinsic_params_identity.principal_point_x()<<"\n"
-             <<"principal_point_y_identity:\n"
-             <<x_bundle[x_offset + 8]<<"\n"
-             <<intrinsic_params_identity.principal_point_y()<<"\n"
-             <<"pixel_ratio_identity:\n"
-             <<x_bundle[x_offset + 9]<<"\n"
-             <<intrinsic_params_identity.pixel_ratio()<<"\n";
-    if (!is_uniform_camera_)
+    x_offset = 0;
+    if (!fix_mask[FIX_POINTS])
     {
-      const IntrinsicParams& intrinsic_params_relative =
-        relative_pair_generator_.intrinsic_params_relative();
-      std::cout<<"k1_relative:\n"
-               <<x_bundle[x_offset + 10]<<"\n"
-               <<intrinsic_params_relative.k1()<<"\n"
-               <<"k2_relative:\n"
-               <<x_bundle[x_offset + 11]<<"\n"
-               <<intrinsic_params_relative.k2()<<"\n"
-               <<"k3_relative:\n"
-               <<x_bundle[x_offset + 12]<<"\n"
-               <<intrinsic_params_relative.k3()<<"\n"
-               <<"d1_relative:\n"
-               <<x_bundle[x_offset + 13]<<"\n"
-               <<intrinsic_params_relative.d1()<<"\n"
-               <<"d2_relative:\n"
-               <<x_bundle[x_offset + 14]<<"\n"
-               <<intrinsic_params_relative.d2()<<"\n"
-               <<"focal_length_relative:\n"
-               <<x_bundle[x_offset + 15]<<"\n"
-               <<intrinsic_params_relative.focal_length()<<"\n"
-               <<"skew_relative:\n"
-               <<x_bundle[x_offset + 16]<<"\n"
-               <<intrinsic_params_relative.skew()<<"\n"
-               <<"principal_point_x_relative:\n"
-               <<x_bundle[x_offset + 17]<<"\n"
-               <<intrinsic_params_relative.principal_point_x()<<"\n"
-               <<"principal_point_y_relative:\n"
-               <<x_bundle[x_offset + 18]<<"\n"
-               <<intrinsic_params_relative.principal_point_y()<<"\n"
-               <<"pixel_ratio_relative:\n"
-               <<x_bundle[x_offset + 19]<<"\n"
-               <<intrinsic_params_relative.pixel_ratio()<<"\n";
-    }
-
-    intrinsic_params_identity_bundle.set_k1(
-      x_bundle[x_offset + 0]);
-    intrinsic_params_identity_bundle.set_k2(
-      x_bundle[x_offset + 1]);
-    intrinsic_params_identity_bundle.set_k3(
-      x_bundle[x_offset + 2]);
-    intrinsic_params_identity_bundle.set_d1(
-      x_bundle[x_offset + 3]);
-    intrinsic_params_identity_bundle.set_d2(
-      x_bundle[x_offset + 4]);
-    intrinsic_params_identity_bundle.set_focal_length(
-      x_bundle[x_offset + 5]);
-    intrinsic_params_identity_bundle.set_skew(
-      x_bundle[x_offset + 6]);
-    intrinsic_params_identity_bundle.set_principal_point_x(
-      x_bundle[x_offset + 7]);
-    intrinsic_params_identity_bundle.set_principal_point_y(
-      x_bundle[x_offset + 8]);
-    intrinsic_params_identity_bundle.set_pixel_ratio(
-      x_bundle[x_offset + 9]);
-
-    if (is_uniform_camera_)
-    {
-      intrinsic_params_relative_bundle = intrinsic_params_identity_bundle;
+      points_bundle.resize(number_of_points);
+      auto itr_point_bundle = points_bundle.begin();
+      auto itr_point_bundle_end = points_bundle.end();
+      for (Index i = 0;
+           itr_point_bundle != itr_point_bundle_end;
+           ++itr_point_bundle, ++i)
+      {
+        (*itr_point_bundle) =
+          x_bundle.segment(i * VectorFunction::params_per_point_,
+                           VectorFunction::params_per_point_);
+      }
+      x_offset = vector_function.GetPointParamsSize();
     }
     else
     {
-    intrinsic_params_relative_bundle.set_k1(
-      x_bundle[x_offset + 10]);
-    intrinsic_params_relative_bundle.set_k2(
-      x_bundle[x_offset + 11]);
-    intrinsic_params_relative_bundle.set_k3(
-      x_bundle[x_offset + 12]);
-    intrinsic_params_relative_bundle.set_d1(
-      x_bundle[x_offset + 13]);
-    intrinsic_params_relative_bundle.set_d2(
-      x_bundle[x_offset + 14]);
-    intrinsic_params_relative_bundle.set_focal_length(
-      x_bundle[x_offset + 15]);
-    intrinsic_params_relative_bundle.set_skew(
-      x_bundle[x_offset + 16]);
-    intrinsic_params_relative_bundle.set_principal_point_x(
-      x_bundle[x_offset + 17]);
-    intrinsic_params_relative_bundle.set_principal_point_y(
-      x_bundle[x_offset + 18]);
-    intrinsic_params_relative_bundle.set_pixel_ratio(
-      x_bundle[x_offset + 19]);
+      points_bundle = points_initial;
     }
 
-    //XVector diff = x_initial - x_bundle;
-    //std::cout<<diff<<"\n";
+    if (!fix_mask[FIX_IMAGES])
+    {
+      extrinsic_params_identity_bundle.rotation()[0] = x_bundle[x_offset + 0];
+      extrinsic_params_identity_bundle.rotation()[1] = x_bundle[x_offset + 1];
+      extrinsic_params_identity_bundle.rotation()[2] = x_bundle[x_offset + 2];
+      Vector3 c_identity;
+      c_identity<<x_bundle[x_offset + 3],
+                  x_bundle[x_offset + 4],
+                  x_bundle[x_offset + 5];
+      extrinsic_params_relative_bundle.rotation()[0] = x_bundle[x_offset + 6];
+      extrinsic_params_relative_bundle.rotation()[1] = x_bundle[x_offset + 7];
+      extrinsic_params_relative_bundle.rotation()[2] = x_bundle[x_offset + 8];
+      Vector3 c_relative;
+      c_relative<<x_bundle[x_offset + 9],
+                  x_bundle[x_offset + 10],
+                  x_bundle[x_offset + 11];
+
+      extrinsic_params_identity_bundle.position() =
+        extrinsic_params_identity_bundle.rotation().Inverse() * c_identity;
+      extrinsic_params_identity_bundle.position() *= Scalar(-1);
+      extrinsic_params_relative_bundle.position() =
+        extrinsic_params_relative_bundle.rotation().Inverse() * c_relative;
+      extrinsic_params_relative_bundle.position() *= Scalar(-1);
+
+      x_offset += vector_function.GetExtrinsicParamsSize();
+    }
+    else
+    {
+      extrinsic_params_identity_bundle = extrinsic_params_identity_initial;
+      extrinsic_params_relative_bundle = extrinsic_params_relative_initial;
+    }
+
+    if (!fix_mask[FIX_CAMERAS])
+    {
+      intrinsic_params_identity_bundle.set_k1(
+        x_bundle[x_offset + 0]);
+      intrinsic_params_identity_bundle.set_k2(
+        x_bundle[x_offset + 1]);
+      intrinsic_params_identity_bundle.set_k3(
+        x_bundle[x_offset + 2]);
+      intrinsic_params_identity_bundle.set_d1(
+        x_bundle[x_offset + 3]);
+      intrinsic_params_identity_bundle.set_d2(
+        x_bundle[x_offset + 4]);
+      intrinsic_params_identity_bundle.set_focal_length(
+        x_bundle[x_offset + 5]);
+      intrinsic_params_identity_bundle.set_skew(
+        x_bundle[x_offset + 6]);
+      intrinsic_params_identity_bundle.set_principal_point_x(
+        x_bundle[x_offset + 7]);
+      intrinsic_params_identity_bundle.set_principal_point_y(
+        x_bundle[x_offset + 8]);
+      intrinsic_params_identity_bundle.set_pixel_ratio(
+        x_bundle[x_offset + 9]);
+
+      if (is_uniform_camera_)
+      {
+        intrinsic_params_relative_bundle = intrinsic_params_identity_bundle;
+      }
+      else
+      {
+        intrinsic_params_relative_bundle.set_k1(
+          x_bundle[x_offset + 10]);
+        intrinsic_params_relative_bundle.set_k2(
+          x_bundle[x_offset + 11]);
+        intrinsic_params_relative_bundle.set_k3(
+          x_bundle[x_offset + 12]);
+        intrinsic_params_relative_bundle.set_d1(
+          x_bundle[x_offset + 13]);
+        intrinsic_params_relative_bundle.set_d2(
+          x_bundle[x_offset + 14]);
+        intrinsic_params_relative_bundle.set_focal_length(
+          x_bundle[x_offset + 15]);
+        intrinsic_params_relative_bundle.set_skew(
+          x_bundle[x_offset + 16]);
+        intrinsic_params_relative_bundle.set_principal_point_x(
+          x_bundle[x_offset + 17]);
+        intrinsic_params_relative_bundle.set_principal_point_y(
+          x_bundle[x_offset + 18]);
+        intrinsic_params_relative_bundle.set_pixel_ratio(
+          x_bundle[x_offset + 19]);
+      }
+    }
+    else
+    {
+      intrinsic_params_identity_bundle = intrinsic_params_identity_initial;
+      intrinsic_params_relative_bundle = intrinsic_params_relative_initial;
+    }
 
     return 0;
   }
@@ -1010,25 +1043,8 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
   Scalar pixel_size = 0.0000039;
   ImageDimension image_width = 6000;
   ImageDimension image_height = 4000;
-  Scalar focal_length_in_metre_identity = 0.018858358970276164;
+  Scalar focal_length_in_metre_identity = 0.02995452167701055;
   IntrinsicParams intrinsic_params_identity(focal_length_in_metre_identity /
-                                            pixel_size,
-                                            //0, 0, 0, 1,
-                                            0,
-                                            -42.4095312016,
-                                            -31.699212823,
-                                            1,
-                                            -0.0050490462006048831,
-                                            //0, 0, 0, 0
-                                            0.031293804298609881,
-                                            -0.030794820960442223,
-                                            -0.00055376548320189127,
-                                            -0.00049877717768381476);
-  //IntrinsicParams intrinsic_params_identity(focal_length_in_metre_identity /
-  //                                          pixel_size,
-  //                                          0, 0, 0, 1, 0, 0, 0, 0, 0);
-  Scalar focal_length_in_metre_relative = 0.02995452167701055;
-  IntrinsicParams intrinsic_params_relative(focal_length_in_metre_relative /
                                             pixel_size,
                                             //0, 0, 0, 1,
                                             0,
@@ -1041,6 +1057,23 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
                                             -0.64208397668697237,
                                             -0.0020605099808780948,
                                             -0.00028706423764766859);
+  //IntrinsicParams intrinsic_params_identity(focal_length_in_metre_identity /
+  //                                          pixel_size,
+  //                                          0, 0, 0, 1, 0, 0, 0, 0, 0);
+  Scalar focal_length_in_metre_relative = 0.018858358970276164;
+  IntrinsicParams intrinsic_params_relative(focal_length_in_metre_relative /
+                                            pixel_size,
+                                            //0, 0, 0, 1,
+                                            0,
+                                            -42.4095312016,
+                                            -31.699212823,
+                                            1,
+                                            -0.0050490462006048831,
+                                            //0, 0, 0, 0
+                                            0.031293804298609881,
+                                            -0.030794820960442223,
+                                            -0.00055376548320189127,
+                                            -0.00049877717768381476);
   //IntrinsicParams intrinsic_params_relative(focal_length_in_metre_relative /
   //                                          pixel_size,
   //                                          0, 0, 0, 1, 0, 0, 0, 0, 0);
@@ -1050,7 +1083,7 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
   Scalar scene_max_height = 50;
   Scalar camera_height_stddev = 5;
   Scalar camera_planar_stddev = 5;
-  Scalar camera_rotation_stddev = 10;
+  Scalar camera_rotation_stddev = 15;
 
   size_t number_of_points = 2000;
   bool is_uniform_camera = true;

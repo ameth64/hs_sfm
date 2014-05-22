@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <cmath>
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
@@ -29,7 +30,7 @@ public:
     Scalar infinite_norm = -std::numeric_limits<Scalar>::max();
     for (Index i = 0; i < x_size; i++)
     {
-      infinite_norm = std::max(gradient[i], infinite_norm);
+      infinite_norm = std::max(std::abs(gradient[i]), infinite_norm);
     }
 
     return infinite_norm;
