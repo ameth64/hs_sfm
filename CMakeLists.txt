@@ -6,6 +6,10 @@ include("cmake/hsprj.cmake")
 set(HSPRJ_NAME "hs_sfm")
 hs_project(${HSPRJ_NAME})
 
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-register")
+endif ()
+
 #bundle adjustment
 set(BA_NAME "bundle_adjustment")
 set(BA_SOURCES
@@ -155,6 +159,7 @@ set(HOMOGRAPHY_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/homography/test_homography2d_analytical_jacobian_matrix_calculator.cpp"
   "unit_test/homography/test_homography2d_vector_function.cpp"
+  "unit_test/homography/test_homography2d_dlt_calculator.cpp"
   )
 hslib_add_utest(${HOMOGRAPHY_NAME} SOURCES ${HOMOGRAPHY_UTEST_SOURCES})
 hslib_add_dep(${HOMOGRAPHY_NAME}_utest
@@ -222,3 +227,21 @@ hslib_add_dep(${FILEIO_NAME}_utest
   HS_DEPS hs_test_utility DEP_LIBS test_env
   )
 hslib_post_build(${FILEIO_NAME}_utest)
+
+#calibrate
+set(CALIBRATE_NAME "calibrate")
+set(CALIBRATE_SOURCES
+  )
+hslib_add_library(${CALIBRATE_NAME} ${HSPRJ_NAME} ${CALIBRATE_SOURCES})
+
+set(CALIBRATE_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  "unit_test/calibrate/test_planar_calibrator.cpp"
+  )
+hslib_add_utest(${CALIBRATE_NAME} SOURCES ${CALIBRATE_UTEST_SOURCES})
+hslib_add_dep(${CALIBRATE_NAME}_utest
+  3RDPARTY_DEPS eigen HEADONLY
+  3RDPARTY_DEPS boost HEADONLY
+  HS_DEPS hs_math HEADONLY
+  )
+hslib_post_build(${CALIBRATE_NAME}_utest)

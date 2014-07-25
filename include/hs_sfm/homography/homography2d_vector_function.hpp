@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_VECTOR_FUNCTION_HPP_
+﻿#ifndef _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_VECTOR_FUNCTION_HPP_
 #define _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_VECTOR_FUNCTION_HPP_
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
@@ -26,7 +26,7 @@ public:
 private:
   enum
   {
-    Major = Eigen::EIGEN_DEFAULT_MATRIX_STORAGE_ORDER_OPTION
+    Major = EIGEN_DEFAULT_MATRIX_STORAGE_ORDER_OPTION
   };
 
 public:
