@@ -69,9 +69,9 @@ public:
       key_covariance(0, 0) = image_x_stddev * image_x_stddev;
       key_covariance(1, 1) = image_y_stddev * image_y_stddev;
       PointCovariance point_covariance = PointCovariance::Identity();
-      point_covariance(0, 0) *= point_x_stddev;
-      point_covariance(1, 1) *= point_y_stddev;
-      point_covariance(2, 2) *= point_z_stddev;
+	  point_covariance(0, 0) *= point_x_stddev * point_x_stddev;
+	  point_covariance(1, 1) *= point_y_stddev * point_y_stddev;
+	  point_covariance(2, 2) *= point_z_stddev * point_z_stddev;
 
       IntrinsicVector intrinsic_vector_mean = IntrinsicVector::Zero();
       IntrinsicVector intrinsic_vector_stddev = IntrinsicVector::Zero();
@@ -100,6 +100,7 @@ public:
         IntrinsicParams intrinsic_params_estimate;
         ExtrinsicParamsContainer extrinsic_params_set_estimate;
         result = calibrator(pattern_views_noised,
+							size_t(image_width), size_t(image_height),
                             key_covariance,
                             point_covariance,
                             intrinsic_params_estimate,
@@ -156,6 +157,8 @@ public:
                  <<"k3: "<<intrinsic_vector_stddev[7]<<"\n"
                  <<"d1: "<<intrinsic_vector_stddev[8]<<"\n"
                  <<"d2: "<<intrinsic_vector_stddev[9]<<"\n";
+		result = -1;
+		break;
       }
 
       break;

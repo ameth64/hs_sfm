@@ -16,6 +16,5 @@ GTEST_API_ int main(int argc, char **argv)
 
   testing::InitGoogleTest(&argc, argv);
   int gtestRst = RUN_ALL_TESTS();
-
   return gtestRst;
 }

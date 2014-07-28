@@ -242,6 +242,8 @@ hslib_add_utest(${CALIBRATE_NAME} SOURCES ${CALIBRATE_UTEST_SOURCES})
 hslib_add_dep(${CALIBRATE_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   3RDPARTY_DEPS boost HEADONLY
+  3RDPARTY_DEPS opencv DEP_LIBS opencv_core opencv_calib3d opencv_imgproc opencv_features2d opencv_highgui
+  3RDPARTY_DEPS z
   HS_DEPS hs_math HEADONLY
   )
 hslib_post_build(${CALIBRATE_NAME}_utest)
