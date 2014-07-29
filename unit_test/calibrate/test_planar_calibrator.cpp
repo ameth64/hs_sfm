@@ -69,9 +69,9 @@ public:
       key_covariance(0, 0) = image_x_stddev * image_x_stddev;
       key_covariance(1, 1) = image_y_stddev * image_y_stddev;
       PointCovariance point_covariance = PointCovariance::Identity();
-	  point_covariance(0, 0) *= point_x_stddev * point_x_stddev;
-	  point_covariance(1, 1) *= point_y_stddev * point_y_stddev;
-	  point_covariance(2, 2) *= point_z_stddev * point_z_stddev;
+      point_covariance(0, 0) *= point_x_stddev * point_x_stddev;
+      point_covariance(1, 1) *= point_y_stddev * point_y_stddev;
+      point_covariance(2, 2) *= point_z_stddev * point_z_stddev;
 
       IntrinsicVector intrinsic_vector_mean = IntrinsicVector::Zero();
       IntrinsicVector intrinsic_vector_stddev = IntrinsicVector::Zero();
@@ -100,7 +100,7 @@ public:
         IntrinsicParams intrinsic_params_estimate;
         ExtrinsicParamsContainer extrinsic_params_set_estimate;
         result = calibrator(pattern_views_noised,
-							size_t(image_width), size_t(image_height),
+                            size_t(image_width), size_t(image_height),
                             key_covariance,
                             point_covariance,
                             intrinsic_params_estimate,
@@ -134,17 +134,18 @@ public:
       }// for (size_t i = 0; i < number_of_samples; i++)
 
       intrinsic_vector_stddev = intrinsic_vector_stddev.cwiseSqrt();
+      intrinsic_vector_mean /= Scalar(number_of_samples);
 
       if (intrinsic_vector_stddev[0] > Scalar(1) ||
           intrinsic_vector_stddev[1] > Scalar(1e-3) ||
           intrinsic_vector_stddev[2] > Scalar(1) ||
           intrinsic_vector_stddev[3] > Scalar(1) ||
-          intrinsic_vector_stddev[4] > Scalar(1e-1) ||
-          intrinsic_vector_stddev[5] > Scalar(1e-3) ||
-          intrinsic_vector_stddev[6] > Scalar(1e-3) ||
-          intrinsic_vector_stddev[7] > Scalar(1e-3) ||
-          intrinsic_vector_stddev[8] > Scalar(1e-3) ||
-          intrinsic_vector_stddev[9] > Scalar(1e-3))
+          intrinsic_vector_stddev[4] > Scalar(5e-3) ||
+          intrinsic_vector_stddev[5] > Scalar(5e-3) ||
+          intrinsic_vector_stddev[6] > Scalar(5e-3) ||
+          intrinsic_vector_stddev[7] > Scalar(5e-3) ||
+          intrinsic_vector_stddev[8] > Scalar(1e-4) ||
+          intrinsic_vector_stddev[9] > Scalar(1e-4))
       {
         std::cout<<"intrincic params standard deviation:\n"
                  <<"focal length: "<<intrinsic_vector_stddev[0]<<"\n"
@@ -157,8 +158,8 @@ public:
                  <<"k3: "<<intrinsic_vector_stddev[7]<<"\n"
                  <<"d1: "<<intrinsic_vector_stddev[8]<<"\n"
                  <<"d2: "<<intrinsic_vector_stddev[9]<<"\n";
-		result = -1;
-		break;
+        result = -1;
+        break;
       }
 
       break;
@@ -198,22 +199,22 @@ TEST(TestPlanarCalibrator, SimpleTest)
                                         Scalar(1602.12),
                                         Scalar(1),
                                         Scalar(-0.06608472),
-                                        Scalar(-0.08491661),
+                                        Scalar( 0.08491661),
                                         Scalar( 0.00987291),
                                         Scalar(-0.00112938),
                                         Scalar(-0.00013884));
-  Scalar pattern_grid_size = Scalar(0.03);
-  size_t number_of_grid_rows = 9;
-  size_t number_of_grid_cols = 12;
+  Scalar pattern_grid_size = Scalar(0.003);
+  size_t number_of_grid_rows = 21;
+  size_t number_of_grid_cols = 21;
   size_t number_of_views = 10;
   size_t image_width = 4912;
   size_t image_height = 3264;
-  Scalar point_x_stddev = Scalar(1e-4);
-  Scalar point_y_stddev = Scalar(1e-4);
-  Scalar point_z_stddev = Scalar(2e-4);
+  Scalar point_x_stddev = Scalar(2e-6);
+  Scalar point_y_stddev = Scalar(2e-6);
+  Scalar point_z_stddev = Scalar(4e-6);
   Scalar image_x_stddev = Scalar(0.5);
   Scalar image_y_stddev = Scalar(0.5);
-  size_t number_of_samples = 1000;
+  size_t number_of_samples = 100;
 
   Tester tester;
   ASSERT_EQ(0, tester.Test(intrinsic_params_true,

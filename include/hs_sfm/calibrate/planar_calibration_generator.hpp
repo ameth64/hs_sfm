@@ -2,10 +2,6 @@
 #define _HS_SFM_CALIBRATE_PLANAR_CALIBRATION_GENERATOR_HPP_
 
 #include <cmath>
-#define VISUAL_TEST
-#ifdef VISUAL_TEST
-#include <fstream>
-#endif
 
 #include "hs_math/random/uniform_random_var.hpp"
 #include "hs_math/random/normal_random_var.hpp"
@@ -13,7 +9,7 @@
 #include "hs_math/geometry/euler_angles.hpp"
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
-#include "hs_sfm/synthetic/multiple_camera_keyset_generator.hpp"
+#include "hs_sfm/sfm_utility/projective_functions.hpp"
 #include "hs_sfm/calibrate/planar_calibrator.hpp"
 
 namespace hs
@@ -54,16 +50,6 @@ private:
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
   typedef typename EulerAngles::OrthoRotMat RMatrix;
   typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
-  typedef hs::sfm::synthetic::MultipleCameraKeysetGenerator<Scalar,
-                                                            ImageDimension>
-          KeysetGenerator;
-  typedef typename KeysetGenerator::IntrinsicParamsContainer
-                   IntrinsicParamsContainer;
-  typedef typename KeysetGenerator::Point3DContianer PointContainer;
-  typedef typename KeysetGenerator::Image Image;
-  typedef typename KeysetGenerator::ImageContainer ImageContainer;
-  typedef typename KeysetGenerator::Keyset Keyset;
-  typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
 public:
   PlanarCalibrationGenerator(
@@ -135,8 +121,7 @@ public:
 
     }
 
-    //生成平面三维点
-    PointContainer points;
+    //生成平面三维点和影像二维点
     for (size_t i = 0; i < number_of_grid_rows_; i++)
     {
       for (size_t j = 0; j < number_of_grid_cols_; j++)
@@ -145,70 +130,20 @@ public:
         point << pattern_grid_size_ * Scalar(j) - pattern_width * Scalar(0.5),
                  pattern_grid_size_ * Scalar(i) - pattern_height * Scalar(0.5),
                  Scalar(0);
-        points.push_back(point);
+
+        for (size_t k = 0; k < number_of_views_; k++)
+        {
+          Key key =
+            hs::sfm::ProjectiveFunctions<Scalar>::WorldPointProjectToImageKey(
+              intrinsic_params_, extrinsic_params_set[k], point);
+          if (key[0] >=0 && key[0] < Scalar(image_width_) &&
+              key[1] >=0 && key[1] < Scalar(image_height_))
+          {
+            pattern_views[k].push_back(Correspondence(key, point));
+          }
+        }
       }
     }
-
-    IntrinsicParamsContainer intrinsic_params_set(number_of_views_,
-                                                  intrinsic_params_);
-    Image image;
-    image.m_width = image_width_;
-    image.m_height = image_height_;
-    ImageContainer images(number_of_views_, image);
-    std::vector<size_t> image_intrinsic_map;
-    for (size_t i = 0; i < number_of_views_; i++)
-    {
-      image_intrinsic_map.push_back(i);
-    }
-    KeysetContainer keysets;
-    TrackContainer tracks;
-    CameraViewContainer camera_views;
-    KeysetGenerator keyset_generator;
-    int result = keyset_generator(intrinsic_params_set,
-                                  extrinsic_params_set,
-                                  images,
-                                  points,
-                                  image_intrinsic_map,
-                                  keysets,
-                                  tracks,
-                                  camera_views);
-    if (result != 0) return result;
-
-    for (size_t i = 0; i < number_of_views_; i++)
-    {
-      for (size_t j = 0; j < camera_views[i].size(); j++)
-      {
-        size_t point_id = camera_views[i][j].first;
-        size_t key_id = camera_views[i][j].second;
-        Point point = points[point_id];
-        Key key = keysets[i][j];
-        pattern_views[i].push_back(Correspondence(key, point));
-      }
-    }
-
-#ifdef VISUAL_TEST
-    std::ofstream ply("planer_calibrate.ply");
-    ply<<"ply\n";
-    ply<<"format ascii 1.0\n";
-    ply<<"element vertex "<<points.size() + number_of_views_ * 2<<"\n";
-    ply<<"property float x\n";
-    ply<<"property float y\n";
-    ply<<"property float z\n";
-    ply<<"end_header\n";
-    for (size_t i = 0; i < points.size(); i++)
-    {
-      ply<<points[i][0]<<" "<<points[i][1]<<" "<<points[i][2]<<"\n";
-    }
-
-    for (size_t i = 0; i < number_of_views_; i++)
-    {
-      Vector3 c = extrinsic_params_set[i].position();
-      Matrix33 R = extrinsic_params_set[i].rotation();
-      Vector3 c_1 = c + (-0.01 * R.col(2));
-      ply<<c[0]<<" "<<c[1]<<" "<<c[2]<<"\n";
-      ply<<c_1[0]<<" "<<c_1[1]<<" "<<c_1[2]<<"\n";
-    }
-#endif
 
     return 0;
   }
