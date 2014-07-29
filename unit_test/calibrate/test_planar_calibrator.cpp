@@ -187,7 +187,7 @@ private:
   }
 };
 
-TEST(TestPlanarCalibrator, SimpleTest)
+TEST(TestPlanarCalibrator, Nex5Test)
 {
   typedef double Scalar;
   typedef TestPlanarCalibrator<Scalar> Tester;
@@ -203,12 +203,102 @@ TEST(TestPlanarCalibrator, SimpleTest)
                                         Scalar( 0.00987291),
                                         Scalar(-0.00112938),
                                         Scalar(-0.00013884));
-  Scalar pattern_grid_size = Scalar(0.003);
-  size_t number_of_grid_rows = 21;
-  size_t number_of_grid_cols = 21;
+  Scalar pattern_grid_size = Scalar(0.005);
+  size_t number_of_grid_rows = 20;
+  size_t number_of_grid_cols = 20;
   size_t number_of_views = 10;
   size_t image_width = 4912;
   size_t image_height = 3264;
+  Scalar point_x_stddev = Scalar(2e-6);
+  Scalar point_y_stddev = Scalar(2e-6);
+  Scalar point_z_stddev = Scalar(4e-6);
+  Scalar image_x_stddev = Scalar(0.5);
+  Scalar image_y_stddev = Scalar(0.5);
+  size_t number_of_samples = 100;
+
+  Tester tester;
+  ASSERT_EQ(0, tester.Test(intrinsic_params_true,
+                           pattern_grid_size,
+                           number_of_grid_rows,
+                           number_of_grid_cols,
+                           number_of_views,
+                           image_width,
+                           image_height,
+                           point_x_stddev,
+                           point_y_stddev,
+                           point_z_stddev,
+                           image_x_stddev,
+                           image_y_stddev,
+                           number_of_samples));
+}
+
+TEST(TestPlanarCalibrator, Nex7Test)
+{
+  typedef double Scalar;
+  typedef TestPlanarCalibrator<Scalar> Tester;
+  typedef Tester::IntrinsicParams IntrinsicParams;
+
+  IntrinsicParams intrinsic_params_true(Scalar(7675.17),
+                                        Scalar(0),
+                                        Scalar(2965.24),
+                                        Scalar(1971.78),
+                                        Scalar(1),
+                                        Scalar(-0.14252046),
+                                        Scalar( 0.30106050),
+                                        Scalar( 0.03066927),
+                                        Scalar(-0.00075512),
+                                        Scalar(-9.32360526e-005));
+  Scalar pattern_grid_size = Scalar(0.005);
+  size_t number_of_grid_rows = 20;
+  size_t number_of_grid_cols = 20;
+  size_t number_of_views = 10;
+  size_t image_width = 6000;
+  size_t image_height = 4000;
+  Scalar point_x_stddev = Scalar(2e-6);
+  Scalar point_y_stddev = Scalar(2e-6);
+  Scalar point_z_stddev = Scalar(4e-6);
+  Scalar image_x_stddev = Scalar(0.5);
+  Scalar image_y_stddev = Scalar(0.5);
+  size_t number_of_samples = 100;
+
+  Tester tester;
+  ASSERT_EQ(0, tester.Test(intrinsic_params_true,
+                           pattern_grid_size,
+                           number_of_grid_rows,
+                           number_of_grid_cols,
+                           number_of_views,
+                           image_width,
+                           image_height,
+                           point_x_stddev,
+                           point_y_stddev,
+                           point_z_stddev,
+                           image_x_stddev,
+                           image_y_stddev,
+                           number_of_samples));
+}
+
+TEST(TestPlanarCalibrator, A7RTest)
+{
+  typedef double Scalar;
+  typedef TestPlanarCalibrator<Scalar> Tester;
+  typedef Tester::IntrinsicParams IntrinsicParams;
+
+  IntrinsicParams intrinsic_params_true(Scalar(7414.3839),
+                                        Scalar(0),
+                                        Scalar(3693.65),
+                                        Scalar(2502.91),
+                                        Scalar(1),
+                                        Scalar( 0.05315551),
+                                        Scalar(-0.23397964),
+                                        Scalar( 0.01623284),
+                                        Scalar(-0.00013183),
+                                        Scalar(8.0993666e-6));
+  Scalar pattern_grid_size = Scalar(0.005);
+  size_t number_of_grid_rows = 20;
+  size_t number_of_grid_cols = 20;
+  size_t number_of_views = 10;
+  size_t image_width = 7360;
+  size_t image_height = 4912;
   Scalar point_x_stddev = Scalar(2e-6);
   Scalar point_y_stddev = Scalar(2e-6);
   Scalar point_z_stddev = Scalar(4e-6);

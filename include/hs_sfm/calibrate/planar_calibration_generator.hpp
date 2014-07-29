@@ -119,6 +119,8 @@ public:
         camera_position_mean, camera_position_covariance,
         extrinsic_params_set[i].position());
 
+      std::cout<<"camera position:\n"<<extrinsic_params_set[i].position()<<"\n";
+
     }
 
     //生成平面三维点和影像二维点
