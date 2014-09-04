@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#define IMAGE_TEST
+//#define IMAGE_TEST
 #ifdef IMAGE_TEST
 #include "hs_image_io/whole_io/image_data.hpp"
 #include "hs_image_io/whole_io/image_io.hpp"

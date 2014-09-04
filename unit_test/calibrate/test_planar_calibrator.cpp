@@ -81,7 +81,7 @@ public:
       {
         //随机生成加入噪声的数据
         PatternViewContainer pattern_views_noised = pattern_views_true;
-        for (size_t j = 0; j < generator.number_of_views(); j++)
+        for (size_t j = 0; j < pattern_views_noised.size(); j++)
         {
           for (size_t k = 0; k < pattern_views_noised[j].size(); k++)
           {

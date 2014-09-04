@@ -46,6 +46,7 @@ hslib_add_dep(${BA_NAME}_utest
   3RDPARTY_DEPS jpeg DEP_LIBS jpeg
   3RDPARTY_DEPS png DEP_LIBS png
   3RDPARTY_DEPS z DEP_LIBS z
+  3RDPARTY_DEPS ceres DEP_LIBS ceres ceres_miniglog
   HS_DEPS hs_math HEADONLY
   HS_DEPS hs_optimizor HEADONLY
   HS_DEPS hs_image_io DEP_LIBS whole_io

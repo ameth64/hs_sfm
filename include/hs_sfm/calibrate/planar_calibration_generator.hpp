@@ -147,6 +147,22 @@ public:
       }
     }
 
+    auto itr_pattern_view = pattern_views.begin();
+    auto itr_extrinsic_params = extrinsic_params_set.begin();
+    for (; itr_pattern_view != pattern_views.end();)
+    {
+      if (itr_pattern_view->size() < 10)
+      {
+        itr_pattern_view = pattern_views.erase(itr_pattern_view);
+        itr_extrinsic_params = extrinsic_params_set.erase(itr_extrinsic_params);
+      }
+      else
+      {
+        ++itr_pattern_view;
+        ++itr_extrinsic_params;
+      }
+    }
+
     return 0;
   }
 

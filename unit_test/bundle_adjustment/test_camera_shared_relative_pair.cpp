@@ -13,6 +13,7 @@
 #include "hs_sfm/essential/ematrix_extrinsic_params_points_calculator.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_levenberg_marquardt_optimizor.hpp"
+#include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 
 namespace
 {
@@ -75,6 +76,8 @@ public:
   typedef hs::sfm::ba::CameraSharedLevenbergMarquardtOptimizor<VectorFunction>
           Optimizor;
   typedef typename Optimizor::YCovarianceInverse YCovarianceInverse;
+  typedef hs::sfm::ba::CameraSharedCeresOptimizor<VectorFunction>
+          CeresOptimizor;
 
 private:
   typedef EIGEN_VECTOR(Scalar, 2) Vector2;
@@ -192,6 +195,7 @@ public:
     extrinsic_params_identity_essential.rotation() = ortho_matrix_identity;
     extrinsic_params_identity_essential.position() = zero;
 
+    std::cout<<"Essential Error:\n";
     if (TestError(points_essential, points_abs,
                   intrinsic_params_identity_essential,
                   intrinsic_params_relative_essential,
@@ -236,8 +240,8 @@ public:
                     intrinsic_params_relative_bundle;
     Point3DContainer points_bundle;
     hs::sfm::ba::FixMask fix_mask;
-    fix_mask.set(hs::sfm::ba::FIX_POINTS);
-    fix_mask.set(hs::sfm::ba::FIX_IMAGES);
+    //fix_mask.set(hs::sfm::ba::FIX_POINTS);
+    //fix_mask.set(hs::sfm::ba::FIX_IMAGES);
     if (BundleAdjustment(extrinsic_params_identity_essential,
                          extrinsic_params_relative_essential,
                          intrinsic_params_identity_essential,
@@ -253,6 +257,7 @@ public:
     {
       return -1;
     }
+    std::cout<<"Bundle Error:\n";
     if (TestError(points_bundle, points_abs,
                   intrinsic_params_identity_bundle,
                   intrinsic_params_relative_bundle,
@@ -270,6 +275,46 @@ public:
       return -1;
     }
 
+    ExtrinsicParams extrinsic_params_identity_ceres,
+                    extrinsic_params_relative_ceres;
+    IntrinsicParams intrinsic_params_identity_ceres,
+                    intrinsic_params_relative_ceres;
+    Point3DContainer points_ceres;
+    hs::sfm::ba::FixMask fix_mask_ceres;
+    //fix_mask_ceres.set(hs::sfm::ba::FIX_POINTS);
+    //fix_mask_ceres.set(hs::sfm::ba::FIX_IMAGES);
+    if (BundleAdjustment(extrinsic_params_identity_essential,
+                         extrinsic_params_relative_essential,
+                         intrinsic_params_identity_essential,
+                         intrinsic_params_relative_essential,
+                         points_essential,
+                         keysets_noised,
+                         fix_mask_ceres,
+                         extrinsic_params_identity_ceres,
+                         extrinsic_params_relative_ceres,
+                         intrinsic_params_identity_ceres,
+                         intrinsic_params_relative_ceres,
+                         points_ceres, true) != 0)
+    {
+      return -1;
+    }
+    std::cout<<"Ceres Error:\n";
+    if (TestError(points_ceres, points_abs,
+                  intrinsic_params_identity_ceres,
+                  intrinsic_params_relative_ceres,
+                  extrinsic_params_identity_ceres,
+                  extrinsic_params_relative_ceres,
+                  intrinsic_params_identity_true,
+                  intrinsic_params_relative_true,
+                  extrinsic_params_identity_true,
+                  extrinsic_params_relative_true,
+                  keysets_noised,
+                  rotation_similar,
+                  translate_similar,
+                  scale_similar) != 0)
+    {
+      return -1;
+    }
     return 0;
   }
 
@@ -709,7 +754,8 @@ private:
                        ExtrinsicParams& extrinsic_params_relative_bundle,
                        IntrinsicParams& intrinsic_params_identity_bundle,
                        IntrinsicParams& intrinsic_params_relative_bundle,
-                       Point3DContainer& points_bundle) const
+                       Point3DContainer& points_bundle,
+                       bool use_ceres = false) const
   {
     using namespace hs::sfm::ba;
     size_t number_of_points = points_initial.size();
@@ -802,25 +848,25 @@ private:
     }
     else
     {
-      hs::sfm::ba::CameraConstraint camera_constraint_identity;
-      camera_constraint_identity.camera_id = 0;
-      camera_constraint_identity.intrinsic_mask.set(
-        hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
-      camera_constraint_identity.intrinsic_mask.set(
-        hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
-      vector_function.camera_constraints().push_back(
-        camera_constraint_identity);
-      if (!is_uniform_camera_)
-      {
-        hs::sfm::ba::CameraConstraint camera_constraint_relative;
-        camera_constraint_relative.camera_id = 1;
-        camera_constraint_relative.intrinsic_mask.set(
-          hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
-        camera_constraint_relative.intrinsic_mask.set(
-          hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
-        vector_function.camera_constraints().push_back(
-          camera_constraint_relative);
-      }
+      //hs::sfm::ba::CameraConstraint camera_constraint_identity;
+      //camera_constraint_identity.camera_id = 0;
+      //camera_constraint_identity.intrinsic_mask.set(
+      //  hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
+      //camera_constraint_identity.intrinsic_mask.set(
+      //  hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+      //vector_function.camera_constraints().push_back(
+      //  camera_constraint_identity);
+      //if (!is_uniform_camera_)
+      //{
+      //  hs::sfm::ba::CameraConstraint camera_constraint_relative;
+      //  camera_constraint_relative.camera_id = 1;
+      //  camera_constraint_relative.intrinsic_mask.set(
+      //    hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
+      //  camera_constraint_relative.intrinsic_mask.set(
+      //    hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+      //  vector_function.camera_constraints().push_back(
+      //    camera_constraint_relative);
+      //}
     }
 
     Index x_size = vector_function.GetXSize();
@@ -838,7 +884,7 @@ private:
         x_initial.segment(i * VectorFunction::params_per_point_,
                           VectorFunction::params_per_point_) = *itr_point;
       }
-      Index x_offset = vector_function.GetPointParamsSize();
+      x_offset = vector_function.GetPointParamsSize();
     }
 
     if (!fix_mask[FIX_IMAGES])
@@ -877,11 +923,11 @@ private:
     {
       Index key_params_size = Index(number_of_points * 4);
       y_initial[key_params_size + 0] = Scalar(0);
-      y_initial[key_params_size + 1] = Scalar(0);
+      y_initial[key_params_size + 1] = Scalar(1);
       if (!is_uniform_camera_)
       {
         y_initial[key_params_size + 2] = Scalar(0);
-        y_initial[key_params_size + 3] = Scalar(0);
+        y_initial[key_params_size + 3] = Scalar(1);
       }
 
       Scalar skew_stddev = Scalar(1e-3);
@@ -899,15 +945,27 @@ private:
       }
     }
 
-    Optimizor optimizor(x_initial, 50,
-                        Scalar(1e-3),
-                        Scalar(1e-8),
-                        Scalar(1e-8));
     XVector x_bundle;
-    if (optimizor(vector_function, y_initial, y_covariance_inverse,
-                  x_bundle) != 0)
+    if (use_ceres)
     {
-      return -1;
+      CeresOptimizor ceres_optimizor(x_initial);
+      if (ceres_optimizor(vector_function, y_initial, y_covariance_inverse,
+                          x_bundle) != 0)
+      {
+        return -1;
+      }
+    }
+    else
+    {
+      Optimizor optimizor(x_initial, 50,
+                          Scalar(1e-3),
+                          Scalar(1e-8),
+                          Scalar(1e-8));
+      if (optimizor(vector_function, y_initial, y_covariance_inverse,
+                    x_bundle) != 0)
+      {
+        return -1;
+      }
     }
 
     x_offset = 0;
