@@ -40,7 +40,7 @@ public:
     }
     KeyTransform key1_transform = KeyTransform::Identity();
     KeyTransform key2_transform = KeyTransform::Identity();
-    GetNormalTransform(correspondences, key1_transform, key2_transform);
+    //GetNormalTransform(correspondences, key1_transform, key2_transform);
 
     ParamMatrix param_matrix(number_of_correspondences * 2, 9);
     for (size_t i = 0; i < number_of_correspondences; i++)
@@ -73,6 +73,8 @@ public:
                             h_vector[6], h_vector[7], h_vector[8];
     UnnormalizeHMatrix(h_matrix_transformed, key1_transform, key2_transform,
                        h_matrix);
+    std::cout<<"param_matrix:\n"<<param_matrix<<"\n";
+    std::cout<<"h_matrix:\n"<<h_matrix<<"\n";
     return 0;
   }
 private:

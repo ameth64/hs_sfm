@@ -848,25 +848,25 @@ private:
     }
     else
     {
-      //hs::sfm::ba::CameraConstraint camera_constraint_identity;
-      //camera_constraint_identity.camera_id = 0;
-      //camera_constraint_identity.intrinsic_mask.set(
-      //  hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
-      //camera_constraint_identity.intrinsic_mask.set(
-      //  hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
-      //vector_function.camera_constraints().push_back(
-      //  camera_constraint_identity);
-      //if (!is_uniform_camera_)
-      //{
-      //  hs::sfm::ba::CameraConstraint camera_constraint_relative;
-      //  camera_constraint_relative.camera_id = 1;
-      //  camera_constraint_relative.intrinsic_mask.set(
-      //    hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
-      //  camera_constraint_relative.intrinsic_mask.set(
-      //    hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
-      //  vector_function.camera_constraints().push_back(
-      //    camera_constraint_relative);
-      //}
+      hs::sfm::ba::CameraConstraint camera_constraint_identity;
+      camera_constraint_identity.camera_id = 0;
+      camera_constraint_identity.intrinsic_mask.set(
+        hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
+      camera_constraint_identity.intrinsic_mask.set(
+        hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+      vector_function.camera_constraints().push_back(
+        camera_constraint_identity);
+      if (!is_uniform_camera_)
+      {
+        hs::sfm::ba::CameraConstraint camera_constraint_relative;
+        camera_constraint_relative.camera_id = 1;
+        camera_constraint_relative.intrinsic_mask.set(
+          hs::sfm::ba::INTRINSIC_CONSTRAIN_SKEW);
+        camera_constraint_relative.intrinsic_mask.set(
+          hs::sfm::ba::INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+        vector_function.camera_constraints().push_back(
+          camera_constraint_relative);
+      }
     }
 
     Index x_size = vector_function.GetXSize();

@@ -91,29 +91,67 @@ protected:
   double cov_inv_11_;
 };
 
+template <int constraint_size>
 class CameraSharedConstraint
 {
 public:
-  CameraSharedConstraint(double expected_value, double constraint)
-    : expected_value_(expected_value), constraint_(constraint) {}
+  CameraSharedConstraint(
+    double expected_values[constraint_size],
+    double constraints[constraint_size])
+  {
+    for (int i = 0; i < constraint_size; i++)
+    {
+      expected_values_[i] = expected_values[i];
+      constraints_[i] = constraints[i];
+    }
+  }
 
   template <typename T>
-  bool operator() (const T* const value, T* residuals) const
+  bool operator() (const T* const values, T* residuals) const
   {
-    residuals[0] = (value[0] - T(expected_value_)) * T(constraint_);
+    for (int i = 0; i < constraint_size; i++)
+    {
+      residuals[i] = (values[i] - T(expected_values_[i])) * T(constraints_[i]);
+    }
     return true;
   }
 
-  static ceres::CostFunction* Create(double expected_value, double constraint)
+  static ceres::CostFunction* Create(double expected_values[constraint_size],
+                                     double constraints[constraint_size])
   {
     return (new ceres::AutoDiffCostFunction<
-                  CameraSharedConstraint, 1, 1>(
-              new CameraSharedConstraint(expected_value, constraint)));
+                  CameraSharedConstraint, constraint_size, constraint_size>(
+              new CameraSharedConstraint(expected_values, constraints)));
   }
-private:
-  double expected_value_;
-  double constraint_;
+
+protected:
+  double expected_values_[constraint_size];
+  double constraints_[constraint_size];
 };
+
+//class CameraSharedConstraint
+//{
+//public:
+//  CameraSharedConstraint(double expected_value, double constraint)
+//    : expected_value_(expected_value), constraint_(constraint) {}
+//
+//  template <typename T>
+//  bool operator() (const T* const value, T* residuals) const
+//  {
+//    residuals[0] = (value[0] - T(expected_value_)) * T(constraint_);
+//    return true;
+//  }
+//
+//  static ceres::CostFunction* Create(double expected_value, double constraint)
+//  {
+//    return (new ceres::AutoDiffCostFunction<
+//                  CameraSharedConstraint, 1, 1>(
+//              new CameraSharedConstraint(expected_value, constraint)));
+//  }
+//private:
+//  double expected_value_;
+//  double constraint_;
+//};
 
 template <typename _VectorFunction>
 class CameraSharedCeresOptimizor;
@@ -220,51 +258,37 @@ public:
     {
       Index point_id = Index(itr_point_constraint->point_id);
       Index x_offset = point_id * VectorFunction::params_per_point_;
+      double expected_values[VectorFunction::params_per_point_] = {0, 0, 0};
+      double constraints[VectorFunction::params_per_point_] = {0, 0, 0};
       if (itr_point_constraint->mask[POINT_CONSTRAIN_X])
       {
-        double expected_value = double(near_y[y_offset]);
-        double constraint =
+        expected_values[0] = double(near_y[y_offset]);
+        constraints[0] =
           y_covariance_inverse.GetConstraint(constraint_offset);
-        ceres::CostFunction* cost_function =
-          CameraSharedConstraint::Create(expected_value, constraint);
-
-        double* value = x_data + x_offset + 0;
-
-        problem.AddResidualBlock(cost_function, NULL, value);
-
         y_offset++;
         constraint_offset++;
       }
       if (itr_point_constraint->mask[POINT_CONSTRAIN_Y])
       {
-        double expected_value = double(near_y[y_offset]);
-        double constraint =
+        expected_values[1] = double(near_y[y_offset]);
+        constraints[1] =
           y_covariance_inverse.GetConstraint(constraint_offset);
-        ceres::CostFunction* cost_function =
-          CameraSharedConstraint::Create(expected_value, constraint);
-
-        double* value = x_data + x_offset + 1;
-
-        problem.AddResidualBlock(cost_function, NULL, value);
-
         y_offset++;
         constraint_offset++;
       }
       if (itr_point_constraint->mask[POINT_CONSTRAIN_Z])
       {
-        double expected_value = double(near_y[y_offset]);
-        double constraint =
+        expected_values[2] = double(near_y[y_offset]);
+        constraints[2] =
           y_covariance_inverse.GetConstraint(constraint_offset);
-        ceres::CostFunction* cost_function =
-          CameraSharedConstraint::Create(expected_value, constraint);
-
-        double* value = x_data + x_offset + 2;
-
-        problem.AddResidualBlock(cost_function, NULL, value);
-
         y_offset++;
         constraint_offset++;
       }
+      double* values = x_data + x_offset;
+      ceres::CostFunction* cost_function =
+        CameraSharedConstraint<VectorFunction::params_per_point_>::Create(
+          expected_values, constraints);
+      problem.AddResidualBlock(cost_function, NULL, values);
     }
 
     auto itr_image_constraint = vector_function.image_constraints().begin();
@@ -275,18 +299,17 @@ public:
       Index image_id = Index(itr_image_constraint->image_id);
       Index x_offset = x_image_begin +
                        image_id * VectorFunction::extrinsic_params_per_image_;
+      double expected_values[VectorFunction::extrinsic_params_per_image_] =
+        {0, 0, 0, 0, 0, 0};
+      double constraints[VectorFunction::extrinsic_params_per_image_] =
+        {0, 0, 0, 0, 0, 0};
       if (itr_image_constraint->mask[IMAGE_CONSTRAIN_ROTATION])
       {
         for (Index i = 0; i < 3; i++)
         {
-          double expected_value = double(near_y[y_offset + i]);
-          double constraint =
+          expected_values[i] = double(near_y[y_offset + i]);
+          constraints[i] =
             y_covariance_inverse.GetConstraint(constraint_offset + i);
-          ceres::CostFunction* cost_function =
-            CameraSharedConstraint::Create(expected_value, constraint);
-
-          double* value = x_data + x_offset + i;
-          problem.AddResidualBlock(cost_function, NULL, value);
         }
         y_offset += 3;
         constraint_offset += 3;
@@ -295,19 +318,19 @@ public:
       {
         if (itr_image_constraint->mask[IMAGE_CONSTRAIN_POSITION_X + i])
         {
-          double expected_value = double(near_y[y_offset]);
-          double constraint =
+          expected_values[3 + i] = double(near_y[y_offset]);
+          constraints[3 + i] =
             y_covariance_inverse.GetConstraint(constraint_offset);
-          ceres::CostFunction* cost_function =
-            CameraSharedConstraint::Create(expected_value, constraint);
-
-          double* value = x_data + x_offset + 3 + i;
-          problem.AddResidualBlock(cost_function, NULL, value);
-
           y_offset++;
           constraint_offset++;
         }
       }
+      double* values = x_data + x_offset;
+      ceres::CostFunction* cost_function =
+        CameraSharedConstraint<
+          VectorFunction::extrinsic_params_per_image_>::Create(
+            expected_values, constraints);
+      problem.AddResidualBlock(cost_function, NULL, values);
     }
 
     auto itr_camera_constraint = vector_function.camera_constraints().begin();
@@ -329,75 +352,60 @@ public:
       Index camera_id = Index(itr_camera_constraint->camera_id);
       Index x_offset = x_camera_begin +
                        camera_id * intrinsic_params_size_per_camera;
+      double expected_values[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+      double constraints[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
       for (Index i = 0; i < 3; i++)
       {
         if (itr_camera_constraint->radial_mask[RADIAL_CONSTRAIN_K1 + i])
         {
-          double expected_value = double(near_y[y_offset]);
-          double constraint =
+          expected_values[i] = double(near_y[y_offset]);
+          constraints[i] =
             y_covariance_inverse.GetConstraint(constraint_offset);
-          ceres::CostFunction* cost_function =
-            CameraSharedConstraint::Create(expected_value, constraint);
-
-          double* value = x_data + x_offset + i;
-          problem.AddResidualBlock(cost_function, NULL, value);
-
           y_offset++;
           constraint_offset++;
         }
-      }
-      if (intrinsic_computations_mask[COMPUTE_RADIAL_DISTORTION])
-      {
-        x_offset += 3;
       }
 
       for (Index i = 0; i < 2; i++)
       {
-        if (itr_camera_constraint->radial_mask[DECENTERING_CONSTRAIN_D1 + i])
+        if (itr_camera_constraint->decentering_mask[
+                                     DECENTERING_CONSTRAIN_D1 + i])
         {
-          double expected_value = double(near_y[y_offset]);
-          double constraint =
+          expected_values[3 + i] = double(near_y[y_offset]);
+          constraints[3 + i] =
             y_covariance_inverse.GetConstraint(constraint_offset);
-          ceres::CostFunction* cost_function =
-            CameraSharedConstraint::Create(expected_value, constraint);
-
-          double* value = x_data + x_offset + i;
-          problem.AddResidualBlock(cost_function, NULL, value);
-
           y_offset++;
           constraint_offset++;
         }
       }
-      if (intrinsic_computations_mask[COMPUTE_DECENTERING_DISTORTION])
-      {
-        x_offset += 2;
-      }
-
       for (Index i = 0; i < 5; i++)
       {
-        if (itr_camera_constraint->radial_mask[
+        if (itr_camera_constraint->intrinsic_mask[
               INTRINSIC_CONSTRAIN_FOCAL_LENGTH + i])
         {
-          double expected_value = double(near_y[y_offset]);
-          double constraint =
+          expected_values[5 + i] = double(near_y[y_offset]);
+          constraints[5 + i] =
             y_covariance_inverse.GetConstraint(constraint_offset);
-          ceres::CostFunction* cost_function =
-            CameraSharedConstraint::Create(expected_value, constraint);
-
-          double* value = x_data + x_offset + i;
-          problem.AddResidualBlock(cost_function, NULL, value);
-
           y_offset++;
           constraint_offset++;
         }
       }
+      double* values = x_data + x_offset;
+      ceres::CostFunction* cost_function =
+        CameraSharedConstraint<10>::Create(expected_values, constraints);
+      problem.AddResidualBlock(cost_function, NULL, values);
     }
 
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
-    std::cout<<summary.FullReport()<<"\n";
+    //std::cout<<summary.FullReport()<<"\n";
+
+    if (!std::is_same<Scalar, double>::value)
+    {
+      optimized_x = casted_x.template cast<Scalar>();
+    }
 
     return 0;
   }
