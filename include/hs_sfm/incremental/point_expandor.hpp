@@ -4,6 +4,7 @@
 #include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
+#include "hs_sfm/sfm_utility/projective_functions.hpp"
 #include "hs_sfm/triangulate/multiple_view_maximum_likelihood_estimator.hpp"
 
 namespace hs
@@ -29,18 +30,20 @@ public:
   typedef EIGEN_STD_VECTOR(Point) PointContainer;
 
   typedef ObjectIndexMap TrackPointMap;
+  typedef ObjectIndexMap ImageIntrinsicMap;
   typedef ObjectIndexMap ImageExtrinsicMap;
 
 private:
   typedef hs::sfm::triangulate::MultipleViewMaximumLikelihoodEstimator<Scalar>
           TriangulateMLEstimator;
+  typedef typename TriangulateMLEstimator::Key Key;
   typedef typename TriangulateMLEstimator::KeyContainer KeyContainer;
-  typedef CameraFunctions<Scalar> CamFunctions;
-  typedef typename CamFunctions::ProjectionMatrix PMatrix;
+  typedef hs::sfm::ProjectiveFunctions<Scalar> ProjectiveFunctionsType;
 
 public:
   Err operator() (const ImageKeysetContainer& image_keysets,
                   const IntrinsicParamsContainer& intrinsic_params_set,
+                  const ImageIntrinsicMap& image_intrinsic_map,
                   const TrackContainer& tracks,
                   const ExtrinsicParamsContainer& extrinsic_params_set,
                   const ImageExtrinsicMap& image_extrinsic_map,
@@ -83,9 +86,10 @@ public:
           {
             size_t image_id = track_views[i].first;
             size_t key_id = track_views[i].second;
+            size_t intrinsic_id = image_intrinsic_map[image_id];
             size_t extrinsic_id = image_extrinsic_map[image_id];
             intrinsic_params_set_view[i] =
-              intrinsic_params_set[image_id];
+              intrinsic_params_set[intrinsic_id];
             extrinsic_params_set_view[i] =
               extrinsic_params_set[extrinsic_id];
             keys[i] = image_keysets[image_id][key_id];
@@ -102,17 +106,15 @@ public:
             bool is_blunder = false;
             for (size_t i = 0; i < track_size; i++)
             {
-              PMatrix P =
-                CamFunctions::GetProjectionMatrix(
-                  intrinsic_params_set_view[i],
-                  extrinsic_params_set_view[i]);
-              EIGEN_VECTOR(Scalar, 3) hkey = P.block(0, 0, 3, 3) * point +
-                                             P.col(3);
-              hkey /= hkey(2);
-              Scalar error = (keys[i] - hkey.segment(0, 2)).norm();
+              Key key = ProjectiveFunctionsType::WorldPointProjectToImageKey(
+                intrinsic_params_set_view[i], extrinsic_params_set_view[i],
+                point);
+
+              Scalar error = (keys[i] - key).norm();
 
               if (error > triangulate_error_threshold)
               {
+                std::cout<<"Blunder Error:"<<error<<"\n";
                 is_blunder = true;
                 break;
               }

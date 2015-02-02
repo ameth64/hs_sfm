@@ -1,9 +1,10 @@
-#ifndef _HS_SFM_INCREMENTAL_REPROJECTIVE_ERROR_CALCULATOR_HPP_
+﻿#ifndef _HS_SFM_INCREMENTAL_REPROJECTIVE_ERROR_CALCULATOR_HPP_
 #define _HS_SFM_INCREMENTAL_REPROJECTIVE_ERROR_CALCULATOR_HPP_
 
 #include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
+#include "hs_sfm/sfm_utility/projective_functions.hpp"
 
 namespace hs
 {
@@ -29,15 +30,17 @@ public:
 
   typedef ObjectIndexMap TrackPointMap;
   typedef ObjectIndexMap ImageExtrinsicMap;
+  typedef ObjectIndexMap ImageIntrinsicMap;
 
 private:
-  typedef CameraFunctions<Scalar> CameraFunctions;
-  typedef typename CameraFunctions::ProjectionMatrix PMatrix;
+  typedef ProjectiveFunctions<Scalar> ProjectiveFunctions;
+  typedef typename ProjectiveFunctions::Key Key;
 
 public:
   Scalar operator() (const ImageKeysetContainer& image_keysets,
                      const IntrinsicParamsContainer& intrinsic_params_set,
                      const TrackContainer& tracks,
+                     const ImageIntrinsicMap& image_intrinsic_map,
                      const ImageExtrinsicMap& image_extrinsic_map,
                      const TrackPointMap& track_point_map,
                      const ViewInfoIndexer& view_info_indexer,
@@ -62,20 +65,20 @@ public:
             !view_info.is_blunder)
           {
             size_t key_id = tracks[track_id][i].second;
-            size_t exrinsic_id = image_extrinsic_map[image_id];
+            size_t extrinsic_id = image_extrinsic_map[image_id];
+            size_t intrinsic_id = image_intrinsic_map[image_id];
             size_t point_id = track_point_map[track_id];
             const ExtrinsicParams& extrinsic_params =
-              extrinsic_params_set[exrinsic_id];
+              extrinsic_params_set[extrinsic_id];
             const IntrinsicParams& intrinsic_params =
-              intrinsic_params_set[image_id];
-            EIGEN_VECTOR(Scalar, 2) key = image_keysets[image_id][key_id];
-            PMatrix P = CameraFunctions::GetProjectionMatrix(intrinsic_params,
-                                                             extrinsic_params);
+              intrinsic_params_set[intrinsic_id];
+            Key key_predicated = image_keysets[image_id][key_id];
             const Point& point = points[point_id];
-            EIGEN_VECTOR(Scalar, 3) hkey = P.block(0, 0, 3, 3) * point +
-                                           P.col(3);
-            hkey /= hkey(2);
-            Scalar reprojection_error = (key - hkey.segment(0, 2)).norm();
+            Key key_projected =
+              ProjectiveFunctions::WorldPointProjectToImageKey(
+                intrinsic_params, extrinsic_params, point);
+            Scalar reprojection_error =
+              (key_predicated - key_projected).norm();
             mean_reprojection_error += reprojection_error;
             number_of_reprojections++;
           }

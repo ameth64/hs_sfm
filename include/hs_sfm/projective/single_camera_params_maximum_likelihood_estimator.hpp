@@ -27,7 +27,7 @@ public:
   typedef CameraIntrinsicParams<Scalar> IntrinsicParams;
   typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;
   typedef EIGEN_MATRIX(Scalar, 2, 2) KeyCovariance;
-  
+
 private:
   typedef PMatrixDLTCalculator<Scalar> DLTCalculator;
   typedef typename DLTCalculator::PMatrix PMatrix;
@@ -42,7 +42,7 @@ private:
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
 
   typedef hs::math::geometry::Rotation3D<Scalar> Rotation;
-  
+
 public:
   typedef typename DLTCalculator::Correspondence Correspondence;
   typedef typename DLTCalculator::CorrespondenceContainer

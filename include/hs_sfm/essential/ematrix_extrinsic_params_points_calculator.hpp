@@ -183,8 +183,8 @@ private:
                       P_left(2, 3);
       Scalar z_right = (P_right.block(2, 0, 1, 3) * points[i])[0] +
                        P_right(2, 3);
-      if (z_left < 0) front_left++; else behind_left++;
-      if (z_right < 0) front_right++; else behind_right++;
+      if (z_left > 0) front_left++; else behind_left++;
+      if (z_right > 0) front_right++; else behind_right++;
     }
 
     if (front_left > behind_left && front_right > behind_right)

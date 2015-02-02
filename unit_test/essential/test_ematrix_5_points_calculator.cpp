@@ -4,8 +4,8 @@
 
 #include "hs_math/random/normal_random_var.hpp"
 
-#include "hs_sfm/synthetic/scene_generator.hpp"
-#include "hs_sfm/synthetic/keyset_generator.hpp"
+#include "hs_sfm/synthetic/flight_generator.hpp"
+#include "hs_sfm/synthetic/multiple_camera_keyset_generator.hpp"
 
 #include "hs_sfm/essential/ematrix_5_points_calculator.hpp"
 
@@ -21,21 +21,18 @@ public:
   typedef int Err;
 
 private:
-  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
-          SceneGenerator;
-  typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
-  typedef typename IntrinsicParams::KMatrix KMatrix;
-  typedef typename SceneGenerator::IntrinsicParamsContainer
-                   IntrinsicParamsContainer;
-  typedef typename SceneGenerator::ExtrinsicParams ExtrinsicParams;
-  typedef typename SceneGenerator::ExtrinsicParamsContainer
+  typedef hs::sfm::synthetic::FlightGenerator<Scalar, ImageDimension>
+          FlightGenerator;
+  typedef typename FlightGenerator::ExtrinsicParams ExtrinsicParams;
+  typedef typename FlightGenerator::ExtrinsicParamsContainer
                    ExtrinsicParamsContainer;
-  typedef typename SceneGenerator::Image Image;
-  typedef typename SceneGenerator::ImageContainer ImageContainer;
-  typedef typename SceneGenerator::Point3D Point3D;
-  typedef typename SceneGenerator::Point3DContainer Point3DContainer;
+  typedef typename FlightGenerator::Image Image;
+  typedef typename FlightGenerator::ImageContainer ImageContainer;
+  typedef typename FlightGenerator::Point3D Point3D;
+  typedef typename FlightGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension>
+  typedef hs::sfm::synthetic::MultipleCameraKeysetGenerator<Scalar,
+                                                            ImageDimension>
           KeysetGenerator;
   typedef typename KeysetGenerator::Keyset Keyset;
   typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
@@ -46,8 +43,13 @@ private:
   typedef typename Calculator::HKey HKey;
   typedef typename Calculator::HKeyPair HKeyPair;
   typedef typename Calculator::HKeyPairContainer HKeyPairContainer;
+public:
+  typedef typename KeysetGenerator::IntrinsicParams IntrinsicParams;
+  typedef typename KeysetGenerator::IntrinsicParamsContainer
+                   IntrinsicParamsContainer;
 
 private:
+  typedef typename IntrinsicParams::KMatrix KMatrix;
   typedef EIGEN_VECTOR(Scalar, 3) HLine;
 
 public:
@@ -65,8 +67,9 @@ public:
     Scalar camera_height_stddev,
     Scalar camera_plannar_stddev,
     Scalar camera_rot_stddev,
-    Scalar north_west_angle)
-    : scene_generator_(focal_length_in_metre,
+    Scalar north_west_angle,
+    const IntrinsicParamsContainer& intrinsic_params_set)
+    : flight_generator_(focal_length_in_metre,
                        number_of_strps,
                        number_of_strps > 1 ? 1 : 2,
                        ground_resolution,
@@ -79,31 +82,33 @@ public:
                        scene_max_height,
                        camera_height_stddev,
                        camera_plannar_stddev,
-                       camera_rot_stddev,
-                       north_west_angle),
-      keys_generator_(image_width, image_height) {}
+                       camera_rot_stddev),
+      intrinsic_params_set_(intrinsic_params_set) {}
 
   Err operator() ()
   {
     //生成相机参数和三维点
-    IntrinsicParamsContainer intrinsic_params_set;
     ExtrinsicParamsContainer extrinsic_params_set;
     ImageContainer images;
     Point3DContainer points;
-    if (scene_generator_(intrinsic_params_set, extrinsic_params_set,
-                         images, points) != 0)
+    if (flight_generator_(extrinsic_params_set, images, points) != 0)
     {
       std::cout<<"scene generator failed!\n";
       return -1;
     }
 
     //生成特征点
+    std::vector<size_t> image_intrinsic_map;
+    image_intrinsic_map.push_back(0);
+    image_intrinsic_map.push_back(1);
     KeysetContainer keysets;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
-    if (keys_generator_(intrinsic_params_set,
+    if (keys_generator_(intrinsic_params_set_,
                         extrinsic_params_set,
+                        images,
                         points,
+                        image_intrinsic_map,
                         keysets,
                         tracks,
                         camera_views) != 0)
@@ -119,8 +124,8 @@ public:
     key_covariance.setIdentity();
     Scalar key_stddev = 2;
     key_covariance *= key_stddev * key_stddev;
-    KMatrix K_left_inverse = intrinsic_params_set[0].GetKMatrix().inverse();
-    KMatrix K_right_inverse = intrinsic_params_set[1].GetKMatrix().inverse();
+    KMatrix K_left_inverse = intrinsic_params_set_[0].GetKMatrix().inverse();
+    KMatrix K_right_inverse = intrinsic_params_set_[1].GetKMatrix().inverse();
     for (size_t i = 0; i < number_of_tracks; i++)
     {
       if (tracks[i].size() == 2)
@@ -155,7 +160,7 @@ public:
     //检查对极线误差
     Scalar mean_error = Scalar(0);
     size_t number_of_key_pairs = key_pairs.size();
-    Scalar focal_length_in_pix = scene_generator_.GetFocalLengthInPixel();
+    Scalar focal_length_in_pix = flight_generator_.GetFocalLengthInPixel();
     for (size_t i = 0; i < number_of_key_pairs; i++)
     {
       const HKey& hkey_left = key_pairs[i].first;
@@ -164,15 +169,18 @@ public:
       HLine epiline_left = e_matrix * hkey_left;
       HLine epiline_right = e_matrix.transpose() * hkey_right;
       Scalar error_left = std::abs(hkey_right.dot(epiline_left)) /
-        epiline_left.segment(0, 2).norm() * focal_length_in_pix;
+        epiline_left.segment(0, 2).norm() *
+        intrinsic_params_set_[0].focal_length();
       Scalar error_right = std::abs(hkey_left.dot(epiline_right)) /
-        epiline_right.segment(0, 2).norm() * focal_length_in_pix;
+        epiline_right.segment(0, 2).norm() *
+        intrinsic_params_set_[1].focal_length();
       mean_error += error_left + error_right;
     }
     mean_error /= Scalar(number_of_key_pairs);
 
     //TODO:该阈值设置较随意！应改善！
-    if (mean_error <= key_stddev * Scalar(2) + 1)
+    std::cout<<"mean_error:"<<mean_error<<"\n";
+    if (mean_error <= 16)
     {
       return 0;
     }
@@ -184,8 +192,9 @@ public:
     return 0;
   }
 private:
-  SceneGenerator scene_generator_;
+  FlightGenerator flight_generator_;
   KeysetGenerator keys_generator_;
+  IntrinsicParamsContainer intrinsic_params_set_;
 };
 
 TEST(TestEMatrix5PointsCalculator, SimpleTest)
@@ -193,6 +202,8 @@ TEST(TestEMatrix5PointsCalculator, SimpleTest)
   typedef double Scalar;
   typedef size_t ImageDimension;
   typedef TestEMatrix5PointsCalculator<Scalar, ImageDimension> Test;
+  typedef Test::IntrinsicParams IntrinsicParams;
+  typedef Test::IntrinsicParamsContainer IntrinsicParamsContainer;
 
   Scalar focal_length_in_metre = 0.019;
   size_t number_of_strips = 1;
@@ -209,6 +220,30 @@ TEST(TestEMatrix5PointsCalculator, SimpleTest)
   Scalar camera_rot_stddev = 1;
   Scalar north_west_angle = 60;
 
+  IntrinsicParams intrinsic_params_0(4835.47665904517026,
+                                     0,
+                                     3000-42.4095312016,
+                                     2000+31.699212823,
+                                     1/*,
+                                     -0.0050490462006048831,
+                                     0.031293804298609881,
+                                     -0.030794820960442223,
+                                     -0.00055376548320189127,
+                                     -0.00049877717768381476*/);
+  IntrinsicParams intrinsic_params_1(4886.17891666633641,
+                                     0,
+                                     3000-35.2052431556,
+                                     2000+16.4262220759,
+                                     1/*,
+                                     -0.10316088386868619,
+                                     0.13520490482776426,
+                                     -0.05489235547426094,
+                                     4.1434720317373253e-006,
+                                     -0.00025018439997095336*/);
+  IntrinsicParamsContainer intrinsic_params_set;
+  intrinsic_params_set.push_back(intrinsic_params_0);
+  intrinsic_params_set.push_back(intrinsic_params_1);
+
   Test test(focal_length_in_metre,
             number_of_strips,
             ground_resolution,
@@ -222,7 +257,8 @@ TEST(TestEMatrix5PointsCalculator, SimpleTest)
             camera_height_stddev,
             camera_plannar_stddev,
             camera_rot_stddev,
-            north_west_angle);
+            north_west_angle,
+            intrinsic_params_set);
 
   ASSERT_EQ(0, test());
 }

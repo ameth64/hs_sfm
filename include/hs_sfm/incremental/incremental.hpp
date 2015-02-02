@@ -53,9 +53,10 @@ public:
       add_new_image_matches_threshold_(add_new_image_matches_threshold),
       min_triangulate_views_(min_triangulate_views) {}
 
-  Err operator() (const IntrinsicParamsContainer& intrinsic_params_set,
+  Err operator() (const ObjectIndexMap& image_intrinsic_map,
                   const hs::sfm::MatchContainer& matches,
                   const KeysetContainer& keysets,
+                  IntrinsicParamsContainer& intrinsic_params_set,
                   ExtrinsicParamsContainer& extrinsic_params_set,
                   hs::sfm::ObjectIndexMap& image_extrinsic_map,
                   PointContainer& points,
@@ -70,6 +71,7 @@ public:
     if (selector(keysets,
                  matches,
                  intrinsic_params_set,
+                 image_intrinsic_map,
                  best_identity_id,
                  best_relative_id,
                  extrinsic_params_relative,
@@ -99,7 +101,7 @@ public:
       points_best_pair[i] = rotation_extra * point;
     }
 
-    size_t number_of_images = intrinsic_params_set.size();
+    size_t number_of_images = keysets.size();
     extrinsic_params_set.clear();
     extrinsic_params_set.push_back(extrinsic_params_identity);
     extrinsic_params_set.push_back(extrinsic_params_relative);
@@ -169,12 +171,13 @@ public:
 
     points.swap(points_best_pair);
     SceneExpandor<Scalar> expandor(add_new_image_matches_threshold_,
-                                   Scalar(4),
+                                   Scalar(16),
                                    min_triangulate_views_,
-                                   Scalar(4));
+                                   Scalar(16));
     if (expandor(keysets,
-                 intrinsic_params_set,
+                 image_intrinsic_map,
                  tracks,
+                 intrinsic_params_set,
                  extrinsic_params_set,
                  image_extrinsic_map,
                  points,

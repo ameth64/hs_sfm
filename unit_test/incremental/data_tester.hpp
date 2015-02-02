@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_UNIT_TEST_INCREMENTAL_DATA_TESTER_HPP_
+﻿#ifndef _HS_SFM_UNIT_TEST_INCREMENTAL_DATA_TESTER_HPP_
 #define _HS_SFM_UNIT_TEST_INCREMENTAL_DATA_TESTER_HPP_
 
 #include <iostream>
@@ -40,6 +40,7 @@ public:
     const KeysetContainer& keysets,
     const IntrinsicParamsContainer& intrinsic_params_set,
     const hs::sfm::TrackContainer& tracks,
+    const hs::sfm::ObjectIndexMap& image_intrinsic_map,
     const hs::sfm::ObjectIndexMap& image_extrinsic_map,
     const hs::sfm::ObjectIndexMap& track_point_map,
     const hs::sfm::ViewInfoIndexer& view_info_indexer,
@@ -53,6 +54,7 @@ public:
                      keysets,
                      intrinsic_params_set,
                      tracks,
+                     image_intrinsic_map,
                      image_extrinsic_map,
                      track_point_map,
                      view_info_indexer,

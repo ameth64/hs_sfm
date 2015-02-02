@@ -18,17 +18,17 @@ hslib_add_library(${BA_NAME} ${HSPRJ_NAME} ${BA_SOURCES})
 
 set(BA_UTEST_SOURCES
   "unit_test/test_main.cpp"
-  "unit_test/bundle_adjustment/test_ba_naive_normal_mle_meta.hpp"
-  "unit_test/bundle_adjustment/test_ba_naive_jacobian_matrix_calculator.cpp"
-  "unit_test/bundle_adjustment/test_ba_naive_monte_carlo_simulate.cpp"
-  "unit_test/bundle_adjustment/test_ba_naive_normal_equation_builder.cpp"
-  "unit_test/bundle_adjustment/test_ba_naive_normal_equation_solver.cpp"
-  "unit_test/bundle_adjustment/test_ba_naive_vector_function.cpp"
-  "unit_test/bundle_adjustment/test_ba_naive_ground_truth.cpp"
-  "unit_test/bundle_adjustment/test_ba_gcp_constrained_gauge.cpp"
-  "unit_test/bundle_adjustment/test_ba_gcp_constrained_jacobian_matrix_calculator.cpp"
-  "unit_test/bundle_adjustment/test_ba_gcp_constrained_normal_equation_builder.cpp"
-  "unit_test/bundle_adjustment/test_ba_gcp_constrained_vector_function.cpp"
+  #"unit_test/bundle_adjustment/test_ba_naive_normal_mle_meta.hpp"
+  #"unit_test/bundle_adjustment/test_ba_naive_jacobian_matrix_calculator.cpp"
+  #"unit_test/bundle_adjustment/test_ba_naive_monte_carlo_simulate.cpp"
+  #"unit_test/bundle_adjustment/test_ba_naive_normal_equation_builder.cpp"
+  #"unit_test/bundle_adjustment/test_ba_naive_normal_equation_solver.cpp"
+  #"unit_test/bundle_adjustment/test_ba_naive_vector_function.cpp"
+  #"unit_test/bundle_adjustment/test_ba_naive_ground_truth.cpp"
+  #"unit_test/bundle_adjustment/test_ba_gcp_constrained_gauge.cpp"
+  #"unit_test/bundle_adjustment/test_ba_gcp_constrained_jacobian_matrix_calculator.cpp"
+  #"unit_test/bundle_adjustment/test_ba_gcp_constrained_normal_equation_builder.cpp"
+  #"unit_test/bundle_adjustment/test_ba_gcp_constrained_vector_function.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_vector_function.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_jacobian_matrix_calculator.cpp"
   "unit_test/bundle_adjustment/test_camera_shared_analytical_derivative.cpp"
@@ -104,14 +104,30 @@ hslib_add_library(${INCREMENTAL_NAME} ${HSPRJ_NAME} ${INCREMENTAL_SOURCES})
 set(INCREMENTAL_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/incremental/test_incremental.cpp"
-  "unit_test/incremental/test_scene_expandor.cpp"
-  "unit_test/incremental/test_bundle_adjustment_gcp_constrained_optimizor.cpp"
+  #"unit_test/incremental/test_scene_expandor.cpp"
+  #"unit_test/incremental/test_bundle_adjustment_gcp_constrained_optimizor.cpp"
   #"unit_test/incremental/test_scene_expandor_gcp_constrained.cpp"
   )
 hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
 hslib_add_dep(${INCREMENTAL_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
+  3RDPARTY_DEPS ceres DEP_LIBS ceres ceres_miniglog
+  3RDPARTY_DEPS boost DEP_LIBS boost_filesystem boost_system
+  3RDPARTY_DEPS tiff DEP_LIBS tiff
+  3RDPARTY_DEPS jpeg DEP_LIBS jpeg
+  3RDPARTY_DEPS png DEP_LIBS png
+  3RDPARTY_DEPS z DEP_LIBS z
+  3RDPARTY_DEPS opencv
+    DEP_LIBS opencv_calib3d
+             opencv_core
+             opencv_cudaarithm
+             opencv_imgproc
+             opencv_features2d
+             opencv_highgui
+             opencv_flann
+             opencv_nonfree
   HS_DEPS hs_math HEADONLY
+  HS_DEPS hs_image_io DEP_LIBS whole_io
   HS_DEPS hs_test_utility DEP_LIBS test_env)
 hslib_post_build(${INCREMENTAL_NAME}_utest)
 
@@ -254,3 +270,22 @@ hslib_add_dep(${CALIBRATE_NAME}_utest
   HS_DEPS hs_math HEADONLY
   )
 hslib_post_build(${CALIBRATE_NAME}_utest)
+
+##feature_match
+#set(FEATURE_MATCH_NAME "feature_match")
+#set(FEATURE_MATCH_SOURCES
+#  "src/feature_match/opencv_feature_detector.cpp"
+#  #"src/feature_match/flann_matcher.cpp"
+#  )
+#hslib_add_library(${FEATURE_MATCH_NAME} ${HSPRJ_NAME} ${FEATURE_MATCH_SOURCES})
+#hslib_add_dep(${FEATURE_MATCH_NAME}
+#  3RDPARTY_DEPS opencv
+#    DEP_LIBS opencv_core
+#             opencv_calib3d
+#             opencv_imgproc
+#             opencv_features2d
+#             opencv_highgui
+#             opencv_flann
+#             opencv_nonfree
+#  HS_DEPS hs_math HEADONLY
+#  )

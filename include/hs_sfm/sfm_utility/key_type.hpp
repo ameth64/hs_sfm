@@ -27,6 +27,7 @@ public:
   void resize(size_t s) {keys_.resize(s);}
   size_t size() const {return keys_.size();}
   void clear() {keys_.swap(KeysContainer());}
+  void AddKey(const Key& key) {keys_.push_back(key);}
   Key operator [] (KeyId i) const {return keys_[i];}
   Key& operator [] (KeyId i) {return keys_[i];}
   bool operator == (const ImageKeys& image_keys)

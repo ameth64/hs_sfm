@@ -78,19 +78,15 @@ public:
             extrinsic_params,
             point);
 
-        if (key[0] > (-Scalar(image.m_width) / 2) &&
-            key[0] < ( Scalar(image.m_width) / 2) &&
-            key[1] > (-Scalar(image.m_height) / 2) &&
-            key[1] < ( Scalar(image.m_height) / 2))
+        if (key[0] > 0 && key[0] < Scalar(image.m_width) &&
+            key[1] > 0 && key[1] < Scalar(image.m_height))
         {
           key = ProjectiveFunctions::WorldPointProjectToImageKey(
                   intrinsic_params,
                   extrinsic_params,
                   point);
-          if (key[0] > (-Scalar(image.m_width) / 2) &&
-              key[0] < ( Scalar(image.m_width) / 2) &&
-              key[1] > (-Scalar(image.m_height) / 2) &&
-              key[1] < ( Scalar(image.m_height) / 2))
+          if (key[0] > 0 && key[0] < Scalar(image.m_width) &&
+              key[1] > 0 && key[1] < Scalar(image.m_height))
           {
             tracks[i].push_back(
               std::make_pair(j, keys_vector[j].size()));

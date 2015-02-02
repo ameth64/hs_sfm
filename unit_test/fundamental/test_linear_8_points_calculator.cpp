@@ -4,8 +4,8 @@
 
 #include "hs_math/random/normal_random_var.hpp"
 
-#include "hs_sfm/synthetic/scene_generator.hpp"
-#include "hs_sfm/synthetic/keyset_generator.hpp"
+#include "hs_sfm/synthetic/flight_generator.hpp"
+#include "hs_sfm/synthetic/multiple_camera_keyset_generator.hpp"
 
 #include "hs_sfm/fundamental/linear_8_points_calculator.hpp"
 
@@ -21,20 +21,18 @@ public:
   typedef int Err;
 
 private:
-  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
-          SceneGenerator;
-  typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
-  typedef typename SceneGenerator::IntrinsicParamsContainer
-                   IntrinsicParamsContainer;
-  typedef typename SceneGenerator::ExtrinsicParams ExtrinsicParams;
-  typedef typename SceneGenerator::ExtrinsicParamsContainer
+  typedef hs::sfm::synthetic::FlightGenerator<Scalar, ImageDimension>
+          FlightGenerator;
+  typedef typename FlightGenerator::ExtrinsicParams ExtrinsicParams;
+  typedef typename FlightGenerator::ExtrinsicParamsContainer
                    ExtrinsicParamsContainer;
-  typedef typename SceneGenerator::Image Image;
-  typedef typename SceneGenerator::ImageContainer ImageContainer;
-  typedef typename SceneGenerator::Point3D Point3D;
-  typedef typename SceneGenerator::Point3DContainer Point3DContainer;
+  typedef typename FlightGenerator::Image Image;
+  typedef typename FlightGenerator::ImageContainer ImageContainer;
+  typedef typename FlightGenerator::Point3D Point3D;
+  typedef typename FlightGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension>
+  typedef hs::sfm::synthetic::MultipleCameraKeysetGenerator<Scalar,
+                                                            ImageDimension>
           KeysetGenerator;
   typedef typename KeysetGenerator::Keyset Keyset;
   typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
@@ -45,6 +43,11 @@ private:
   typedef typename Calculator::FMatrix FMatrix;
   typedef EIGEN_VECTOR(Scalar, 3) HKey;
   typedef EIGEN_VECTOR(Scalar, 3) HLine;
+
+public:
+  typedef typename KeysetGenerator::IntrinsicParams IntrinsicParams;
+  typedef typename KeysetGenerator::IntrinsicParamsContainer
+                   IntrinsicParamsContainer;
 
 public:
   TestLinear8PointsCalculator(
@@ -61,33 +64,31 @@ public:
     Scalar camera_height_stddev,
     Scalar camera_plannar_stddev,
     Scalar camera_rot_stddev,
-    Scalar north_west_angle)
-    : scene_generator_(focal_length_in_metre,
-                       number_of_strps,
-                       number_of_strps > 1 ? 1 : 2,
-                       ground_resolution,
-                       image_width,
-                       image_height,
-                       pixel_size,
-                       number_of_points,
-                       lateral_overlap_ratio,
-                       longitudinal_overlap_ratio,
-                       scene_max_height,
-                       camera_height_stddev,
-                       camera_plannar_stddev,
-                       camera_rot_stddev,
-                       north_west_angle),
-      keys_generator_(image_width, image_height){}
+    Scalar north_west_angle,
+    const IntrinsicParamsContainer& intrinsic_params_set)
+    : flight_generator_(focal_length_in_metre,
+                        number_of_strps,
+                        number_of_strps > 1 ? 1 : 2,
+                        ground_resolution,
+                        image_width,
+                        image_height,
+                        pixel_size,
+                        number_of_points,
+                        lateral_overlap_ratio,
+                        longitudinal_overlap_ratio,
+                        scene_max_height,
+                        camera_height_stddev,
+                        camera_plannar_stddev,
+                        camera_rot_stddev),
+      intrinsic_params_set_(intrinsic_params_set) {}
 
   Err operator()()
   {
     //生成相机参数和三维点
-    IntrinsicParamsContainer intrinsic_params_set;
     ExtrinsicParamsContainer extrinsic_params_set;
     ImageContainer images;
     Point3DContainer points;
-    if (scene_generator_(intrinsic_params_set, extrinsic_params_set,
-                         images, points) != 0)
+    if (flight_generator_(extrinsic_params_set, images, points) != 0)
     {
       std::cout<<"scene generator failed!\n";
       return -1;
@@ -95,11 +96,16 @@ public:
 
     //生成特征点
     KeysetContainer keysets;
+    std::vector<size_t> image_intrinsic_map;
+    image_intrinsic_map.push_back(0);
+    image_intrinsic_map.push_back(1);
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
-    if (keys_generator_(intrinsic_params_set,
+    if (keys_generator_(intrinsic_params_set_,
                         extrinsic_params_set,
+                        images,
                         points,
+                        image_intrinsic_map,
                         keysets,
                         tracks,
                         camera_views) != 0)
@@ -129,7 +135,7 @@ public:
     size_t number_of_keys = keys_left.size();
     EIGEN_MATRIX(Scalar, 2, 2) key_covariance;
     key_covariance.setIdentity();
-    Scalar key_stddev = 2;
+    Scalar key_stddev = 1;
     key_covariance *= key_stddev * key_stddev;
     for (size_t i = 0; i < number_of_keys; i++)
     {
@@ -175,20 +181,21 @@ public:
     mean_error /= Scalar(number_of_keys);
 
     //TODO:该阈值设置较随意！应改善！
-    if (mean_error <= key_stddev * Scalar(2) + 1)
+    if (mean_error <= 16)
     {
       return 0;
     }
     else
     {
+      std::cout<<"mean_error:"<<mean_error<<"\n";
       return -1;
     }
   }
 
 private:
-  SceneGenerator scene_generator_;
+  FlightGenerator flight_generator_;
   KeysetGenerator keys_generator_;
-
+  IntrinsicParamsContainer intrinsic_params_set_;
 };
 
 TEST(TestLinear8PointsCalculator, SimpleTest)
@@ -196,6 +203,8 @@ TEST(TestLinear8PointsCalculator, SimpleTest)
   typedef double Scalar;
   typedef size_t ImageDimension;
   typedef TestLinear8PointsCalculator<Scalar, ImageDimension> Test;
+  typedef Test::IntrinsicParams IntrinsicParams;
+  typedef Test::IntrinsicParamsContainer IntrinsicParamsContainer;
 
   Scalar focal_length_in_metre = 0.019;
   size_t number_of_strips = 1;
@@ -212,6 +221,30 @@ TEST(TestLinear8PointsCalculator, SimpleTest)
   Scalar camera_rot_stddev = 1;
   Scalar north_west_angle = 60;
 
+  IntrinsicParams intrinsic_params_0(4835.47665904517026,
+                                     0,
+                                     3000-42.4095312016,
+                                     2000+31.699212823,
+                                     1,
+                                     -0.0050490462006048831,
+                                     0.031293804298609881,
+                                     -0.030794820960442223,
+                                     -0.00055376548320189127,
+                                     -0.00049877717768381476);
+  IntrinsicParams intrinsic_params_1(4886.17891666633641,
+                                     0,
+                                     3000-35.2052431556,
+                                     2000+16.4262220759,
+                                     1,
+                                     -0.10316088386868619,
+                                     0.13520490482776426,
+                                     -0.05489235547426094,
+                                     4.1434720317373253e-006,
+                                     -0.00025018439997095336);
+  IntrinsicParamsContainer intrinsic_params_set;
+  intrinsic_params_set.push_back(intrinsic_params_0);
+  intrinsic_params_set.push_back(intrinsic_params_1);
+
   Test test(focal_length_in_metre,
             number_of_strips,
             ground_resolution,
@@ -225,7 +258,8 @@ TEST(TestLinear8PointsCalculator, SimpleTest)
             camera_height_stddev,
             camera_plannar_stddev,
             camera_rot_stddev,
-            north_west_angle);
+            north_west_angle,
+            intrinsic_params_set);
 
   ASSERT_EQ(0, test());
 }

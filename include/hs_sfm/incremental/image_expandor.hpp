@@ -29,6 +29,7 @@ public:
   typedef EIGEN_STD_VECTOR(Point) PointContainer;
 
   typedef ObjectIndexMap TrackPointMap;
+  typedef ObjectIndexMap ImageIntrinsicMap;
   typedef ObjectIndexMap ImageExtrinsicMap;
   typedef std::vector<size_t> ImageViewTracks;
   typedef std::vector<ImageViewTracks> ImageViewTracksContainer;
@@ -58,6 +59,7 @@ public:
 
   Err operator() (const ImageKeysetContainer& image_keysets,
                   const IntrinsicParamsContainer& intrinsic_params_set,
+                  const ImageIntrinsicMap& image_intrinsic_map,
                   const PointContainer& points,
                   const TrackPointMap& track_point_map,
                   const ImageViewTracksContainer& image_view_tracks_set,
@@ -67,7 +69,7 @@ public:
                   size_t& new_image_id) const
   {
     size_t number_of_images = image_keysets.size();
-    if (number_of_images != intrinsic_params_set.size())
+    if (number_of_images != image_intrinsic_map.Size())
     {
       return -1;
     }
@@ -106,6 +108,7 @@ public:
       }
     }
 
+    std::cout<<"max_number_of_view_tracks:"<<max_number_of_view_tracks<<"\n";
     if (max_number_of_view_tracks < add_new_image_matches_threshold_)
     {
       return -1;
@@ -160,9 +163,10 @@ public:
     CameraParamsMLEstimator camera_ml_estimator;
     KeyCovariance key_covariance = KeyCovariance::Identity();
     IntrinsicParams intrinsic_params_estimate;
+    size_t intrinsic_id = image_intrinsic_map[new_image_id];
     if (camera_ml_estimator(refined_correspondences,
                             key_covariance,
-                            intrinsic_params_set[new_image_id],
+                            intrinsic_params_set[intrinsic_id],
                             Scalar(1),
                             Scalar(0.01),
                             Scalar(1),

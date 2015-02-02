@@ -4,6 +4,7 @@
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
+#include "hs_sfm/sfm_utility/projective_functions.hpp"
 
 namespace hs
 {
@@ -32,11 +33,8 @@ public:
   static const Index params_per_point_ = 3;
 
 private:
-  typedef typename IntrinsicParamsContainer::size_type SizeType;
-  typedef hs::sfm::CameraFunctions<Scalar> Camera;
-  typedef typename Camera::ProjectionMatrix ProjectionMatrix;
-  typedef EIGEN_VECTOR(Scalar, params_per_point_ + 1) HomogeneousPoint;
-  typedef EIGEN_VECTOR(Scalar, params_per_feature_ + 1) HomogeneousFeature;
+  typedef hs::sfm::ProjectiveFunctions<Scalar> ProjectiveFunctionsType;
+  typedef typename ProjectiveFunctionsType::Key KeyType;
 
 public:
   MultipleViewVectorFunction(){}
@@ -59,17 +57,10 @@ public:
 
     for (Index i = 0; i < number_of_camera; i++)
     {
-      ProjectionMatrix p_matrix =
-        Camera::GetProjectionMatrix(intrinsic_params_set_[i],
-                                    extrinsic_params_set_[i]);
+      KeyType key = ProjectiveFunctionsType::WorldPointProjectToImageKey(
+        intrinsic_params_set_[i], extrinsic_params_set_[i], x);
 
-      HomogeneousFeature homogeneous_feature = 
-        p_matrix.block(0, 0, 3, 3) * x + 
-        p_matrix.block(0, 3, 3, 1);
-      homogeneous_feature /= homogeneous_feature[2];
-
-      y.segment(i * params_per_feature_, params_per_feature_) =
-        homogeneous_feature.segment(0, params_per_feature_);
+      y.segment(i * params_per_feature_, params_per_feature_) = key;
     }
 
     return 0;

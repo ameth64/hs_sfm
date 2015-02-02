@@ -8,6 +8,7 @@
 #include <ceres/rotation.h>
 
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
+#include "hs_sfm/bundle_adjustment/camera_shared_y_covariance_inverse.hpp"
 
 namespace hs
 {
@@ -58,8 +59,8 @@ public:
     normalized_x += radial_x + decentering_x;
     normalized_y += radial_y + decentering_y;
 
-    T image_x = camera[5] * normalized_x + camera[6] * normalized_y + camera[7];
-    T image_y = camera[5] * camera[9] * normalized_y + camera[8];
+    T image_x = camera[5] * normalized_x + /*camera[6] * normalized_y + */camera[7];
+    T image_y = camera[5]/* * camera[9]*/ * normalized_y + camera[8];
 
     T diff_x = image_x - T(observed_x_);
     T diff_y = image_y - T(observed_y_);
@@ -168,8 +169,9 @@ public:
   typedef typename VectorFunction::YVector YVector;
   typedef CameraSharedYCovarianceInverse<Scalar> YCovarianceInverse;
 
-  CameraSharedCeresOptimizor(const XVector& initial_x)
-    : initial_x_(initial_x) {}
+  CameraSharedCeresOptimizor(const XVector& initial_x,
+                             int number_of_threads = 1)
+    : initial_x_(initial_x), number_of_threads_(number_of_threads) {}
 
   Err operator() (const VectorFunction& vector_function,
                   const YVector& near_y,
@@ -397,6 +399,8 @@ public:
     }
 
     ceres::Solver::Options options;
+    options.max_num_iterations = 50;
+    options.num_threads = number_of_threads_ > 1 ? number_of_threads_ : 1;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
@@ -412,6 +416,7 @@ public:
 
 private:
   XVector initial_x_;
+  int number_of_threads_;
 };
 
 }

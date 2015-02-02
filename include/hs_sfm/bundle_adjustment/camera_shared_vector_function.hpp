@@ -361,6 +361,54 @@ public:
             GetYCameraConstraintsSize());
   }
 
+  Point GetPoint(Index point_id, const XVector& x) const
+  {
+    Point point;
+    if (is_fix_points())
+    {
+      point = fix_points_[point_id];
+    }
+    else
+    {
+      point =
+        x.template segment<params_per_point_>(point_id * params_per_point_);
+    }
+    return point;
+  }
+
+  Image GetImage(Index image_id, const XVector& x) const
+  {
+    Image image;
+    if (is_fix_images())
+    {
+      image = fix_images_[image_id];
+    }
+    else
+    {
+      Index image_begin = is_fix_points() ? 0 : GetPointParamsSize();
+      image = x.template segment<extrinsic_params_per_image_>(
+                image_begin + image_id * extrinsic_params_per_image_);
+    }
+    return image;
+  }
+
+  Camera GetCamera(Index camera_id, const XVector& x) const
+  {
+    Index camera_size = GetIntrinsicParamsSizePerCamera();
+    Camera camera(camera_size);
+    if (is_fix_cameras())
+    {
+      camera = fix_cameras_[camera_id];
+    }
+    else
+    {
+      Index camera_begin = (is_fix_points() ? 0 : GetPointParamsSize()) +
+                           (is_fix_images() ? 0 : GetExtrinsicParamsSize());
+      camera = x.segment(camera_begin + camera_id * camera_size, camera_size);
+    }
+    return camera;
+  }
+
   Err operator() (const XVector& x, YVector& y) const
   {
     Index x_size = x.rows();

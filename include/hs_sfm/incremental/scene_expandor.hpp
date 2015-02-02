@@ -34,6 +34,7 @@ public:
   typedef EIGEN_STD_VECTOR(Point) PointContainer;
 
   typedef ObjectIndexMap TrackPointMap;
+  typedef ObjectIndexMap ImageIntrinsicMap;
   typedef ObjectIndexMap ImageExtrinsicMap;
 
 protected:
@@ -58,8 +59,9 @@ public:
       triangulate_error_threshold_(triangulate_error_threshold){}
 
   Err operator() (const ImageKeysetContainer& image_keysets,
-                  const IntrinsicParamsContainer& intrinsic_params_set,
+                  const ImageIntrinsicMap& image_intrinsic_map,
                   const TrackContainer& tracks,
+                  IntrinsicParamsContainer& intrinsic_params_set,
                   ExtrinsicParamsContainer& extrinsic_params_set,
                   ImageExtrinsicMap& image_extrinsic_map,
                   PointContainer& points,
@@ -67,8 +69,9 @@ public:
                   ViewInfoIndexer& view_info_indexer) const
   {
     return Run(image_keysets,
-               intrinsic_params_set,
+               image_intrinsic_map,
                tracks,
+               intrinsic_params_set,
                extrinsic_params_set,
                image_extrinsic_map,
                points,
@@ -77,20 +80,20 @@ public:
   }
 
   Err Run(const ImageKeysetContainer& image_keysets,
-          const IntrinsicParamsContainer& intrinsic_params_set,
+          const ImageIntrinsicMap& image_intrinsic_map,
           const TrackContainer& tracks,
+          IntrinsicParamsContainer& intrinsic_params_set,
           ExtrinsicParamsContainer& extrinsic_params_set,
           ImageExtrinsicMap& image_extrinsic_map,
           PointContainer& points,
           TrackPointMap& track_point_map,
           ViewInfoIndexer& view_info_indexer) const
   {
+    size_t number_of_images = image_keysets.size();
+    if (image_intrinsic_map.Size() != number_of_images) return -1;
     ImageViewTracksContainer image_view_tracks_set;
-    if (Initialize(image_keysets,
-                   intrinsic_params_set,
+    if (Initialize(number_of_images,
                    tracks,
-                   image_extrinsic_map,
-                   track_point_map,
                    image_view_tracks_set,
                    view_info_indexer) != 0)
     {
@@ -101,11 +104,12 @@ public:
     {
       BundleAdjustmentOptimizor bundle_adjustment_optimizor;
       if (bundle_adjustment_optimizor(image_keysets,
-                                      intrinsic_params_set,
+                                      image_intrinsic_map,
                                       tracks,
                                       image_extrinsic_map,
                                       track_point_map,
                                       view_info_indexer,
+                                      intrinsic_params_set,
                                       extrinsic_params_set,
                                       points) != 0)
       {
@@ -116,6 +120,7 @@ public:
       size_t new_image_id;
       if (image_expandor_(image_keysets,
                           intrinsic_params_set,
+                          image_intrinsic_map,
                           points,
                           track_point_map,
                           image_view_tracks_set,
@@ -133,6 +138,7 @@ public:
       PointExpandor point_expandor;
       if (point_expandor(image_keysets,
                          intrinsic_params_set,
+                         image_intrinsic_map,
                          tracks,
                          extrinsic_params_set,
                          image_extrinsic_map,
@@ -150,21 +156,12 @@ public:
   }
 
 protected:
-  Err Initialize(const ImageKeysetContainer& image_keysets,
-                 const IntrinsicParamsContainer& intrinsic_params_set,
+  Err Initialize(size_t number_of_images,
                  const TrackContainer& tracks,
-                 const ImageExtrinsicMap& image_extrinsic_map,
-                 const TrackPointMap& track_point_map,
                  ImageViewTracksContainer& image_view_tracks_set,
                  ViewInfoIndexer& view_info_indexer) const
   {
-    size_t number_of_images = image_keysets.size();
-    if (number_of_images != intrinsic_params_set.size())
-    {
-      return -1;
-    }
-
-    //计算每个内参数对应的影像拍到的track
+    //计算每张影像拍到的track
     image_view_tracks_set.resize(number_of_images);
     size_t number_of_tracks = tracks.size();
     for (size_t i = 0; i < number_of_tracks; i++)

@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_PROJECTIVE_PMATRIX_DLT_RANSAC_REFINER_HPP_
+﻿#ifndef _HS_SFM_PROJECTIVE_PMATRIX_DLT_RANSAC_REFINER_HPP_
 #define _HS_SFM_PROJECTIVE_PMATRIX_DLT_RANSAC_REFINER_HPP_
 
 #include <utility>
@@ -83,6 +83,7 @@ private:
       distance = (hkey.template segment<2>(0) -
                   correspondence.first).norm();
 
+      //std::cout<<"distance:"<<distance<<"\n";
       return 0;
     }
   };

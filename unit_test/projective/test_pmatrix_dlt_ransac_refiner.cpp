@@ -5,8 +5,8 @@
 #include "hs_math/random/normal_random_var.hpp"
 #include "hs_math/random/uniform_random_var.hpp"
 
-#include "hs_sfm/synthetic/scene_generator.hpp"
-#include "hs_sfm/synthetic/keyset_generator.hpp"
+#include "hs_sfm/synthetic/flight_generator.hpp"
+#include "hs_sfm/synthetic/multiple_camera_keyset_generator.hpp"
 
 #include "hs_sfm/projective/pmatrix_dlt_ransac_refiner.hpp"
 
@@ -22,22 +22,21 @@ public:
   typedef int Err;
 
 private:
-  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
-          SceneGenerator;
-  typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
-  typedef typename IntrinsicParams::KMatrix KMatrix;
-  typedef typename SceneGenerator::IntrinsicParamsContainer
-                   IntrinsicParamsContainer;
-  typedef typename SceneGenerator::ExtrinsicParams ExtrinsicParams;
-  typedef typename SceneGenerator::ExtrinsicParamsContainer
+  typedef hs::sfm::synthetic::FlightGenerator<Scalar, ImageDimension>
+          FlightGenerator;
+  typedef typename FlightGenerator::ExtrinsicParams ExtrinsicParams;
+  typedef typename FlightGenerator::ExtrinsicParamsContainer
                    ExtrinsicParamsContainer;
-  typedef typename SceneGenerator::Image Image;
-  typedef typename SceneGenerator::ImageContainer ImageContainer;
-  typedef typename SceneGenerator::Point3D Point3D;
-  typedef typename SceneGenerator::Point3DContainer Point3DContainer;
+  typedef typename FlightGenerator::Image Image;
+  typedef typename FlightGenerator::ImageContainer ImageContainer;
+  typedef typename FlightGenerator::Point3D Point3D;
+  typedef typename FlightGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension>
+  typedef hs::sfm::synthetic::MultipleCameraKeysetGenerator<
+            Scalar, ImageDimension>
           KeysetGenerator;
+  typedef typename KeysetGenerator::IntrinsicParamsContainer
+                   IntrinsicParamsContainer;
   typedef typename KeysetGenerator::Keyset Keyset;
   typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
@@ -47,6 +46,8 @@ private:
   typedef typename Refiner::Correspondence Correspondence;
   typedef typename Refiner::CorrespondenceContainer CorrespondenceContainer;
   typedef typename Refiner::IndexSet IndexSet;
+public:
+  typedef typename KeysetGenerator::IntrinsicParams IntrinsicParams;
 
 public:
   TestPMatrixDLTRansacRefiner(
@@ -61,8 +62,9 @@ public:
     Scalar camera_planar_stddev,
     Scalar camera_rot_stdddev,
     Scalar north_west_angle,
-    Scalar outlier_ratio)
-    : scene_generator_(focal_length_in_metre,
+    Scalar outlier_ratio,
+    const IntrinsicParams& intrinsic_params)
+    : flight_generator_(focal_length_in_metre,
                        1,
                        1,
                        ground_resolution,
@@ -75,34 +77,36 @@ public:
                        scene_max_height,
                        camera_height_stddev,
                        camera_planar_stddev,
-                       camera_rot_stdddev,
-                       north_west_angle),
-      keys_generator_(image_width, image_height),
+                       camera_rot_stdddev),
       outlier_ratio_(outlier_ratio),
-      image_width_(image_width),
-      image_height_(image_height) {}
+      intrinsic_params_(intrinsic_params) {}
 
   Err operator() ()
   {
     //生成相机参数和三维点
-    IntrinsicParamsContainer intrinsic_params_set;
     ExtrinsicParamsContainer extrinsic_params_set;
     ImageContainer images;
     Point3DContainer points;
-    if (scene_generator_(intrinsic_params_set, extrinsic_params_set,
-                         images, points) != 0)
+    if (flight_generator_(extrinsic_params_set,
+                          images, points) != 0)
     {
       std::cout<<"scene generator failed!\n";
       return -1;
     }
 
     //生成特征点
+    IntrinsicParamsContainer intrinsic_params_set;
+    intrinsic_params_set.push_back(intrinsic_params_);
+    std::vector<size_t> image_intrinsic_map;
+    image_intrinsic_map.push_back(0);
     KeysetContainer keysets;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
     if (keys_generator_(intrinsic_params_set,
                         extrinsic_params_set,
+                        images,
                         points,
+                        image_intrinsic_map,
                         keysets,
                         tracks,
                         camera_views) != 0)
@@ -119,9 +123,10 @@ public:
     key_covariance.setIdentity();
     key_covariance *= key_stddev * key_stddev;
     EIGEN_VECTOR(Scalar, 2) max;
-    max << Scalar(image_width_) / (Scalar(2)),
-           Scalar(image_height_) / (Scalar(2));
-    EIGEN_VECTOR(Scalar, 2) min = -max;
+    max << Scalar(flight_generator_.image_width()),
+           Scalar(flight_generator_.image_height());
+    EIGEN_VECTOR(Scalar, 2) min;
+    min.setZero();
     std::set<size_t> true_outlier_indices;
     for (size_t i = 0; i < number_of_tracks; i++)
     {
@@ -149,7 +154,7 @@ public:
     CorrespondenceContainer refined_correspondences;
     IndexSet estimated_inlier_indices;
     if (refiner(correspondences,
-                key_stddev * 4,
+                key_stddev * 8,
                 refined_correspondences,
                 estimated_inlier_indices) != 0)
     {
@@ -186,11 +191,12 @@ public:
   }
 
 private:
-  SceneGenerator scene_generator_;
+  FlightGenerator flight_generator_;
   KeysetGenerator keys_generator_;
   Scalar outlier_ratio_;
   ImageDimension image_width_;
   ImageDimension image_height_;
+  IntrinsicParams intrinsic_params_;
 };
 
 TEST(TestPMatrixDLTRansacRefiner, SimpleTest)
@@ -198,6 +204,7 @@ TEST(TestPMatrixDLTRansacRefiner, SimpleTest)
   typedef double Scalar;
   typedef size_t ImageDimension;
   typedef TestPMatrixDLTRansacRefiner<Scalar, ImageDimension> Test;
+  typedef Test::IntrinsicParams IntrinsicParams;
 
   Scalar focal_length_in_metre = 0.019;
   Scalar ground_resolution = 0.1;
@@ -210,7 +217,18 @@ TEST(TestPMatrixDLTRansacRefiner, SimpleTest)
   Scalar camera_plannar_stddev = 5;
   Scalar camera_rot_stddev = 1;
   Scalar north_west_angle = 60;
-  Scalar outlier_ration = 0.2;
+  Scalar outlier_ratio = 0.2;
+
+  IntrinsicParams intrinsic_params(focal_length_in_metre / pixel_size,
+                                   0,
+                                   3000-35.2052431556,
+                                   2000+16.4262220759,
+                                   1,
+                                   -0.10316088386868619,
+                                   0.13520490482776426,
+                                   -0.05489235547426094,
+                                   4.1434720317373253e-006,
+                                   -0.00025018439997095336);
 
   Test test(focal_length_in_metre,
             ground_resolution,
@@ -223,7 +241,8 @@ TEST(TestPMatrixDLTRansacRefiner, SimpleTest)
             camera_plannar_stddev,
             camera_rot_stddev,
             north_west_angle,
-            outlier_ration);
+            outlier_ratio,
+            intrinsic_params);
 
   ASSERT_EQ(0, test());
 

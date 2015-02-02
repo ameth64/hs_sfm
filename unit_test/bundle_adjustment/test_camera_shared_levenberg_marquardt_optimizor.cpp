@@ -7,6 +7,7 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_synthetic_data_generator.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_levenberg_marquardt_optimizor.hpp"
+#include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_noised_y_generator.hpp"
 #include "hs_sfm/sfm_utility/similar_transform_estimator.hpp"
 
@@ -21,12 +22,15 @@ public:
   typedef int Err;
   typedef hs::sfm::ba::CameraSharedVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
+  typedef typename VectorFunction::Image Image;
+  typedef typename VectorFunction::Camera Camera;
   typedef
     hs::sfm::ba::CameraSharedAnalyticalJacobianMatrixCalculator<
       VectorFunction> JacobianMatrixCalculator;
   typedef typename JacobianMatrixCalculator::JacobianMatrix JacobianMatrix;
-  typedef hs::sfm::ba::CameraSharedLevenbergMarquardtOptimizor<VectorFunction>
-          Optimizor;
+  //typedef hs::sfm::ba::CameraSharedLevenbergMarquardtOptimizor<VectorFunction>
+  //        Optimizor;
+  typedef hs::sfm::ba::CameraSharedCeresOptimizor<VectorFunction> Optimizor;
   typedef typename Optimizor::XVector XVector;
   typedef typename Optimizor::YVector YVector;
   typedef typename Optimizor::YCovarianceInverse YCovarianceInverse;
@@ -51,14 +55,20 @@ public:
     Scalar constrained_image_rotation_stddev,
     Scalar constrained_image_position_stddev,
     Scalar constrained_camera_skew_stddev,
-    Scalar constrained_camera_pixel_ratio_stddev)
+    Scalar constrained_camera_pixel_ratio_stddev,
+    Scalar ground_resolution,
+    int image_width,
+    int image_height)
     : constrained_point_planar_stddev_(constrained_point_planar_stddev),
       constrained_point_height_stddev_(constrained_point_height_stddev),
       constrained_image_rotation_stddev_(constrained_image_rotation_stddev),
       constrained_image_position_stddev_(constrained_image_position_stddev),
       constrained_camera_skew_stddev_(constrained_camera_skew_stddev),
       constrained_camera_pixel_ratio_stddev_(
-        constrained_camera_pixel_ratio_stddev) {}
+        constrained_camera_pixel_ratio_stddev),
+      ground_resolution_(ground_resolution),
+      image_width_(image_width),
+      image_height_(image_height) {}
 
   Err Test(const VectorFunction& vector_function,
            const XVector& true_x,
@@ -90,12 +100,11 @@ public:
       return -1;
     }
 
-    std::cout<<"noised_y:\n"<<true_y<<"\n";
-
-    Optimizor optimizor(near_x, 200,
-                        Scalar(1e-3),
-                        Scalar(1e-8),
-                        Scalar(1e-8));
+    //Optimizor optimizor(near_x, 200,
+    //                    Scalar(1e-3),
+    //                    Scalar(1e-8),
+    //                    Scalar(1e-8));
+    Optimizor optimizor(near_x, 4);
     XVector optimized_x;
     if (optimizor(vector_function, noised_y, y_covariance_inverse,
                   optimized_x) != 0)
@@ -104,12 +113,6 @@ public:
     }
 
     Index x_size = vector_function.GetXSize();
-    std::cout.setf(std::ios::fixed);
-    std::cout<<std::setprecision(10);
-    for (Index i = 0; i < x_size; i++)
-    {
-      std::cout<<true_x[i]<<" "<<near_x[i]<<" "<<optimized_x[i]<<"\n";
-    }
 
     Index number_of_points = vector_function.number_of_points();
     Scalar point_planar_mean = Scalar(0);
@@ -123,12 +126,12 @@ public:
     PointContainer points_optimized(number_of_points);
     for (Index i = 0; i < number_of_points; i++)
     {
-      points_true[i] =
-        true_x.segment(i * VectorFunction::params_per_point_,
-                       VectorFunction::params_per_point_);
-      points_optimized[i] =
-        optimized_x.segment(i * VectorFunction::params_per_point_,
-                            VectorFunction::params_per_point_);
+      points_true[i] = vector_function.GetPoint(i, true_x);
+      points_optimized[i] = vector_function.GetPoint(i, optimized_x);
+      Vector3 point_near = vector_function.GetPoint(i, near_x);
+      std::cout<<"point_true:\n"<<points_true[i]<<"\n";
+      std::cout<<"point_optimized:\n"<<points_optimized[i]<<"\n";
+      std::cout<<"point_near:\n"<<point_near<<"\n";
     }
     SimilarEstimator estimator;
     Rotation rotation;
@@ -138,10 +141,6 @@ public:
                   rotation, translate, scale) != 0) return -1;
     for (Index i = 0; i < number_of_points; i++)
     {
-      //Vector3 diff = true_x.segment(i * VectorFunction::params_per_point_,
-      //                              VectorFunction::params_per_point_) -
-      //               optimized_x.segment(i * VectorFunction::params_per_point_,
-      //                                   VectorFunction::params_per_point_);
       Vector3 point_transformed = points_optimized[i];
       point_transformed = scale * (rotation * point_transformed) + translate;
       Vector3 diff = point_transformed - points_true[i];
@@ -151,8 +150,44 @@ public:
     point_planar_mean /= Scalar(number_of_points);
     point_height_mean /= Scalar(number_of_points);
 
+    Index number_of_images = vector_function.number_of_images();
+    for (Index i = 0; i < number_of_images; i++)
+    {
+      Image image_true = vector_function.GetImage(i, true_x);
+      Image image_optimized = vector_function.GetImage(i, optimized_x);
+      Image image_near = vector_function.GetImage(i, near_x);
+      EIGEN_MATRIX(Scalar, VectorFunction::extrinsic_params_per_image_, 3) m;
+      m.col(0) = image_true;
+      m.col(1) = image_optimized;
+      m.col(2) = image_near;
+      std::cout<<"images:\n"<<m<<"\n";
+    }
+
+    Index number_of_cameras = vector_function.number_of_cameras();
+    Index camera_size = vector_function.GetIntrinsicParamsSizePerCamera();
+    for (Index i = 0; i < number_of_cameras; i++)
+    {
+      Camera camera_true = vector_function.GetCamera(i, true_x);
+      Camera camera_optimized = vector_function.GetCamera(i, optimized_x);
+      Camera camera_near = vector_function.GetCamera(i, near_x);
+      EIGEN_MATRIX(Scalar, Eigen::Dynamic, 3) m(camera_size, 3);
+      m.col(0) = camera_true;
+      m.col(1) = camera_optimized;
+      m.col(2) = camera_near;
+      std::cout<<"camera:\n"<<m<<"\n";
+    }
+
+    std::cout<<"number_of_images:"<<number_of_images<<"\n";
+    std::cout<<"number_of_points:"<<number_of_points<<"\n";
+    std::cout<<"number_of_cameras:"<<number_of_cameras<<"\n";
     std::cout<<"point_planar_mean:"<<point_planar_mean<<"\n";
     std::cout<<"point_height_mean:"<<point_height_mean<<"\n";
+
+    if (point_planar_mean > ground_resolution_ * 2 ||
+        point_height_mean > ground_resolution_ * 4)
+    {
+      return -1;
+    }
 
     YVector optimized_y;
     if (vector_function(optimized_x, optimized_y) != 0)
@@ -171,6 +206,11 @@ public:
       key_mean_error += diff.norm();
     }
     key_mean_error /= Scalar(number_of_keys);
+
+    if (key_mean_error > std::sqrt(key_covariance(0, 0)) * 2)
+    {
+      return -1;
+    }
 
     std::cout<<"key_mean_error:"<<key_mean_error<<"\n";
 
@@ -416,8 +456,8 @@ private:
         hs::math::random::NormalRandomVar<Scalar, 1>::Generate(
           true_x[offset], focal_length_stddev, near_x[offset]);
         near_x[offset + 1] = Scalar(0);
-        near_x[offset + 2] = Scalar(0);
-        near_x[offset + 3] = Scalar(0);
+        near_x[offset + 2] = Scalar(image_width_) / Scalar(2);
+        near_x[offset + 3] = Scalar(image_height_) / Scalar(2);
         near_x[offset + 4] = Scalar(1);
         //near_x[offset + 0] = true_x[offset + 0];
         //near_x[offset + 1] = true_x[offset + 1];
@@ -437,6 +477,9 @@ private:
   Scalar constrained_image_position_stddev_;
   Scalar constrained_camera_skew_stddev_;
   Scalar constrained_camera_pixel_ratio_stddev_;
+  Scalar ground_resolution_;
+  int image_width_;
+  int image_height_;
 };
 
 TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
@@ -465,13 +508,13 @@ TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
   IntrinsicParamsContainer intrinsic_params_set;
 
   Scalar focal_length_in_metre_0 = 0.018858358970276164;
-  size_t number_of_strips_0 = 2;
-  size_t number_of_cameras_in_strip_0 = 1;
+  size_t number_of_strips_0 = 4;
+  size_t number_of_cameras_in_strip_0 = 10;
   Scalar ground_resolution_0 = 0.1;
   ImageDimension image_width_0 = 6000;
   ImageDimension image_height_0 = 4000;
   Scalar pixel_size_0 = 0.0000039;
-  size_t number_of_points_0 = 2000;
+  size_t number_of_points_0 = 10000;
   Scalar lateral_overlap_ratio_0 = 0.6;
   Scalar longitudinal_overlap_ratio_0 = 0.8;
   Scalar scene_max_height_0 = 50;
@@ -496,8 +539,8 @@ TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
   flight_generators.push_back(flight_generator_0);
   IntrinsicParams intrinsic_params_0(focal_length_in_metre_0 / pixel_size_0,
                                      0,
-                                     -42.4095312016,
-                                     -31.699212823,
+                                     3000-42.4095312016,
+                                     2000+31.699212823,
                                      1,
                                      -0.0050490462006048831,
                                      0.031293804298609881,
@@ -507,13 +550,13 @@ TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
   intrinsic_params_set.push_back(intrinsic_params_0);
 
   Scalar focal_length_in_metre_1 = 0.02995452167701055;
-  size_t number_of_strips_1 = 1;
-  size_t number_of_cameras_in_strip_1 = 1;
+  size_t number_of_strips_1 = 4;
+  size_t number_of_cameras_in_strip_1 = 10;
   Scalar ground_resolution_1 = 0.1;
   ImageDimension image_width_1 = 6000;
   ImageDimension image_height_1 = 4000;
   Scalar pixel_size_1 = 0.0000039;
-  size_t number_of_points_1 = 2000;
+  size_t number_of_points_1 = 10000;
   Scalar lateral_overlap_ratio_1 = 0.6;
   Scalar longitudinal_overlap_ratio_1 = 0.8;
   Scalar scene_max_height_1 = 50;
@@ -535,27 +578,27 @@ TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
     camera_height_stddev_1,
     camera_planar_stddev_1,
     camera_rotation_stddev_1);
-  //flight_generators.push_back(flight_generator_1);
+  flight_generators.push_back(flight_generator_1);
   IntrinsicParams intrinsic_params_1(focal_length_in_metre_1 / pixel_size_1,
                                      0,
-                                     -21.669436058,
-                                     -44.8644764322,
+                                     3000-21.669436058,
+                                     2000+44.8644764322,
                                      1,
                                      -0.02529179096221609,
                                      0.23762413973445157,
                                      -0.64208397668697237,
                                      -0.0020605099808780948,
                                      -0.00028706423764766859);
-  //intrinsic_params_set.push_back(intrinsic_params_1);
+  intrinsic_params_set.push_back(intrinsic_params_1);
 
   Scalar focal_length_in_metre_2 = 0.019056097774998712;
-  size_t number_of_strips_2 = 2;
-  size_t number_of_cameras_in_strip_2 = 5;
+  size_t number_of_strips_2 = 4;
+  size_t number_of_cameras_in_strip_2 = 10;
   Scalar ground_resolution_2 = 0.1;
   ImageDimension image_width_2 = 6000;
   ImageDimension image_height_2 = 4000;
   Scalar pixel_size_2 = 0.0000039;
-  size_t number_of_points_2 = 2000;
+  size_t number_of_points_2 = 10000;
   Scalar lateral_overlap_ratio_2 = 0.6;
   Scalar longitudinal_overlap_ratio_2 = 0.8;
   Scalar scene_max_height_2 = 50;
@@ -577,25 +620,25 @@ TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
     camera_height_stddev_2,
     camera_planar_stddev_2,
     camera_rotation_stddev_2);
-  //flight_generators.push_back(flight_generator_2);
+  flight_generators.push_back(flight_generator_2);
   IntrinsicParams intrinsic_params_2(focal_length_in_metre_2 / pixel_size_2,
                                      0,
-                                     -35.2052431556,
-                                     -16.4262220759,
+                                     3000-35.2052431556,
+                                     2000+16.4262220759,
                                      1,
                                      -0.10316088386868619,
                                      0.13520490482776426,
                                      -0.05489235547426094,
                                      4.1434720317373253e-006,
                                      -0.00025018439997095336);
-  //intrinsic_params_set.push_back(intrinsic_params_2);
+  intrinsic_params_set.push_back(intrinsic_params_2);
 
-  Scalar flight_longitudinal_overlap_ratio = 0.99;
-  Scalar flight_lateral_overlap_ratio = 0.6;
+  Scalar flight_longitudinal_overlap_ratio = 0.2;
+  Scalar flight_lateral_overlap_ratio = 0.9;
   Scalar north_west_angle = 0.0;
-  Scalar north_west_angle_stddev = 10.0;
+  Scalar north_west_angle_stddev = 5.0;
   Scalar offset_stddev = 15.0;
-  size_t number_of_points = 200;
+  size_t number_of_points = 10000;
   size_t number_of_planar_constrained_points = 0;
   size_t number_of_full_constrained_points = 0;
   size_t number_of_constrained_images = 0;
@@ -634,7 +677,8 @@ TEST(TestCameraSharedLevenbergMarquardtOptimizor, SimpleTest)
                 constrianed_image_rotation_stddev,
                 constrianed_image_position_stddev,
                 constrianed_camera_skew_stddev,
-                constrianed_camera_pixel_ratio_stddev);
+                constrianed_camera_pixel_ratio_stddev,
+                0.1, 6000, 4000);
   KeyCovariance feature_covariance = KeyCovariance::Identity();
   //feature_covariance *= Scalar(0.25);
   ASSERT_EQ(0, tester.Test(vector_function, x, feature_covariance));

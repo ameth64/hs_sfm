@@ -45,6 +45,7 @@ public:
                   const ExtrinsicParamsContainer& extrinsic_params_set,
                   const hs::sfm::TrackContainer& tracks_gcp,
                   const PointContainer& gcps,
+                  const hs::sfm::ObjectIndexMap& image_intrinsic_map,
                   const hs::sfm::ObjectIndexMap& image_extrinsic_map,
                   size_t min_triangulate_views,
                   Scalar triangulate_error_threshold,
@@ -67,6 +68,7 @@ public:
     gcps_relative.clear();
     if (triangulator(keysets_gcp,
                      intrinsic_params_set,
+                     image_intrinsic_map,
                      tracks_gcp,
                      extrinsic_params_set,
                      image_extrinsic_map,

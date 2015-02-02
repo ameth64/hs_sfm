@@ -105,6 +105,8 @@ public:
     Matrix33 R_identity =
       euler_angles_identity.template ToOrthoRotMat<2, 1, -3, 1>();
     R_identity.transposeInPlace();
+    R_identity.col(2) *= -1;
+    R_identity.col(1) *= -1;
     extrinsic_params_identity.rotation() = R_identity;
 
     Position mean_position_relative;
@@ -129,6 +131,8 @@ public:
     Matrix33 R_relative =
       euler_angles_relative.template ToOrthoRotMat<2, 1, -3, 1>();
     R_relative.transposeInPlace();
+    R_relative.col(2) *= -1;
+    R_relative.col(1) *= -1;
     extrinsic_params_relative.rotation() = R_relative;
 
     return 0;
@@ -168,6 +172,21 @@ public:
   const IntrinsicParams& intrinsic_params_relative() const
   {
     return intrinsic_params_relative_;
+  }
+
+  Scalar ground_resolution() const
+  {
+    return ground_resolution_;
+  }
+
+  ImageDimension image_width() const
+  {
+    return image_width_;
+  }
+
+  ImageDimension image_height() const
+  {
+    return image_height_;
   }
 
 private:

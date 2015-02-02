@@ -15,6 +15,10 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_levenberg_marquardt_optimizor.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 
+#if 1
+#include "hs_sfm/sfm_file_io/scene_ply_saver.hpp"
+#endif
+
 namespace
 {
 
@@ -93,6 +97,8 @@ public:
     Scalar pixel_size,
     const IntrinsicParams& intrinsic_params_identity,
     const IntrinsicParams& intrinsic_params_relative,
+    const IntrinsicParams& intrinsic_params_identity_initial,
+    const IntrinsicParams& intrinsic_params_relative_initial,
     Scalar lateral_overlap_ratio,
     Scalar longitudinal_overlap_ratio,
     Scalar scene_max_height,
@@ -119,7 +125,9 @@ public:
       keyset_generator_(),
       number_of_points_(number_of_points),
       is_uniform_camera_(is_uniform_camera),
-      key_stddev_(key_stddev) {}
+      key_stddev_(key_stddev),
+      intrinsic_params_identity_initial_(intrinsic_params_identity_initial),
+      intrinsic_params_relative_initial_(intrinsic_params_relative_initial) {}
 
   Err Test() const
   {
@@ -146,19 +154,14 @@ public:
       relative_pair_generator_.intrinsic_params_identity() :
       relative_pair_generator_.intrinsic_params_relative();
 
-    IntrinsicParams intrinsic_params_identity_essential;
-    intrinsic_params_identity_essential.set_focal_length(
-      intrinsic_params_identity_true.focal_length() + 10);
-    IntrinsicParams intrinsic_params_relative_essential;
-    if (is_uniform_camera_)
+    IntrinsicParams intrinsic_params_identity_essential =
+      intrinsic_params_identity_initial_;
+    IntrinsicParams intrinsic_params_relative_essential =
+      intrinsic_params_relative_initial_;
+    if (!is_uniform_camera_)
     {
-      intrinsic_params_relative_essential.set_focal_length(
-        intrinsic_params_identity_true.focal_length() + 10);
-    }
-    else
-    {
-      intrinsic_params_relative_essential.set_focal_length(
-        intrinsic_params_relative_true.focal_length() + 10);
+      intrinsic_params_relative_essential =
+        intrinsic_params_identity_initial_;
     }
 
     KeysetContainer keysets_noised;
@@ -401,6 +404,7 @@ private:
         number_of_available_points++;
       }
     }
+    std::cout<<"number_of_available_points:"<<number_of_available_points<<"\n";
     points.clear();
     tracks.clear();
     keysets.resize(2);
@@ -435,6 +439,16 @@ private:
         available_point_id++;
       }
     }
+
+#if 1
+    typedef hs::sfm::fileio::ScenePLYSaver<Scalar, ImageDimension> Saver;
+    Saver saver(relative_pair_generator_.ground_resolution() *
+                intrinsic_params_set[0].focal_length());
+    saver("relative_pair.ply",
+          intrinsic_params_set, extrinsic_params_set, images, points);
+    saver("relative_pair_loose.ply",
+          intrinsic_params_set, extrinsic_params_set, images, points_loose);
+#endif
 
     return 0;
   }
@@ -554,6 +568,8 @@ private:
       Vector2 diff_relative = key_relative - keysets[1][i];
       //mean_reprojection_error += diff_identity.squaredNorm() +
       //                           diff_relative.squaredNorm();
+      //std::cout<<"diff_identity:\n"<<diff_identity<<"\n";
+      //std::cout<<"diff_relative:\n"<<diff_relative<<"\n";
       mean_reprojection_error += diff_identity.norm() +
                                  diff_relative.norm();
     }
@@ -1087,6 +1103,8 @@ private:
   size_t number_of_points_;
   bool is_uniform_camera_;
   Scalar key_stddev_;
+  IntrinsicParams intrinsic_params_identity_initial_;
+  IntrinsicParams intrinsic_params_relative_initial_;
 };
 
 TEST(TestCameraSharedRelativePair, SimpleTest)
@@ -1106,8 +1124,8 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
                                             pixel_size,
                                             //0, 0, 0, 1,
                                             0,
-                                            -21.669436058,
-                                            -44.8644764322,
+                                            3000-21.669436058,
+                                            2000+44.8644764322,
                                             1,
                                             -0.02529179096221609,
                                             //0, 0, 0, 0
@@ -1118,13 +1136,15 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
   //IntrinsicParams intrinsic_params_identity(focal_length_in_metre_identity /
   //                                          pixel_size,
   //                                          0, 0, 0, 1, 0, 0, 0, 0, 0);
+  IntrinsicParams intrinsic_params_identity_initial(0.03 / pixel_size,
+                                                    0, 3000, 2000);
   Scalar focal_length_in_metre_relative = 0.018858358970276164;
   IntrinsicParams intrinsic_params_relative(focal_length_in_metre_relative /
                                             pixel_size,
                                             //0, 0, 0, 1,
                                             0,
-                                            -42.4095312016,
-                                            -31.699212823,
+                                            3000-42.4095312016,
+                                            2000+31.699212823,
                                             1,
                                             -0.0050490462006048831,
                                             //0, 0, 0, 0
@@ -1135,15 +1155,17 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
   //IntrinsicParams intrinsic_params_relative(focal_length_in_metre_relative /
   //                                          pixel_size,
   //                                          0, 0, 0, 1, 0, 0, 0, 0, 0);
+  IntrinsicParams intrinsic_params_relative_initial(0.019 / pixel_size,
+                                                    0, 3000, 2000);
   Scalar ground_resolution = 0.1;
   Scalar lateral_overlap_ratio = 0.6;
   Scalar longitudinal_overlap_ratio = 1.0;
   Scalar scene_max_height = 50;
   Scalar camera_height_stddev = 5;
   Scalar camera_planar_stddev = 5;
-  Scalar camera_rotation_stddev = 15;
+  Scalar camera_rotation_stddev = 1;
 
-  size_t number_of_points = 2000;
+  size_t number_of_points = 4000;
   bool is_uniform_camera = true;
   Scalar key_stddev = 1.0;
 
@@ -1153,6 +1175,8 @@ TEST(TestCameraSharedRelativePair, SimpleTest)
                 pixel_size,
                 intrinsic_params_identity,
                 intrinsic_params_relative,
+                intrinsic_params_identity_initial,
+                intrinsic_params_relative_initial,
                 lateral_overlap_ratio,
                 longitudinal_overlap_ratio,
                 scene_max_height,

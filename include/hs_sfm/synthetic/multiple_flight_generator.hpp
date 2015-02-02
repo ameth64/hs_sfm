@@ -170,7 +170,7 @@ public:
     return 0;
   }
 
-  Err GetNumberOfFlights() const
+  size_t GetNumberOfFlights() const
   {
     return flight_generators_.size();
   }

@@ -4,8 +4,8 @@
 
 #include "hs_math/random/normal_random_var.hpp"
 
-#include "hs_sfm/synthetic/scene_generator.hpp"
-#include "hs_sfm/synthetic/keyset_generator.hpp"
+#include "hs_sfm/synthetic/flight_generator.hpp"
+#include "hs_sfm/synthetic/multiple_camera_keyset_generator.hpp"
 
 #include "hs_sfm/projective/pmatrix_dlt_calculator.hpp"
 
@@ -21,23 +21,24 @@ public:
   typedef int Err;
 
 private:
-  typedef hs::sfm::synthetic::SceneGenerator<Scalar, ImageDimension>
-          SceneGenerator;
-  typedef typename SceneGenerator::IntrinsicParams IntrinsicParams;
-  typedef typename SceneGenerator::IntrinsicParamsContainer
-                   IntrinsicParamsContainer;
-  typedef typename SceneGenerator::ExtrinsicParams ExtrinsicParams;
-  typedef typename SceneGenerator::ExtrinsicParamsContainer
+  typedef hs::sfm::synthetic::FlightGenerator<Scalar, ImageDimension>
+          FlightGenerator;
+  typedef typename FlightGenerator::ExtrinsicParams ExtrinsicParams;
+  typedef typename FlightGenerator::ExtrinsicParamsContainer
                    ExtrinsicParamsContainer;
-  typedef typename SceneGenerator::Image Image;
-  typedef typename SceneGenerator::ImageContainer ImageContainer;
-  typedef typename SceneGenerator::Point3D Point3D;
-  typedef typename SceneGenerator::Point3DContainer Point3DContainer;
+  typedef typename FlightGenerator::Image Image;
+  typedef typename FlightGenerator::ImageContainer ImageContainer;
+  typedef typename FlightGenerator::Point3D Point3D;
+  typedef typename FlightGenerator::Point3DContainer Point3DContainer;
 
-  typedef hs::sfm::synthetic::KeysetGenerator<Scalar, ImageDimension>
+  typedef hs::sfm::synthetic::MultipleCameraKeysetGenerator<Scalar,
+                                                            ImageDimension>
           KeysetGenerator;
   typedef typename KeysetGenerator::Keyset Keyset;
   typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
+  typedef typename KeysetGenerator::IntrinsicParams IntrinsicParams;
+  typedef typename KeysetGenerator::IntrinsicParamsContainer
+          IntrinsicParamsContainer;
 
   typedef hs::sfm::projective::PMatrixDLTCalculator<Scalar> Calculator;
   typedef typename Calculator::Key Key;
@@ -63,7 +64,7 @@ public:
     Scalar camera_planar_stddev,
     Scalar camera_rot_stdddev,
     Scalar north_west_angle)
-    : scene_generator_(focal_length_in_metre,
+    : flight_generator_(focal_length_in_metre,
                        1,
                        1,
                        ground_resolution,
@@ -76,23 +77,25 @@ public:
                        scene_max_height,
                        camera_height_stddev,
                        camera_planar_stddev,
-                       camera_rot_stdddev,
-                       north_west_angle),
-      keys_generator_(image_width, image_height) {}
+                       camera_rot_stdddev) {}
 
   Err operator() ()
   {
     //生成相机参数和三维点
-    IntrinsicParamsContainer intrinsic_params_set;
     ExtrinsicParamsContainer extrinsic_params_set;
     ImageContainer images;
     Point3DContainer points;
-    if (scene_generator_(intrinsic_params_set, extrinsic_params_set,
-                         images, points) != 0)
+    if (flight_generator_(extrinsic_params_set,
+                          images, points) != 0)
     {
       std::cout<<"scene generator failed!\n";
       return -1;
     }
+
+    IntrinsicParamsContainer intrinsic_params_set(
+      extrinsic_params_set.size(), flight_generator_.GetFocalLengthInPixel());
+    std::vector<size_t> image_intrinsic_map;
+    image_intrinsic_map.push_back(0);
 
     //生成特征点
     KeysetContainer keysets;
@@ -100,7 +103,9 @@ public:
     hs::sfm::CameraViewContainer camera_views;
     if (keys_generator_(intrinsic_params_set,
                         extrinsic_params_set,
+                        images,
                         points,
+                        image_intrinsic_map,
                         keysets,
                         tracks,
                         camera_views) != 0)
@@ -165,7 +170,7 @@ public:
   }
 
 private:
-  SceneGenerator scene_generator_;
+  FlightGenerator flight_generator_;
   KeysetGenerator keys_generator_;
 };
 

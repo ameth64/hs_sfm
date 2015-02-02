@@ -208,6 +208,8 @@ public:
           angles[2] / 180 * Scalar(M_PI));
         Matrix33 R = euler_angles.template ToOrthoRotMat<2, 1, -3, 1>();
         R.transposeInPlace();
+        R.col(2) *= -1;
+        R.col(1) *= -1;
         extrinsic_params_set[id].rotation() = R;
       }
     }
