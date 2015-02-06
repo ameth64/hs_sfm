@@ -92,7 +92,6 @@ public:
     {
       return -1;
     }
-    image_pair_itr_best = matches.find(ImagePair(12, 13));
     std::cout<<"image_pair_itr_best:"<<image_pair_itr_best->first.first<<" "
                                      <<image_pair_itr_best->first.second<<"\n";
     auto key_pair_itr = image_pair_itr_best->second.begin();

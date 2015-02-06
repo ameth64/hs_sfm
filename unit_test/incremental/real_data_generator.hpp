@@ -23,11 +23,17 @@
 #include "hs_sfm/sfm_file_io/matches_saver.hpp"
 #endif
 
-#define NO_DETECTION 0
+#define NO_DETECTION 1
 #if NO_DETECTION
 #include "hs_sfm/sfm_file_io/keyset_loader.hpp"
 #endif
 
+#define NO_MATCH 1
+#if NO_MATCH
+#include "hs_sfm/sfm_file_io/matches_loader.hpp"
+#endif
+
+#define NO_FILTER 1
 
 namespace hs
 {
@@ -226,6 +232,7 @@ private:
                     MatchContainer& matches) const
   {
     matches.clear();
+#if !NO_MATCH
     size_t number_of_images = key_paths.size();
     if (descriptor_paths.size() != number_of_images) return -1;
     for (size_t i = 0; i < number_of_images; i++)
@@ -265,10 +272,16 @@ private:
       }
     }
 
-#if 1
+  #if 1
     hs::sfm::fileio::MatchesSaver saver;
     saver("test_matches.txt", matches);
+  #endif
+
+#else
+    hs::sfm::fileio::MatchesLoader loader;
+    loader("test_matches.txt", matches);
 #endif
+
     return 0;
   }
 
@@ -282,12 +295,15 @@ private:
     typedef typename Refiner::KeyPairContainer RefinerKeyPairContainer;
     typedef typename Refiner::IndexSet IndexSet;
 
+#if !NO_FILTER
     auto itr_key_pairs = matches_initial.begin();
     auto itr_key_pairs_end = matches_initial.end();
     Scalar distance_threshold = Scalar(32);
     Refiner refiner;
     for (; itr_key_pairs != itr_key_pairs_end; ++itr_key_pairs)
     {
+      std::cout<<"Filtering image pair "<<itr_key_pairs->first.first<<" "
+                                        <<itr_key_pairs->first.second<<"\n";
       RefinerKeyPairContainer refiner_key_pairs_initial;
       RefinerKeyPairContainer refiner_key_pairs_refined;
       IndexSet inlier_indices;
@@ -303,7 +319,8 @@ private:
         refiner_key_pairs_initial.push_back(refiner_key_pair);
       }
       refiner(refiner_key_pairs_initial, distance_threshold,
-              refiner_key_pairs_refined, inlier_indices);
+              refiner_key_pairs_refined, inlier_indices, 2048);
+      std::cout<<"inlier_indices.size():"<<inlier_indices.size()<<"\n";
       if (inlier_indices.size() > 100)
       {
         KeyPairContainer key_pairs_refined;
@@ -315,6 +332,15 @@ private:
         matches_filtered[itr_key_pairs->first] = key_pairs_refined;
       }
     }
+#if 1
+    hs::sfm::fileio::MatchesSaver saver;
+    saver("test_matches_filtered.txt", matches_filtered);
+#endif
+
+#else
+    hs::sfm::fileio::MatchesLoader loader;
+    loader("test_matches_filtered.txt", matches_filtered);
+#endif
     return 0;
   }
 

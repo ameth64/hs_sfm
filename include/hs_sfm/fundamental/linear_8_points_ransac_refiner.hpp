@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_FUNDAMENTAL_LINEAR_8_POINTS_RANSAC_REFINER_HPP_
+﻿#ifndef _HS_SFM_FUNDAMENTAL_LINEAR_8_POINTS_RANSAC_REFINER_HPP_
 #define _HS_SFM_FUNDAMENTAL_LINEAR_8_POINTS_RANSAC_REFINER_HPP_
 
 #include <utility>
@@ -118,14 +118,20 @@ public:
   Err operator() (const KeyPairContainer& key_pairs,
                   Scalar distance_threshold,
                   KeyPairContainer& refined_key_pairs,
-                  IndexSet& inlier_indices) const
+                  IndexSet& inlier_indices,
+                  int number_of_samples = 0) const
   {
+    typedef typename RansacRefiner::Index Index;
     FMatrixCalculator model_calculator;
     FMatrixResidualsCalculator distance_calculator;
     RansacRefiner ransac_refiner(model_calculator, distance_calculator);
     
     ransac_refiner.SetAlphaThreshold(Scalar(0.95));
     ransac_refiner.SetDistanceThreshold(distance_threshold);
+    if (number_of_samples > 0)
+    {
+      ransac_refiner.SetNumberOfSamples(Index(number_of_samples));
+    }
     KeyPairContainer best_key_pairs;
     return (ransac_refiner(key_pairs, refined_key_pairs,
                            inlier_indices, best_key_pairs));
