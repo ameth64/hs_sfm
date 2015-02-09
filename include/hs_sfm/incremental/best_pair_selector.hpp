@@ -3,6 +3,7 @@
 
 #include <map>
 #include <limits>
+#include <algorithm>
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/key_type.hpp"
@@ -54,6 +55,19 @@ private:
   typedef typename EMatrixCalculator::EMatrix EMatrix;
   typedef hs::sfm::essential::EMatrixExtrinsicParamsPointsCalculator<Scalar>
           ExtrinsicParamsPointsCalculator;
+
+  struct ImagePairSize
+  {
+    size_t image0;
+    size_t image1;
+    size_t number_of_key_pairs;
+
+    bool operator < (const ImagePairSize& other) const
+    {
+      return number_of_key_pairs < other.number_of_key_pairs;
+    }
+  };
+
 #if 1
   typedef ProjectiveFunctions<Scalar> ProjectiveFunctionsType;
   typedef typename ProjectiveFunctionsType::Key Key;
@@ -72,6 +86,88 @@ public:
                  ExtrinsicParams& relative_extrinsic_params,
                  PointContainer& points) const
   {
+#if 1
+    std::vector<ImagePairSize> image_pair_sizes;
+    auto image_pair_itr = matches.begin();
+    auto image_pair_itr_end = matches.end();
+    for (; image_pair_itr != image_pair_itr_end; ++image_pair_itr)
+    {
+      ImagePairSize image_pair_size;
+      image_pair_size.image0 = image_pair_itr->first.first;
+      image_pair_size.image1 = image_pair_itr->first.second;
+      image_pair_size.number_of_key_pairs = image_pair_itr->second.size();
+      image_pair_sizes.push_back(image_pair_size);
+    }
+    std::sort(image_pair_sizes.begin(), image_pair_sizes.end());
+    auto itr_image_pair_size = image_pair_sizes.rbegin();
+    auto itr_image_pair_size_end = image_pair_sizes.rend();
+    best_identity_id = std::numeric_limits<size_t>::max();
+    best_relative_id = std::numeric_limits<size_t>::max();
+    for (; itr_image_pair_size != itr_image_pair_size_end;
+         ++itr_image_pair_size)
+    {
+      if (itr_image_pair_size->number_of_key_pairs <
+          min_number_of_pair_matches_) break;
+      hs::sfm::ImagePair image_pair(itr_image_pair_size->image0,
+                                    itr_image_pair_size->image1);
+      auto itr_key_pairs = matches.find(image_pair);
+      auto key_pair_itr = itr_key_pairs->second.begin();
+      auto key_pair_itr_end = itr_key_pairs->second.end();
+      HKeyPairContainer key_pairs;
+      size_t intrinsic_id_left = image_intrinsic_map[image_pair.first];
+      size_t intrinsic_id_right = image_intrinsic_map[image_pair.second];
+      const IntrinsicParams& intrinsic_params_left =
+        intrinsic_params_set[intrinsic_id_left];
+      const IntrinsicParams& intrinsic_params_right =
+        intrinsic_params_set[intrinsic_id_right];
+      KMatrix K_left_inverse = intrinsic_params_left.GetKMatrix().inverse();
+      KMatrix K_right_inverse = intrinsic_params_right.GetKMatrix().inverse();
+      for (; key_pair_itr != key_pair_itr_end; ++key_pair_itr)
+      {
+        size_t key_left_id = key_pair_itr->first;
+        size_t key_right_id = key_pair_itr->second;
+        HKeyPair key_pair;
+        key_pair.first.segment(0, 2) =
+          image_keysets[image_pair.first][key_left_id];
+        key_pair.first[2] = Scalar(1);
+        key_pair.second.segment(0, 2) =
+          image_keysets[image_pair.second][key_right_id];
+        key_pair.second[2] = Scalar(1);
+        key_pair.first = K_left_inverse * key_pair.first;
+        key_pair.second = K_right_inverse * key_pair.second;
+        key_pairs.push_back(key_pair);
+      }
+      EMatrix e_matrix;
+      EMatrixCalculator ematrix_calculator;
+      if (ematrix_calculator(key_pairs, e_matrix) != 0)
+      {
+        continue;
+      }
+
+      //通过E矩阵计算影像对的相对外方位元素
+      ExtrinsicParamsPointsCalculator extrinsic_points_calculator;
+      if (extrinsic_points_calculator(e_matrix,
+                                      key_pairs,
+                                      relative_extrinsic_params,
+                                      points) != 0)
+      {
+        continue;
+      }
+
+      best_identity_id = image_pair.first;
+      best_relative_id = image_pair.second;
+      break;
+    }
+    if (best_identity_id != std::numeric_limits<size_t>::max() &&
+        best_relative_id != std::numeric_limits<size_t>::max())
+    {
+      return 0;
+    }
+    else
+    {
+      return -1;
+    }
+#else
     auto image_pair_itr = matches.begin();
     auto image_pair_itr_end = matches.end();
     auto image_pair_itr_best = matches.begin();
@@ -141,102 +237,8 @@ public:
     best_identity_id = image_left_id;
     best_relative_id = image_right_id;
 
-//    auto image_pair_itr = matches.begin();
-//    auto image_pair_itr_end = matches.end();
-//    EMatrixCalculator ematrix_calculator;
-//    Scalar min_mean_height = -std::numeric_limits<Scalar>::max();
-//    for (; image_pair_itr != image_pair_itr_end; image_pair_itr++)
-//    {
-//      if (image_pair_itr->second.size() > min_number_of_pair_matches_)
-//      {
-//        auto key_pair_itr = image_pair_itr->second.begin();
-//        auto key_pair_itr_end = image_pair_itr->second.end();
-//        HKeyPairContainer key_pairs;
-//        size_t image_left_id = image_pair_itr->first.first;
-//        size_t intrinsic_id_left = image_intrinsic_map[image_left_id];
-//        size_t image_right_id = image_pair_itr->first.second;
-//        size_t intrinsic_id_right = image_intrinsic_map[image_right_id];
-//        const IntrinsicParams& intrinsic_params_left =
-//          intrinsic_params_set[intrinsic_id_left];
-//        const IntrinsicParams& intrinsic_params_right =
-//          intrinsic_params_set[intrinsic_id_right];
-//        KMatrix K_left_inverse = intrinsic_params_left.GetKMatrix().inverse();
-//        KMatrix K_right_inverse = intrinsic_params_right.GetKMatrix().inverse();
-//        for (; key_pair_itr != key_pair_itr_end; ++key_pair_itr)
-//        {
-//          size_t key_left_id = key_pair_itr->first;
-//          size_t key_right_id = key_pair_itr->second;
-//          HKeyPair key_pair;
-//          key_pair.first.segment(0, 2) =
-//            image_keysets[image_left_id][key_left_id];
-//          key_pair.first[2] = Scalar(1);
-//          key_pair.second.segment(0, 2) =
-//            image_keysets[image_right_id][key_right_id];
-//          key_pair.second[2] = Scalar(1);
-//          key_pair.first = K_left_inverse * key_pair.first;
-//          key_pair.second = K_right_inverse * key_pair.second;
-//          key_pairs.push_back(key_pair);
-//        }
-//
-//        EMatrix e_matrix;
-//        if (ematrix_calculator(key_pairs, e_matrix) != 0)
-//        {
-//          continue;
-//        }
-//
-//        //通过E矩阵计算影像对的相对外方位元素
-//        ExtrinsicParamsPointsCalculator extrinsic_points_calculator;
-//        ExtrinsicParams extrinsic_params_pair;
-//        PointContainer points_pair;
-//        if (extrinsic_points_calculator(e_matrix,
-//                                        key_pairs,
-//                                        extrinsic_params_pair,
-//                                        points_pair) != 0)
-//        {
-//          continue;
-//        }
-//
-//        //计算平均基高比
-//        Scalar mean_height = Scalar(0);
-//        size_t number_of_points = points_pair.size();
-//        for (size_t i = 0; i < number_of_points; i++)
-//        {
-//          mean_height += std::abs(points_pair[i][2]);
-//#if 1
-//          ExtrinsicParams extrinsic_params_left;
-//          Key key_left_projected =
-//            ProjectiveFunctionsType::WorldPointProjectToImageKey(
-//              intrinsic_params_left, extrinsic_params_left, points_pair[i]);
-//          Key key_right_projected =
-//            ProjectiveFunctionsType::WorldPointProjectToImageKey(
-//              intrinsic_params_right, extrinsic_params_pair, points_pair[i]);
-//          size_t key_left_id = image_pair_itr->second[i].first;
-//          size_t key_right_id = image_pair_itr->second[i].second;
-//          Key key_left_predicated =
-//            image_keysets[image_left_id][key_left_id];
-//          Key key_right_predicated =
-//            image_keysets[image_right_id][key_right_id];
-//
-//          Key diff_left = key_left_projected - key_left_predicated;
-//          Key diff_right = key_right_projected - key_right_predicated;
-//          //std::cout<<"diff_left:\n"<<diff_left<<"\n";
-//          //std::cout<<"diff_right:\n"<<diff_right<<"\n";
-//#endif
-//        }
-//        mean_height /= Scalar(number_of_points);
-//
-//        if (mean_height > min_mean_height)
-//        {
-//          best_identity_id = image_left_id;
-//          best_relative_id = image_right_id;
-//          relative_extrinsic_params = extrinsic_params_pair;
-//          points.swap(points_pair);
-//          min_mean_height = mean_height;
-//        }
-//      }
-//    }
-
     return 0;
+#endif
   }
 
 private:

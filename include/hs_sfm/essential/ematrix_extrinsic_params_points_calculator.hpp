@@ -187,8 +187,14 @@ private:
       if (z_right > 0) front_right++; else behind_right++;
     }
 
-    if (front_left > behind_left && front_right > behind_right)
+    if (front_left > behind_left && front_right > behind_right &&
+        (Scalar(front_left) / Scalar(front_left + behind_left) > 0.9) &&
+        (Scalar(front_right) / Scalar(front_right + behind_right) > 0.9))
     {
+      std::cout<<"front_left:"<<front_left<<"\n";
+      std::cout<<"behind_left:"<<behind_left<<"\n";
+      std::cout<<"front_right:"<<front_right<<"\n";
+      std::cout<<"behind_right:"<<behind_right<<"\n";
       return 0;
     }
     else

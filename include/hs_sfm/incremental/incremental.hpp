@@ -14,6 +14,10 @@
 #include "hs_sfm/incremental/best_pair_selector.hpp"
 #include "hs_sfm/incremental/scene_expandor.hpp"
 
+#if 1
+#include "hs_sfm/sfm_file_io/scene_ply_saver.hpp"
+#endif
+
 namespace hs
 {
 namespace sfm
@@ -63,13 +67,32 @@ public:
                   hs::sfm::ObjectIndexMap& track_point_map,
                   hs::sfm::ViewInfoIndexer& view_info_indexer) const
   {
+    TrackContainer tracks;
+    hs::sfm::MatchesTracksConvertor matches_track_convertor;
+    if (matches_track_convertor(matches, tracks) != 0)
+    {
+      return -1;
+    }
+    auto itr_track = tracks.begin();
+    auto itr_track_end = tracks.end();
+    for (; itr_track != itr_track_end; ++itr_track)
+    {
+      std::sort(itr_track->begin(), itr_track->end());
+    }
+    std::sort(tracks.begin(), tracks.end());
+    MatchContainer matches_filtered;
+    if (matches_track_convertor(tracks, matches_filtered) != 0)
+    {
+      return -1;
+    }
+
     BestPairSelector selector(min_number_of_pair_matches_);
     size_t best_identity_id;
     size_t best_relative_id;
     ExtrinsicParams extrinsic_params_relative;
     PointContainer points_best_pair;
     if (selector(keysets,
-                 matches,
+                 matches_filtered,
                  intrinsic_params_set,
                  image_intrinsic_map,
                  best_identity_id,
@@ -100,7 +123,6 @@ public:
       Point point = points_best_pair[i];
       points_best_pair[i] = rotation_extra * point;
     }
-
     size_t number_of_images = keysets.size();
     extrinsic_params_set.clear();
     extrinsic_params_set.push_back(extrinsic_params_identity);
@@ -109,25 +131,34 @@ public:
     image_extrinsic_map[best_identity_id] = 0;
     image_extrinsic_map[best_relative_id] = 1;
 
-    TrackContainer tracks;
-    hs::sfm::MatchesTracksConvertor matches_track_convertor;
-    if (matches_track_convertor(matches, tracks) != 0)
-    {
-      return -1;
-    }
-    auto itr_track = tracks.begin();
-    auto itr_track_end = tracks.end();
-    for (; itr_track != itr_track_end; ++itr_track)
-    {
-      std::sort(itr_track->begin(), itr_track->end());
-    }
-    std::sort(tracks.begin(), tracks.end());
+#if 1
+    IntrinsicParamsContainer intrinsic_params_set_pair;
+    intrinsic_params_set_pair.push_back(
+      intrinsic_params_set[image_intrinsic_map[best_identity_id]]);
+    intrinsic_params_set_pair.push_back(
+      intrinsic_params_set[image_intrinsic_map[best_relative_id]]);
+    typedef hs::sfm::ImageParams<size_t> Image;
+    typedef EIGEN_STD_VECTOR(Image) ImageContainer;
+    Image image;
+    image.m_width = 6000;
+    image.m_height = 4000;
+    ImageContainer images;
+    images.push_back(image);
+    images.push_back(image);
+    hs::sfm::fileio::ScenePLYSaver<Scalar, size_t> scene_ply_saver(0.5);
+    scene_ply_saver("test_initial_pair.ply",
+                    intrinsic_params_set_pair,
+                    extrinsic_params_set,
+                    images,
+                    points_best_pair);
+#endif
+
     size_t number_of_tracks = tracks.size();
     track_point_map.Resize(number_of_tracks);
     std::map<std::pair<size_t, size_t>, size_t> key_pair_indexer;
-    auto itr_image_pair = matches.find(std::make_pair(best_identity_id,
-                                                      best_relative_id));
-    if (itr_image_pair == matches.end())
+    auto itr_image_pair =
+      matches_filtered.find(std::make_pair(best_identity_id, best_relative_id));
+    if (itr_image_pair == matches_filtered.end())
     {
       return -1;
     }

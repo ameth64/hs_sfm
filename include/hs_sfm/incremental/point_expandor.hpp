@@ -114,7 +114,6 @@ public:
 
               if (error > triangulate_error_threshold)
               {
-                std::cout<<"Blunder Error:"<<error<<"\n";
                 is_blunder = true;
                 break;
               }

@@ -7,7 +7,7 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 
-#define TMP_DEBUG 1
+#define TMP_DEBUG 0
 #if TMP_DEBUG
 #include "hs_sfm/incremental/reprojective_error_calculator.hpp"
 #endif
@@ -147,7 +147,6 @@ public:
       if (!extrinsic_image_map.IsValid(i)) return -1;
       size_t image_id = extrinsic_image_map[i];
       image_camera_map.push_back(image_intrinsic_map[image_id]);
-      std::cout<<"intrinsic_id:"<<image_intrinsic_map[image_id]<<"\n";
     }
 
     Index number_of_points = Index(number_of_tracks_bundle);
@@ -264,6 +263,7 @@ public:
       intrinsic_params.set_principal_point_x(ba_camera[7]);
       intrinsic_params.set_principal_point_y(ba_camera[8]);
       intrinsic_params.set_pixel_ratio(ba_camera[9]);
+#if TMP_DEBUG
       std::cout<<"camera "<<i<<":\n";
       std::cout<<"k1:"<<ba_camera[0]<<"\n";
       std::cout<<"k2:"<<ba_camera[1]<<"\n";
@@ -275,6 +275,7 @@ public:
       std::cout<<"principal_x:"<<ba_camera[7]<<"\n";
       std::cout<<"principal_y:"<<ba_camera[8]<<"\n";
       std::cout<<"pixel_ratio:"<<ba_camera[9]<<"\n";
+#endif
     }
 
 #if TMP_DEBUG

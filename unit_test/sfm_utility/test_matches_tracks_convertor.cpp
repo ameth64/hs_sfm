@@ -14,28 +14,71 @@ class TestMatchesTracksConvertor
 public:
   typedef int Err;
 
-  Err Test(const hs::sfm::TrackContainer& tracks_true,
-           const hs::sfm::TrackContainer& tracks_error) const
+  Err Test(const hs::sfm::TrackContainer& tracks_true) const
   {
+    typedef std::pair<size_t, size_t> View;
+    typedef std::map<View, size_t> ViewTrackIndexer;
+    //Generate error tracks and expected tracks
+    hs::sfm::TrackContainer tracks_error = tracks_true;
+    hs::sfm::TrackContainer tracks_expected = tracks_true;
+
+    ViewTrackIndexer view_track_indexer_true;
+    auto itr_track_true = tracks_true.begin();
+    auto itr_track_true_end = tracks_true.end();
+    for (size_t i = 0; itr_track_true != itr_track_true_end;
+         ++itr_track_true, ++i)
+    {
+      auto itr_view_true = itr_track_true->begin();
+      auto itr_view_true_end = itr_track_true->end();
+      for (; itr_view_true != itr_view_true_end; ++itr_view_true)
+      {
+        view_track_indexer_true[*itr_view_true] = i;
+      }
+    }
+
+    const size_t number_of_error_views = 10;
+    size_t error_count = 0;
+    for (size_t i = 0; i < tracks_true.size(); i++)
+    {
+      if (!tracks_true[i].empty())
+      {
+        View view_true = tracks_true[i][0];
+
+        View view_error = view_true;
+        view_error.second++;
+        auto itr_view_error = view_track_indexer_true.find(view_error);
+        if (itr_view_error != view_track_indexer_true.end() &&
+            error_count < number_of_error_views)
+        {
+          size_t j = itr_view_error->second;
+          tracks_error[i].push_back(view_error);
+          tracks_expected[i].clear();
+          tracks_expected[j].clear();
+          error_count++;
+        }
+      }
+    }
+
+    hs::sfm::TrackContainer tracks_expected_reordered;
+
+    auto itr_track_expected = tracks_expected.begin();
+    auto itr_track_expected_end = tracks_expected.end();
+    for (; itr_track_expected != itr_track_expected_end; ++itr_track_expected)
+    {
+      if (itr_track_expected->size() > 1)
+      {
+        std::sort(itr_track_expected->begin(), itr_track_expected->end());
+        tracks_expected_reordered.push_back(*itr_track_expected);
+      }
+    }
+    std::sort(tracks_expected_reordered.begin(),
+              tracks_expected_reordered.end());
+
     hs::sfm::MatchesTracksConvertor convertor;
     hs::sfm::MatchContainer matches;
     if (convertor(tracks_error, matches) != 0) return -1;
     hs::sfm::TrackContainer tracks_estimate;
     if (convertor(matches, tracks_estimate) != 0) return -1;
-
-    hs::sfm::TrackContainer tracks_reordered;
-    auto itr_track_true = tracks_true.begin();
-    auto itr_track_true_end = tracks_true.end();
-    for (; itr_track_true != itr_track_true_end; ++itr_track_true)
-    {
-      //if (itr_track_true->size() > 1)
-      {
-        hs::sfm::Track track = *itr_track_true;
-        std::sort(track.begin(), track.end());
-        tracks_reordered.push_back(track);
-      }
-    }
-    std::sort(tracks_reordered.begin(), tracks_reordered.end());
 
     auto itr_track_estimate = tracks_estimate.begin();
     auto itr_track_estimate_end = tracks_estimate.end();
@@ -45,68 +88,7 @@ public:
     }
     std::sort(tracks_estimate.begin(), tracks_estimate.end());
 
-    for (size_t i = 0; i < std::max(tracks_true.size(),
-                                    tracks_error.size()); i++)
-    {
-      if (i < tracks_true.size())
-      {
-        std::cout<<"track_true["<<i<<"]:\n";
-        for (size_t j = 0; j < tracks_true[i].size(); j++)
-        {
-          std::cout<<tracks_true[i][j].first<<" "
-                   <<tracks_true[i][j].second<<"\n";
-        }
-      }
-      if (i < tracks_error.size())
-      {
-        std::cout<<"track_error["<<i<<"]:\n";
-        for (size_t j = 0; j < tracks_error[i].size(); j++)
-        {
-          std::cout<<tracks_error[i][j].first<<" "
-                   <<tracks_error[i][j].second<<"\n";
-        }
-      }
-    }
-
-    hs::sfm::TrackContainer tracks_error_reordered = tracks_error;
-    auto itr_track_error_reordered = tracks_error_reordered.begin();
-    auto itr_track_error_reordered_end = tracks_error_reordered.end();
-    for (; itr_track_error_reordered != itr_track_error_reordered_end;
-         ++itr_track_error_reordered)
-    {
-      std::sort(itr_track_error_reordered->begin(),
-                itr_track_error_reordered->end());
-    }
-    std::sort(tracks_error_reordered.begin(), tracks_error_reordered.end());
-
-    std::cout<<"tracks_error_reordered.size():"
-             <<tracks_error_reordered.size()<<"\n";
-    std::cout<<"tracks_estimate.size():"<<tracks_estimate.size()<<"\n";
-
-    for (size_t i = 0; i < std::max(tracks_error_reordered.size(),
-                                    tracks_estimate.size()); i++)
-    {
-      if (i < tracks_error_reordered.size())
-      {
-        std::cout<<"track_error_reordered["<<i<<"]:\n";
-        for (size_t j = 0; j < tracks_error_reordered[i].size(); j++)
-        {
-          std::cout<<tracks_error_reordered[i][j].first<<" "
-                   <<tracks_error_reordered[i][j].second<<"\n";
-        }
-      }
-      if (i < tracks_estimate.size())
-      {
-        std::cout<<"track_estimate["<<i<<"]:\n";
-        for (size_t j = 0; j < tracks_estimate[i].size(); j++)
-        {
-          std::cout<<tracks_estimate[i][j].first<<" "
-                   <<tracks_estimate[i][j].second<<"\n";
-        }
-      }
-    }
-
-    if (tracks_reordered == tracks_estimate)
+    if (tracks_expected_reordered == tracks_estimate)
     {
       return 0;
     }
@@ -136,13 +118,13 @@ TEST(TestMatchesTracksConvertor, SyntheticTest)
   typedef std::map<View, size_t> ViewTrackIndexer;
 
   Scalar focal_length_in_metre = 0.019;
-  size_t number_of_strips = 7;
-  size_t number_of_cameras_in_strips = 15;
+  size_t number_of_strips = 25;
+  size_t number_of_cameras_in_strips = 40;
   Scalar ground_resolution = 0.1;
   ImageDimension image_width = 6000;
   ImageDimension image_height = 4000;
   Scalar pixel_size = 0.0000039;
-  size_t number_of_points = 20;
+  size_t number_of_points = 20000;
   Scalar lateral_overlap_ratio = 0.6;
   Scalar longitudinal_overlap_ratio = 0.8;
   Scalar scene_max_height = 100;
@@ -197,29 +179,8 @@ TEST(TestMatchesTracksConvertor, SyntheticTest)
     }
   }
 
-  hs::sfm::TrackContainer tracks_error = tracks_tight;
-  hs::sfm::TrackContainer tracks_true = tracks_tight;
-  size_t number_of_tracks = tracks_tight.size();
-  for (size_t i = 0; i < number_of_tracks; i++)
-  {
-    size_t j = i + 1;
-    if (i % 1000 == 4 && !tracks_tight[i].empty())
-    {
-      tracks_error[i].push_back(tracks_tight[j][0]);
-      tracks_error[j].push_back(tracks_tight[i][0]);
-      tracks_true[i].clear();
-      tracks_true[j].clear();
-    }
-    if (i % 1000 == 6 && !tracks_tight[i].empty())
-    {
-      tracks_error[i].push_back(tracks_tight[i][0]);
-      tracks_error[i].rbegin()->second++;
-      tracks_true[i].clear();
-    }
-  }
-
   TestMatchesTracksConvertor tester;
-  ASSERT_EQ(0, tester.Test(tracks_true, tracks_error));
+  ASSERT_EQ(0, tester.Test(tracks_tight));
 }
 
 }

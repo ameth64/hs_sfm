@@ -108,7 +108,6 @@ public:
       }
     }
 
-    std::cout<<"max_number_of_view_tracks:"<<max_number_of_view_tracks<<"\n";
     if (max_number_of_view_tracks < add_new_image_matches_threshold_)
     {
       return -1;

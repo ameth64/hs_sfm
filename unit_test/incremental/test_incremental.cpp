@@ -437,7 +437,7 @@ TEST(TestIncremental, SyntheticTest)
   size_t number_of_points = 40000;
   size_t number_of_gcps = 10;
   //TODO:Outlier test needed!
-  Scalar outlier_ratio = 0.0;
+  Scalar outlier_ratio = 0.00;
   Scalar key_stddev = 1.0;
 
   Generator generator(flight_longitudinal_overlap_ratio,
