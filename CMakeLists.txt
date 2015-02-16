@@ -128,6 +128,7 @@ hslib_add_dep(${INCREMENTAL_NAME}_utest
              opencv_nonfree
   HS_DEPS hs_math HEADONLY
   HS_DEPS hs_image_io DEP_LIBS whole_io
+  HS_DEPS hs_progress DEP_LIBS progress_utility
   HS_DEPS hs_test_utility DEP_LIBS test_env)
 hslib_post_build(${INCREMENTAL_NAME}_utest)
 

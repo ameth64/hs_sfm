@@ -4,6 +4,8 @@
 #include <vector>
 #include <map>
 
+#include "hs_progress/progress_utility/progress_manager.hpp"
+
 #include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
@@ -66,7 +68,8 @@ public:
                   ImageExtrinsicMap& image_extrinsic_map,
                   PointContainer& points,
                   TrackPointMap& track_point_map,
-                  ViewInfoIndexer& view_info_indexer) const
+                  ViewInfoIndexer& view_info_indexer,
+                  hs::progress::ProgressManager* progress_manager = NULL) const
   {
     return Run(image_keysets,
                image_intrinsic_map,
@@ -76,7 +79,8 @@ public:
                image_extrinsic_map,
                points,
                track_point_map,
-               view_info_indexer);
+               view_info_indexer,
+               progress_manager);
   }
 
   Err Run(const ImageKeysetContainer& image_keysets,
@@ -87,7 +91,8 @@ public:
           ImageExtrinsicMap& image_extrinsic_map,
           PointContainer& points,
           TrackPointMap& track_point_map,
-          ViewInfoIndexer& view_info_indexer) const
+          ViewInfoIndexer& view_info_indexer,
+          hs::progress::ProgressManager* progress_manager = NULL) const
   {
     size_t number_of_images = image_keysets.size();
     if (image_intrinsic_map.Size() != number_of_images) return -1;
@@ -102,6 +107,13 @@ public:
 
     while (1)
     {
+      if (progress_manager)
+      {
+        if (!progress_manager->CheckKeepWorking())
+        {
+          break;
+        }
+      }
       BundleAdjustmentOptimizor bundle_adjustment_optimizor;
       if (bundle_adjustment_optimizor(image_keysets,
                                       image_intrinsic_map,
@@ -149,6 +161,12 @@ public:
                          view_info_indexer) != 0)
       {
         break;
+      }
+
+      if (progress_manager)
+      {
+        progress_manager->SetCurrentSubProgressCompleteRatio(
+          float(extrinsic_params_set.size() / float(image_keysets.size())));
       }
     }
 

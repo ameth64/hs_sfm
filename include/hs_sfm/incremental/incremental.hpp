@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
+#include "hs_progress/progress_utility/progress_manager.hpp"
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/key_type.hpp"
@@ -65,7 +66,8 @@ public:
                   hs::sfm::ObjectIndexMap& image_extrinsic_map,
                   PointContainer& points,
                   hs::sfm::ObjectIndexMap& track_point_map,
-                  hs::sfm::ViewInfoIndexer& view_info_indexer) const
+                  hs::sfm::ViewInfoIndexer& view_info_indexer,
+                  hs::progress::ProgressManager* progress_manager = NULL) const
   {
     TrackContainer tracks;
     hs::sfm::MatchesTracksConvertor matches_track_convertor;
@@ -213,7 +215,8 @@ public:
                  image_extrinsic_map,
                  points,
                  track_point_map,
-                 view_info_indexer) != 0)
+                 view_info_indexer,
+                 progress_manager) != 0)
     {
       return -1;
     }
