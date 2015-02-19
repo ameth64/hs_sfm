@@ -65,11 +65,11 @@ public:
                   ExtrinsicParamsContainer& extrinsic_params_set,
                   hs::sfm::ObjectIndexMap& image_extrinsic_map,
                   PointContainer& points,
+                  TrackContainer& tracks,
                   hs::sfm::ObjectIndexMap& track_point_map,
                   hs::sfm::ViewInfoIndexer& view_info_indexer,
                   hs::progress::ProgressManager* progress_manager = NULL) const
   {
-    TrackContainer tracks;
     hs::sfm::MatchesTracksConvertor matches_track_convertor;
     if (matches_track_convertor(matches, tracks) != 0)
     {

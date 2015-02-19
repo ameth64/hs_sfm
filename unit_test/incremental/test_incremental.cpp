@@ -76,6 +76,7 @@ public:
     }
     ObjectIndexMap image_extrinsic_map;
     PointContainer points_relative_estimate;
+    TrackContainer tracks;
     ObjectIndexMap track_point_map;
     ViewInfoIndexer view_info_indexer;
     IncrementalSFM incremental_sfm;
@@ -88,6 +89,7 @@ public:
                         extrinsic_params_set_relative_estimate,
                         image_extrinsic_map,
                         points_relative_estimate,
+                        tracks,
                         track_point_map,
                         view_info_indexer) != 0)
     {
@@ -95,16 +97,6 @@ public:
     }
 
     Tester tester;
-    hs::sfm::MatchesTracksConvertor matches_tracks_convertor;
-    TrackContainer tracks;
-    if (matches_tracks_convertor(matches, tracks) != 0) return -1;
-    auto itr_track = tracks.begin();
-    auto itr_track_end = tracks.end();
-    for (; itr_track != itr_track_end; ++itr_track)
-    {
-      std::sort(itr_track->begin(), itr_track->end());
-    }
-    std::sort(tracks.begin(), tracks.end());
     if (tester.TestReprojectiveError(
           keysets,
           intrinsic_params_set_estimate,
