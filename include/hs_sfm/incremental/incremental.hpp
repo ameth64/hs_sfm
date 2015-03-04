@@ -49,14 +49,17 @@ public:
   IncrementalSFM()
     : min_number_of_pair_matches_(100),
       add_new_image_matches_threshold_(8),
-      min_triangulate_views_(2) {}
+      min_triangulate_views_(2),
+      number_of_threads_(1) {}
 
   IncrementalSFM(size_t min_number_of_pair_matches,
                  size_t add_new_image_matches_threshold,
-                 size_t min_triangulate_views)
+                 size_t min_triangulate_views,
+                 size_t number_of_threads)
     : min_number_of_pair_matches_(min_number_of_pair_matches),
       add_new_image_matches_threshold_(add_new_image_matches_threshold),
-      min_triangulate_views_(min_triangulate_views) {}
+      min_triangulate_views_(min_triangulate_views),
+      number_of_threads_(number_of_threads) {}
 
   Err operator() (const ObjectIndexMap& image_intrinsic_map,
                   const hs::sfm::MatchContainer& matches,
@@ -133,28 +136,6 @@ public:
     image_extrinsic_map[best_identity_id] = 0;
     image_extrinsic_map[best_relative_id] = 1;
 
-#if 1
-    IntrinsicParamsContainer intrinsic_params_set_pair;
-    intrinsic_params_set_pair.push_back(
-      intrinsic_params_set[image_intrinsic_map[best_identity_id]]);
-    intrinsic_params_set_pair.push_back(
-      intrinsic_params_set[image_intrinsic_map[best_relative_id]]);
-    typedef hs::sfm::ImageParams<size_t> Image;
-    typedef EIGEN_STD_VECTOR(Image) ImageContainer;
-    Image image;
-    image.m_width = 6000;
-    image.m_height = 4000;
-    ImageContainer images;
-    images.push_back(image);
-    images.push_back(image);
-    hs::sfm::fileio::ScenePLYSaver<Scalar, size_t> scene_ply_saver(0.5);
-    scene_ply_saver("test_initial_pair.ply",
-                    intrinsic_params_set_pair,
-                    extrinsic_params_set,
-                    images,
-                    points_best_pair);
-#endif
-
     size_t number_of_tracks = tracks.size();
     track_point_map.Resize(number_of_tracks);
     std::map<std::pair<size_t, size_t>, size_t> key_pair_indexer;
@@ -206,7 +187,8 @@ public:
     SceneExpandor<Scalar> expandor(add_new_image_matches_threshold_,
                                    Scalar(16),
                                    min_triangulate_views_,
-                                   Scalar(16));
+                                   Scalar(16),
+                                   number_of_threads_);
     if (expandor(keysets,
                  image_intrinsic_map,
                  tracks,
@@ -228,6 +210,7 @@ private:
   size_t min_number_of_pair_matches_;
   size_t add_new_image_matches_threshold_;
   size_t min_triangulate_views_;
+  size_t number_of_threads_;
 };
 
 }

@@ -271,22 +271,3 @@ hslib_add_dep(${CALIBRATE_NAME}_utest
   HS_DEPS hs_math HEADONLY
   )
 hslib_post_build(${CALIBRATE_NAME}_utest)
-
-##feature_match
-#set(FEATURE_MATCH_NAME "feature_match")
-#set(FEATURE_MATCH_SOURCES
-#  "src/feature_match/opencv_feature_detector.cpp"
-#  #"src/feature_match/flann_matcher.cpp"
-#  )
-#hslib_add_library(${FEATURE_MATCH_NAME} ${HSPRJ_NAME} ${FEATURE_MATCH_SOURCES})
-#hslib_add_dep(${FEATURE_MATCH_NAME}
-#  3RDPARTY_DEPS opencv
-#    DEP_LIBS opencv_core
-#             opencv_calib3d
-#             opencv_imgproc
-#             opencv_features2d
-#             opencv_highgui
-#             opencv_flann
-#             opencv_nonfree
-#  HS_DEPS hs_math HEADONLY
-#  )

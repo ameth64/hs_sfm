@@ -62,6 +62,9 @@ private:
 #endif
 
 public:
+  BundleAdjustmentOptimizor(size_t number_of_threads = 1)
+    : number_of_threads_(number_of_threads) {}
+
   Err operator() (const ImageKeysetContainer& image_keysets,
                   const ImageIntrinsicMap& image_intrinsic_map,
                   const TrackContainer& tracks,
@@ -223,7 +226,7 @@ public:
     YCovarianceInverse y_covariance_inverse;
     y_covariance_inverse.SetKeysUniformStdDev(Scalar(1), number_of_keys);
 
-    BAOptimizor ba_optimizor(initial_x);
+    BAOptimizor ba_optimizor(initial_x, int(number_of_threads_));
     XVector optimized_x;
     if (ba_optimizor(vector_function, near_y, y_covariance_inverse,
                      optimized_x) != 0)
@@ -293,6 +296,9 @@ public:
 #endif
     return 0;
   }
+
+private:
+  size_t number_of_threads_;
 };
 
 }

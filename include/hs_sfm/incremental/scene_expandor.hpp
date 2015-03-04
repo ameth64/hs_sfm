@@ -54,11 +54,13 @@ public:
     size_t add_new_image_matches_threshold = 8,
     Scalar pmatrix_ransac_threshold = 4.0,
     size_t min_triangulate_views = 2,
-    Scalar triangulate_error_threshold = 4.0)
+    Scalar triangulate_error_threshold = 4.0,
+    size_t number_of_threads = 1)
     : image_expandor_(add_new_image_matches_threshold,
                       pmatrix_ransac_threshold),
       min_triangulate_views_(min_triangulate_views),
-      triangulate_error_threshold_(triangulate_error_threshold){}
+      triangulate_error_threshold_(triangulate_error_threshold),
+      number_of_threads_(number_of_threads) {}
 
   Err operator() (const ImageKeysetContainer& image_keysets,
                   const ImageIntrinsicMap& image_intrinsic_map,
@@ -114,7 +116,8 @@ public:
           break;
         }
       }
-      BundleAdjustmentOptimizor bundle_adjustment_optimizor;
+      BundleAdjustmentOptimizor bundle_adjustment_optimizor(
+                                  number_of_threads_);
       if (bundle_adjustment_optimizor(image_keysets,
                                       image_intrinsic_map,
                                       tracks,
@@ -201,6 +204,7 @@ protected:
   ImageExpandor image_expandor_;
   size_t min_triangulate_views_;
   Scalar triangulate_error_threshold_;
+  size_t number_of_threads_;
 };
 
 }

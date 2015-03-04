@@ -83,7 +83,7 @@ public:
       if (max_eigen_value < eigen_value)
       {
         max_eigen_value = eigen_value;
-        max_id = i;
+        max_id = int(i);
       }
     }
 

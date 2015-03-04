@@ -79,7 +79,7 @@ public:
     TrackContainer tracks;
     ObjectIndexMap track_point_map;
     ViewInfoIndexer view_info_indexer;
-    IncrementalSFM incremental_sfm;
+    IncrementalSFM incremental_sfm(100, 8, 2, 7);
     IntrinsicParamsContainer intrinsic_params_set_estimate =
       intrinsic_params_set_initial;
     if (incremental_sfm(image_intrinsic_map,
@@ -324,10 +324,11 @@ TEST(TestIncremental, SyntheticTest)
                                      -0.00055376548320189127,
                                      -0.00049877717768381476);
   intrinsic_params_set_true.push_back(intrinsic_params_0);
-  intrinsic_params_set_initial.push_back(IntrinsicParams(4871.79487179487179,
-                                                         0,
-                                                         image_width_0 / 2,
-                                                         image_height_0 / 2));
+  intrinsic_params_set_initial.push_back(
+    IntrinsicParams(4871.79487179487179,
+                    0,
+                    Scalar(image_width_0 / 2),
+                    Scalar(image_height_0 / 2)));
 
   Scalar focal_length_in_metre_1 = 0.02995452167701055;
   size_t number_of_strips_1 = 3;
@@ -370,10 +371,11 @@ TEST(TestIncremental, SyntheticTest)
                                      -0.0020605099808780948,
                                      -0.00028706423764766859);
   intrinsic_params_set_true.push_back(intrinsic_params_1);
-  intrinsic_params_set_initial.push_back(IntrinsicParams(7692.30769230769231,
-                                                         0,
-                                                         image_width_1 / 2,
-                                                         image_height_1 / 2));
+  intrinsic_params_set_initial.push_back(
+    IntrinsicParams(7692.30769230769231,
+                    0,
+                    Scalar(image_width_1 / 2),
+                    Scalar(image_height_1 / 2)));
 
   Scalar focal_length_in_metre_2 = 0.019056097774998712;
   size_t number_of_strips_2 = 3;
@@ -416,10 +418,11 @@ TEST(TestIncremental, SyntheticTest)
                                      4.1434720317373253e-006,
                                      -0.00025018439997095336);
   intrinsic_params_set_true.push_back(intrinsic_params_2);
-  intrinsic_params_set_initial.push_back(IntrinsicParams(4871.79487179487179,
-                                                         0,
-                                                         image_width_2 / 2,
-                                                         image_height_2 / 2));
+  intrinsic_params_set_initial.push_back(
+    IntrinsicParams(4871.79487179487179,
+                    0,
+                    Scalar(image_width_2 / 2),
+                    Scalar(image_height_2 / 2)));
 
   Scalar flight_longitudinal_overlap_ratio = 0.9;
   Scalar flight_lateral_overlap_ratio = 0.2;
