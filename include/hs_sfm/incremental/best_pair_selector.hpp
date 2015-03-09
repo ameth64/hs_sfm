@@ -45,6 +45,9 @@ public:
 
 private:
   typedef std::map<ImagePair, Scalar> ScoreContainer;
+  typedef hs::sfm::essential::EMatrix5PointsRansacRefiner<Scalar>
+          EMatrixRansacRefiner;
+  typedef typename EMatrixRansacRefiner::IndexSet IndexSet;
   typedef hs::sfm::essential::EMatrix5PointsCalculator<Scalar>
           EMatrixCalculator;
   typedef typename EMatrixCalculator::HKey HKey;
@@ -81,10 +84,13 @@ public:
                  const MatchContainer& matches,
                  const IntrinsicParamsContainer& intrinsic_params_set,
                  const ObjectIndexMap& image_intrinsic_map,
+                 hs::sfm::TrackContainer& tracks,
                  size_t& best_identity_id,
                  size_t& best_relative_id,
                  ExtrinsicParams& relative_extrinsic_params,
-                 PointContainer& points) const
+                 PointContainer& points,
+                 hs::sfm::ObjectIndexMap& track_point_map,
+                 hs::sfm::ViewInfoIndexer& view_info_indexer) const
   {
 #if 1
     std::vector<ImagePairSize> image_pair_sizes;
@@ -103,6 +109,7 @@ public:
     auto itr_image_pair_size_end = image_pair_sizes.rend();
     best_identity_id = std::numeric_limits<size_t>::max();
     best_relative_id = std::numeric_limits<size_t>::max();
+    IndexSet estimated_inlier_indices;
     for (; itr_image_pair_size != itr_image_pair_size_end;
          ++itr_image_pair_size)
     {
@@ -137,9 +144,18 @@ public:
         key_pair.second = K_right_inverse * key_pair.second;
         key_pairs.push_back(key_pair);
       }
+      EMatrixRansacRefiner ransac_refiner;
+      HKeyPairContainer key_pairs_refined;
+      estimated_inlier_indices.clear();
+      if (ransac_refiner(key_pairs, 8 / intrinsic_params_left.focal_length(),
+                         key_pairs_refined, estimated_inlier_indices))
+      {
+        continue;
+      }
+
       EMatrix e_matrix;
       EMatrixCalculator ematrix_calculator;
-      if (ematrix_calculator(key_pairs, e_matrix) != 0)
+      if (ematrix_calculator(key_pairs_refined, e_matrix) != 0)
       {
         continue;
       }
@@ -147,7 +163,7 @@ public:
       //通过E矩阵计算影像对的相对外方位元素
       ExtrinsicParamsPointsCalculator extrinsic_points_calculator;
       if (extrinsic_points_calculator(e_matrix,
-                                      key_pairs,
+                                      key_pairs_refined,
                                       relative_extrinsic_params,
                                       points) != 0)
       {
@@ -161,6 +177,62 @@ public:
     if (best_identity_id != std::numeric_limits<size_t>::max() &&
         best_relative_id != std::numeric_limits<size_t>::max())
     {
+      std::map<std::pair<size_t, size_t>, size_t> key_pair_indexer;
+      auto itr_image_pair =
+        matches.find(std::make_pair(best_identity_id, best_relative_id));
+      if (itr_image_pair == matches.end())
+      {
+        return -1;
+      }
+
+      for (size_t i = 0; i < estimated_inlier_indices.size(); i++)
+      {
+        size_t key_pair_id = size_t(estimated_inlier_indices[i]);
+        key_pair_indexer[
+          std::make_pair(itr_image_pair->second[key_pair_id].first,
+                         itr_image_pair->second[key_pair_id].second)] = i;
+      }
+      for (size_t i = 0; i < tracks.size(); i++)
+      {
+        size_t number_of_views = tracks[i].size();
+        size_t key_id_identity = std::numeric_limits<size_t>::max();
+        size_t key_id_relative = std::numeric_limits<size_t>::max();
+        for (size_t j = 0; j < number_of_views; j++)
+        {
+          size_t image_id = tracks[i][j].first;
+          size_t key_id = tracks[i][j].second;
+          if (image_id == best_identity_id)
+          {
+            key_id_identity = key_id;
+          }
+          if (image_id == best_relative_id)
+          {
+            key_id_relative = key_id;
+          }
+        }
+        if (key_id_identity != std::numeric_limits<size_t>::max() &&
+            key_id_relative != std::numeric_limits<size_t>::max())
+        {
+          auto itr_key_pair =
+            key_pair_indexer.find(std::make_pair(key_id_identity,
+                                                 key_id_relative));
+          if (itr_key_pair != key_pair_indexer.end())
+          {
+            track_point_map[i] = itr_key_pair->second;
+          }
+          else
+          {
+            for (size_t j = 0; j < number_of_views; j++)
+            {
+              ViewInfo& view_info = view_info_indexer.GetViewInfoByTrackImage(
+                                      i, tracks[i][j].first);
+              view_info.is_blunder = true;
+            }
+          }
+        }
+      }
+
+
       return 0;
     }
     else

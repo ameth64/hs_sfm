@@ -91,6 +91,12 @@ public:
       return -1;
     }
 
+    size_t number_of_tracks = tracks.size();
+    track_point_map.Resize(number_of_tracks);
+
+    //构造view info indexer
+    view_info_indexer.SetViewInfoByTracks(tracks);
+
     BestPairSelector selector(min_number_of_pair_matches_);
     size_t best_identity_id;
     size_t best_relative_id;
@@ -100,10 +106,13 @@ public:
                  matches_filtered,
                  intrinsic_params_set,
                  image_intrinsic_map,
+                 tracks,
                  best_identity_id,
                  best_relative_id,
                  extrinsic_params_relative,
-                 points_best_pair) != 0) return -1;
+                 points_best_pair,
+                 track_point_map,
+                 view_info_indexer) != 0) return -1;
 
     //旋转向量为0时（即没有旋转），bundle adjustment时无法计算jacobian矩阵。
     //因此需改变初始的相机朝向。
@@ -135,53 +144,6 @@ public:
     image_extrinsic_map.Resize(number_of_images);
     image_extrinsic_map[best_identity_id] = 0;
     image_extrinsic_map[best_relative_id] = 1;
-
-    size_t number_of_tracks = tracks.size();
-    track_point_map.Resize(number_of_tracks);
-    std::map<std::pair<size_t, size_t>, size_t> key_pair_indexer;
-    auto itr_image_pair =
-      matches_filtered.find(std::make_pair(best_identity_id, best_relative_id));
-    if (itr_image_pair == matches_filtered.end())
-    {
-      return -1;
-    }
-    size_t number_of_key_pairs = itr_image_pair->second.size();
-    for (size_t i = 0; i < number_of_key_pairs; i++)
-    {
-      key_pair_indexer[std::make_pair(itr_image_pair->second[i].first,
-                                      itr_image_pair->second[i].second)] = i;
-    }
-    for (size_t i = 0; i < number_of_tracks; i++)
-    {
-      size_t number_of_views = tracks[i].size();
-      size_t key_id_identity = std::numeric_limits<size_t>::max();
-      size_t key_id_relative = std::numeric_limits<size_t>::max();
-      for (size_t j = 0; j < number_of_views; j++)
-      {
-        size_t image_id = tracks[i][j].first;
-        size_t key_id = tracks[i][j].second;
-        if (image_id == best_identity_id)
-        {
-          key_id_identity = key_id;
-        }
-        if (image_id == best_relative_id)
-        {
-          key_id_relative = key_id;
-        }
-      }
-      if (key_id_identity != std::numeric_limits<size_t>::max() &&
-          key_id_relative != std::numeric_limits<size_t>::max())
-      {
-        auto itr_key_pair =
-          key_pair_indexer.find(std::make_pair(key_id_identity,
-                                               key_id_relative));
-        if (itr_key_pair == key_pair_indexer.end())
-        {
-          return -1;
-        }
-        track_point_map[i] = itr_key_pair->second;
-      }
-    }
 
     points.swap(points_best_pair);
     SceneExpandor<Scalar> expandor(add_new_image_matches_threshold_,

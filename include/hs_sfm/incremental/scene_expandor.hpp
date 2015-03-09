@@ -194,9 +194,6 @@ protected:
       }
     }
 
-    //构造view info indexer
-    view_info_indexer.SetViewInfoByTracks(tracks);
-
     return 0;
   }
 
