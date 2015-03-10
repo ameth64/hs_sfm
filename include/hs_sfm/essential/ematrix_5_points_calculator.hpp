@@ -308,32 +308,22 @@ public:
     }
   };
 
-  class HypothesesEvaluator
+  class EMatrixEvaluator
   {
   public:
     Err operator()(const HKeyPair& key_pair,
-                   const EMatrixHypotheses& ematrix_hypotheses,
-                   size_t& best_hypothesis, Scalar& distance) const
+                   const EMatrix& ematrix,
+                   Scalar& distance) const
     {
-      size_t number_of_hypotheses = ematrix_hypotheses.size();
-      distance = std::numeric_limits<Scalar>::max();
-      for (size_t i = 0; i < number_of_hypotheses; i++)
-      {
-        HLine epiline_left = ematrix_hypotheses[i] * key_pair.first;
-        HLine epiline_right = ematrix_hypotheses[i].transpose() *
-                              key_pair.second;
+      HLine epiline_left = ematrix * key_pair.first;
+      HLine epiline_right = ematrix.transpose() *
+                            key_pair.second;
 
-        Scalar error_left = std::abs(key_pair.second.dot(epiline_left)) /
-                                     epiline_left.segment(0, 2).norm();
-        Scalar error_right = std::abs(key_pair.first.dot(epiline_right)) /
-                                      epiline_right.segment(0, 2).norm();
-
-        if (distance > error_left + error_right)
-        {
-          distance = error_left + error_right;
-          best_hypothesis = i;
-        }
-      }
+      Scalar error_left = std::abs(key_pair.second.dot(epiline_left)) /
+                                    epiline_left.segment(0, 2).norm();
+      Scalar error_right = std::abs(key_pair.first.dot(epiline_right)) /
+                                    epiline_right.segment(0, 2).norm();
+      distance = error_left + error_right;
 
       return 0;
     }
@@ -351,24 +341,25 @@ public:
         return -1;
       }
       size_t number_of_hypotheses = ematrix_hypotheses.size();
-      std::vector<size_t> hypotheses_score(number_of_hypotheses, 0);
-      HypothesesEvaluator evaluator;
-      size_t number_of_key_pairs = key_pairs.size();
-      for (size_t i = 0; i < number_of_key_pairs; i++)
+      std::vector<Scalar> hypotheses_score(number_of_hypotheses, Scalar(0));
+      EMatrixEvaluator evaluator;
+      for (size_t i = 0; i < number_of_hypotheses; i++)
       {
-        size_t best_hypothesis;
-        Scalar distance;
-        evaluator(key_pairs[i], ematrix_hypotheses, best_hypothesis, distance);
-        hypotheses_score[best_hypothesis]++;
+        for (size_t j = 0; j < key_pairs.size(); j++)
+        {
+          Scalar distance;
+          evaluator(key_pairs[j], ematrix_hypotheses[i], distance);
+          hypotheses_score[i] += distance;
+        }
       }
 
-      size_t max_number = 0;
+      Scalar min_score = std::numeric_limits<Scalar>::max();
       size_t best_id = 0;
       for (size_t i = 0; i < number_of_hypotheses; i++)
       {
-        if (hypotheses_score[i] > max_number)
+        if (hypotheses_score[i] < min_score)
         {
-          max_number = hypotheses_score[i];
+          min_score = hypotheses_score[i];
           best_id = i;
         }
       }

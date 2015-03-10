@@ -146,19 +146,20 @@ public:
       }
       EMatrixRansacRefiner ransac_refiner;
       HKeyPairContainer key_pairs_refined;
+      EMatrix e_matrix;
       estimated_inlier_indices.clear();
       if (ransac_refiner(key_pairs, 8 / intrinsic_params_left.focal_length(),
-                         key_pairs_refined, estimated_inlier_indices))
+                         key_pairs_refined, estimated_inlier_indices,
+                         e_matrix))
       {
         continue;
       }
 
-      EMatrix e_matrix;
-      EMatrixCalculator ematrix_calculator;
-      if (ematrix_calculator(key_pairs_refined, e_matrix) != 0)
-      {
-        continue;
-      }
+      //EMatrixCalculator ematrix_calculator;
+      //if (ematrix_calculator(key_pairs_refined, e_matrix) != 0)
+      //{
+      //  continue;
+      //}
 
       //通过E矩阵计算影像对的相对外方位元素
       ExtrinsicParamsPointsCalculator extrinsic_points_calculator;

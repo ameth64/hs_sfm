@@ -40,6 +40,7 @@ private:
   typedef typename KeysetGenerator::KeysetContainer KeysetContainer;
 
   typedef hs::sfm::essential::EMatrix5PointsRansacRefiner<Scalar> Refiner;
+  typedef typename Refiner::EMatrix EMatrix;
   typedef typename Refiner::HKey HKey;
   typedef typename Refiner::HKeyPair HKeyPair;
   typedef typename Refiner::HKeyPairContainer HKeyPairContainer;
@@ -175,9 +176,10 @@ public:
     Refiner refiner;
     HKeyPairContainer refined_key_pairs;
     IndexSet estimated_inlier_indices;
+    EMatrix ematrix;
     if (refiner(key_pairs,
                 key_stddev * 2 * 4 / flight_generator_.GetFocalLengthInPixel(),
-                refined_key_pairs, estimated_inlier_indices) != 0)
+                refined_key_pairs, estimated_inlier_indices, ematrix) != 0)
     {
       std::cout<<"refiner failed!\n";
       return -1;
@@ -248,22 +250,22 @@ TEST(TestEMatrix5PointsRansacRefiner, SimpleTest)
                                      0,
                                      3000-42.4095312016,
                                      2000+31.699212823,
-                                     1/*,
+                                     1,
                                      -0.0050490462006048831,
                                      0.031293804298609881,
                                      -0.030794820960442223,
                                      -0.00055376548320189127,
-                                     -0.00049877717768381476*/);
+                                     -0.00049877717768381476);
   IntrinsicParams intrinsic_params_1(4886.17891666633641,
                                      0,
                                      3000-35.2052431556,
                                      2000+16.4262220759,
-                                     1/*,
+                                     1,
                                      -0.10316088386868619,
                                      0.13520490482776426,
                                      -0.05489235547426094,
                                      4.1434720317373253e-006,
-                                     -0.00025018439997095336*/);
+                                     -0.00025018439997095336);
   IntrinsicParamsContainer intrinsic_params_set;
   intrinsic_params_set.push_back(intrinsic_params_0);
   intrinsic_params_set.push_back(intrinsic_params_1);
