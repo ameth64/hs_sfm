@@ -109,9 +109,11 @@ set(INCREMENTAL_UTEST_SOURCES
   #"unit_test/incremental/test_scene_expandor_gcp_constrained.cpp"
   )
 hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
+add_definitions(-DBOOST_ALL_NO_LIB)
 hslib_add_dep(${INCREMENTAL_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
-  3RDPARTY_DEPS ceres DEP_LIBS ceres ceres_miniglog
+  3RDPARTY_DEPS ceres DEP_LIBS ceres
+                      DEP_STATIC_LIBS ceres_miniglog
   3RDPARTY_DEPS boost DEP_LIBS boost_filesystem boost_system
   3RDPARTY_DEPS tiff DEP_LIBS tiff
   3RDPARTY_DEPS jpeg DEP_LIBS jpeg
