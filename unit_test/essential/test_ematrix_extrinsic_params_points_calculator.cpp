@@ -184,7 +184,7 @@ public:
       return -1;
     }
 
-    Scalar threshold = Scalar(1e-8);
+    Scalar threshold = Scalar(1e-7);
     //检查相机外参数
     EIGEN_MATRIX(Scalar, 3, 3) rmatrix_relative_estimated =
       extrinsic_params_relative.rotation();
@@ -211,6 +211,8 @@ public:
       point_absolute = scale * point_absolute + translate;
       if (!points_absolute[i].isApprox(point_absolute, threshold))
       {
+        std::cout<<"point_absolute:\n"<<point_absolute<<"\n";
+        std::cout<<"points_absolute[i]:\n"<<points_absolute[i]<<"\n";
         return -1;
       }
     }

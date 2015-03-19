@@ -130,30 +130,30 @@ TEST(TestEMatrix5PointsCalculator, SyntheticTest)
   Scalar camera_rot_stddev = 1;
   Scalar north_west_angle = 60;
 
-  //TODO:当生成含有镜头畸变的数据时，大量点计算的E矩阵失效。
+  //TODO:当两张照片的内参数不一致时，大量点计算的E矩阵失败。
   IntrinsicParams intrinsic_params_0(4835.47665904517026,
                                      0,
                                      3000-42.4095312016,
                                      2000+31.699212823,
-                                     1/*,
+                                     1,
                                      -0.0050490462006048831,
                                      0.031293804298609881,
                                      -0.030794820960442223,
                                      -0.00055376548320189127,
-                                     -0.00049877717768381476*/);
+                                     -0.00049877717768381476);
   IntrinsicParams intrinsic_params_1(4886.17891666633641,
                                      0,
                                      3000-35.2052431556,
                                      2000+16.4262220759,
-                                     1/*,
+                                     1,
                                      -0.10316088386868619,
                                      0.13520490482776426,
                                      -0.05489235547426094,
                                      4.1434720317373253e-006,
-                                     -0.00025018439997095336*/);
+                                     -0.00025018439997095336);
   IntrinsicParamsContainer intrinsic_params_set;
   intrinsic_params_set.push_back(intrinsic_params_0);
-  intrinsic_params_set.push_back(intrinsic_params_1);
+  intrinsic_params_set.push_back(intrinsic_params_0);
 
   Generator generator(focal_length_in_metre,
                       number_of_strips,

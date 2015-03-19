@@ -36,7 +36,7 @@ public:
   {
   private:
     typedef EIGEN_MATRIX(Scalar, 9, 4) NullspaceBasis;
-    typedef EIGEN_MATRIX(Scalar, 10, 10) GrobnerBasis;
+    typedef EIGEN_MATRIX(Scalar, 10, 10) GroebnerBasis;
     typedef EIGEN_MATRIX(Scalar, 10, 10) ActionMatrix;
 
     typedef hs::math::MultiPolynomial<Scalar, 3, 3> Polynomial33;
@@ -62,14 +62,14 @@ public:
         return -1;
       }
 
-      GrobnerBasis brobner_basis;
-      if (ComputeGrobnerBasis(constraint, brobner_basis) != 0)
+      GroebnerBasis groebner_basis;
+      if (ComputeGroebnerBasis(constraint, groebner_basis) != 0)
       {
         return -1;
       }
 
       ActionMatrix action_matrix;
-      if (ComputeActionMatrix(brobner_basis, action_matrix) != 0)
+      if (ComputeActionMatrix(groebner_basis, action_matrix) != 0)
       {
         return -1;
       }
@@ -152,7 +152,7 @@ public:
       {
         trace += EET[i * 3 + i];
       }
-      
+
       //2EE^T-trace
       for (size_t i = 0; i < 3; i++)
       {
@@ -172,7 +172,7 @@ public:
         {
           for (size_t k = 0; k < 3; k++)
           {
-            constraint[i * 3 + j] += EET[i * 3 + k] * E[k * 3 + j];
+            constraint[i * 3 + j + 1] += EET[i * 3 + k] * E[k * 3 + j];
           }
         }
       }
@@ -185,35 +185,35 @@ public:
       determinant -= E[2] * E[4] * E[6];
       determinant -= E[1] * E[3] * E[8];
       determinant -= E[0] * E[5] * E[7];
-      constraint[9] = determinant;
+      constraint[0] = determinant;
 
       return 0;
     }
 
-    Err ComputeGrobnerBasis(const std::vector<Polynomial33>& constraint,
-                            GrobnerBasis& brobner_basis) const
+    Err ComputeGroebnerBasis(const std::vector<Polynomial33>& constraint,
+                             GroebnerBasis& groebner_basis) const
     {
       EIGEN_MATRIX(Scalar, 10, 20) A;
-      
+
       //将多项式重新排列并放入A矩阵中
       //多项式顺序为
-      //x3 x2y xy2 y3 x2z xyz y2z xz2 yz2 z3 x2 xy y2 xz yz z2 x y z 1
+      //x3 x2y x2z xy2 xyz xz2 y3 y2z yz2 z3 x2 xy xz y2 yz z2 x y z 1
       for (size_t i = 0; i < 10; i++)
       {
         A(i, 0) = constraint[i][10];
         A(i, 1) = constraint[i][11];
-        A(i, 2) = constraint[i][13];
-        A(i, 3) = constraint[i][16];
-        A(i, 4) = constraint[i][12];
-        A(i, 5) = constraint[i][14];
-        A(i, 6) = constraint[i][17];
-        A(i, 7) = constraint[i][15];
+        A(i, 2) = constraint[i][12];
+        A(i, 3) = constraint[i][13];
+        A(i, 4) = constraint[i][14];
+        A(i, 5) = constraint[i][15];
+        A(i, 6) = constraint[i][16];
+        A(i, 7) = constraint[i][17];
         A(i, 8) = constraint[i][18];
         A(i, 9) = constraint[i][19];
         A(i, 10) = constraint[i][4];
         A(i, 11) = constraint[i][5];
-        A(i, 12) = constraint[i][7];
-        A(i, 13) = constraint[i][6];
+        A(i, 12) = constraint[i][6];
+        A(i, 13) = constraint[i][7];
         A(i, 14) = constraint[i][8];
         A(i, 15) = constraint[i][9];
         A(i, 16) = constraint[i][1];
@@ -240,22 +240,22 @@ public:
         }
       }
 
-      brobner_basis = A.block(0, 10, 10, 10);
+      groebner_basis = A.block(0, 10, 10, 10);
 
       return 0;
     }
 
 
-    Err ComputeActionMatrix(const GrobnerBasis& brobner_basis,
+    Err ComputeActionMatrix(const GroebnerBasis& groebner_basis,
                             ActionMatrix& action_matrix) const
     {
       action_matrix.setZero();
-      action_matrix.row(0) = -brobner_basis.row(0);
-      action_matrix.row(1) = -brobner_basis.row(1);
-      action_matrix.row(2) = -brobner_basis.row(2);
-      action_matrix.row(3) = -brobner_basis.row(4);
-      action_matrix.row(4) = -brobner_basis.row(5);
-      action_matrix.row(5) = -brobner_basis.row(7);
+      action_matrix.row(0) = -groebner_basis.row(0);
+      action_matrix.row(1) = -groebner_basis.row(1);
+      action_matrix.row(2) = -groebner_basis.row(2);
+      action_matrix.row(3) = -groebner_basis.row(4);
+      action_matrix.row(4) = -groebner_basis.row(5);
+      action_matrix.row(5) = -groebner_basis.row(7);
       action_matrix(6, 0) = 1;
       action_matrix(7, 1) = 1;
       action_matrix(8, 3) = 1;
@@ -369,7 +369,7 @@ public:
       return 0;
     }
   };
-  
+
 public:
   Err operator () (const HKeyPairContainer& key_pairs,
                    EMatrix& e_matrix) const

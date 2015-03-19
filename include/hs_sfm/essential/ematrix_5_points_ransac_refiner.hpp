@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_ESSENTIAL_EMATRIX_5_POINTS_RANSAC_REFINER_HPP_
+﻿#ifndef _HS_SFM_ESSENTIAL_EMATRIX_5_POINTS_RANSAC_REFINER_HPP_
 #define _HS_SFM_ESSENTIAL_EMATRIX_5_POINTS_RANSAC_REFINER_HPP_
 
 #include <utility>
@@ -160,7 +160,7 @@ public:
                   IndexSet& inlier_indices,
                   EMatrix& ematrix) const
   {
-    typedef Calculator::EMatrixEvaluator Evaluator;
+    typedef typename Calculator::EMatrixEvaluator Evaluator;
     RansacModelCalculator model_calculator;
     RansacDistanceCalculator distance_calculator;
     RansacRefiner ransac_refiner(model_calculator, distance_calculator);
