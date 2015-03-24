@@ -1,6 +1,12 @@
 ﻿#ifndef _HS_SFM_PROJECTIVE_SINGLE_CAMERA_PARAMS_MAXIMUM_LIKELIHOOD_ESTIMATOR_HPP_
 #define _HS_SFM_PROJECTIVE_SINGLE_CAMERA_PARAMS_MAXIMUM_LIKELIHOOD_ESTIMATOR_HPP_
 
+#include "hs_sfm/config/hs_config.hpp"
+
+#if HS_HAVE_MKL
+#define EIGEN_USE_MKL_ALL
+#endif
+
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/projective/pmatrix_dlt_calculator.hpp"
 #include "hs_sfm/projective/mle/intrinsic_constrained_levenberg_marquardt_optimizor.hpp"

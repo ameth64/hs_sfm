@@ -3,6 +3,12 @@
 
 #include <type_traits>
 
+#include "hs_sfm/config/hs_config.hpp"
+
+#if HS_HAVE_MKL
+#define EIGEN_USE_MKL_ALL
+#endif
+
 #include <ceres/problem.h>
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>

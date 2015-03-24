@@ -51,6 +51,7 @@ hslib_add_dep(${BA_NAME}_utest
   HS_DEPS hs_optimizor HEADONLY
   HS_DEPS hs_image_io DEP_LIBS whole_io
   )
+hslib_add_mkl_dep(${BA_NAME}_utest)
 hslib_post_build(${BA_NAME}_utest)
 
 #utility
@@ -131,6 +132,7 @@ hslib_add_dep(${INCREMENTAL_NAME}_utest
   HS_DEPS hs_image_io DEP_LIBS whole_io
   HS_DEPS hs_progress DEP_LIBS progress_utility
   HS_DEPS hs_test_utility DEP_LIBS test_env)
+hslib_add_mkl_dep(${INCREMENTAL_NAME}_utest)
 hslib_post_build(${INCREMENTAL_NAME}_utest)
 
 #essential
@@ -207,6 +209,7 @@ hslib_add_dep(${PROJECTIVE_NAME}_utest
   3RDPARTY_DEPS ceres DEP_LIBS ceres
   HS_DEPS hs_math HEADONLY
   HS_DEPS hs_optimizor HEADONLY)
+hslib_add_mkl_dep(${PROJECTIVE_NAME}_utest)
 hslib_post_build(${PROJECTIVE_NAME}_utest)
 
 #synthetic
