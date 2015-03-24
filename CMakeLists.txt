@@ -46,7 +46,7 @@ hslib_add_dep(${BA_NAME}_utest
   3RDPARTY_DEPS jpeg DEP_LIBS jpeg
   3RDPARTY_DEPS png DEP_LIBS png
   3RDPARTY_DEPS z DEP_LIBS z
-  3RDPARTY_DEPS ceres DEP_LIBS ceres ceres_miniglog
+  3RDPARTY_DEPS ceres DEP_LIBS ceres
   HS_DEPS hs_math HEADONLY
   HS_DEPS hs_optimizor HEADONLY
   HS_DEPS hs_image_io DEP_LIBS whole_io
@@ -113,7 +113,6 @@ add_definitions(-DBOOST_ALL_NO_LIB)
 hslib_add_dep(${INCREMENTAL_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   3RDPARTY_DEPS ceres DEP_LIBS ceres
-                      DEP_STATIC_LIBS ceres_miniglog
   3RDPARTY_DEPS boost DEP_LIBS boost_filesystem boost_system
   3RDPARTY_DEPS tiff DEP_LIBS tiff
   3RDPARTY_DEPS jpeg DEP_LIBS jpeg
@@ -205,6 +204,7 @@ set(PROJECTIVE_UTEST_SOURCES
 hslib_add_utest(${PROJECTIVE_NAME} SOURCES ${PROJECTIVE_UTEST_SOURCES})
 hslib_add_dep(${PROJECTIVE_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
+  3RDPARTY_DEPS ceres DEP_LIBS ceres
   HS_DEPS hs_math HEADONLY
   HS_DEPS hs_optimizor HEADONLY)
 hslib_post_build(${PROJECTIVE_NAME}_utest)

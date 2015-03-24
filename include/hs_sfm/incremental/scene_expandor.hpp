@@ -116,6 +116,9 @@ public:
           break;
         }
       }
+
+      std::chrono::time_point<std::chrono::system_clock> start, end;
+      start = std::chrono::system_clock::now();
       BundleAdjustmentOptimizor bundle_adjustment_optimizor(
                                   number_of_threads_);
       if (bundle_adjustment_optimizor(image_keysets,
@@ -130,9 +133,13 @@ public:
       {
         break;
       }
+      end = std::chrono::system_clock::now();
+      std::chrono::duration<double> elapsed_seconds = end - start;
+      std::cout<<"Bundle Adjustment took "<<elapsed_seconds.count()
+               <<" seconds.\n";
 
-      ExtrinsicParams new_extrinsic_params;
-      size_t new_image_id;
+      ExtrinsicParamsContainer new_extrinsic_params_set;
+      std::vector<size_t> new_image_ids;
       if (image_expandor_(image_keysets,
                           intrinsic_params_set,
                           image_intrinsic_map,
@@ -141,14 +148,19 @@ public:
                           image_view_tracks_set,
                           image_extrinsic_map,
                           view_info_indexer,
-                          new_extrinsic_params,
-                          new_image_id) != 0)
+                          new_extrinsic_params_set,
+                          new_image_ids) != 0)
       {
         break;
       }
 
-      extrinsic_params_set.push_back(new_extrinsic_params);
-      image_extrinsic_map[new_image_id] = extrinsic_params_set.size() - 1;
+      for (size_t i = 0; i < new_extrinsic_params_set.size(); i++)
+      {
+        std::cout<<"Added Image "<<new_image_ids[i]<<"\n";
+        extrinsic_params_set.push_back(new_extrinsic_params_set[i]);
+        image_extrinsic_map[new_image_ids[i]] = extrinsic_params_set.size() - 1;
+      }
+      std::cout<<new_image_ids.size()<<" images added.\n";
 
       PointExpandor point_expandor;
       if (point_expandor(image_keysets,

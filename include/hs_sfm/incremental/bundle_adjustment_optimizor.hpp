@@ -226,7 +226,18 @@ public:
     YCovarianceInverse y_covariance_inverse;
     y_covariance_inverse.SetKeysUniformStdDev(Scalar(1), number_of_keys);
 
-    BAOptimizor ba_optimizor(initial_x, int(number_of_threads_));
+    int max_num_iterations = 50;
+    double function_tolerance = 1e-6;
+    double parameter_tolerance = 1e-8;
+    if (number_of_images > 2)
+    {
+      max_num_iterations = 10;
+      function_tolerance = 1e-4;
+      parameter_tolerance = 1e-4;
+    }
+    BAOptimizor ba_optimizor(initial_x, int(number_of_threads_),
+                             max_num_iterations, function_tolerance,
+                             parameter_tolerance);
     XVector optimized_x;
     if (ba_optimizor(vector_function, near_y, y_covariance_inverse,
                      optimized_x) != 0)

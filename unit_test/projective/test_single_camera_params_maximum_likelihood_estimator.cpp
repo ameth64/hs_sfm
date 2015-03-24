@@ -1,4 +1,4 @@
-#include <iostream>
+ï»¿#include <iostream>
 
 #include <gtest/gtest.h>
 
@@ -86,7 +86,7 @@ public:
                   ExtrinsicParams& extrinsic_params_true,
                   IntrinsicParams& intrinsic_params_true) const
   {
-    //Éú³ÉÏà»ú²ÎÊıºÍÈıÎ¬µã
+    //ç”Ÿæˆç›¸æœºå‚æ•°å’Œä¸‰ç»´ç‚¹
     ExtrinsicParamsContainer extrinsic_params_set;
     ImageContainer images;
     Point3DContainer points;
@@ -101,7 +101,7 @@ public:
     std::vector<size_t> image_intrinsic_map;
     image_intrinsic_map.push_back(0);
 
-    //Éú³ÉÌØÕ÷µã
+    //ç”Ÿæˆç‰¹å¾ç‚¹
     KeysetContainer keysets;
     hs::sfm::TrackContainer tracks;
     hs::sfm::CameraViewContainer camera_views;
@@ -118,7 +118,7 @@ public:
       return -1;
     }
 
-    //Éú³É¼ÆËãP¾ØÕóËùĞèµÄ¶ÔÓ¦µã
+    //ç”Ÿæˆè®¡ç®—PçŸ©é˜µæ‰€éœ€çš„å¯¹åº”ç‚¹
     size_t number_of_tracks = tracks.size();
     key_covariance.setIdentity();
     key_covariance *= key_stddev * key_stddev;
@@ -173,7 +173,7 @@ public:
   {
     Estimator estimator;
     Scalar focal_length_stddev = 1;
-    Scalar skew_stddev = 1e-2;
+    Scalar skew_stddev = 1e-4;
     Scalar principal_point_x_stddev = 1;
     Scalar principal_point_y_stddev = 1;
     Scalar pixel_ratio_stddev = 1e-5;
@@ -312,7 +312,7 @@ TEST(TestSingleCameraParamsMaximumLikelihoodEstimator, GeneratorTest)
   KeyCovariance key_covariance;
   ExtrinsicParams extrinsic_params_true;
   IntrinsicParams intrinsic_params_true;
-  Scalar key_stddev = 2;
+  Scalar key_stddev = 1;
   ASSERT_EQ(0, generator(key_stddev,
                          correspondences,
                          key_covariance,

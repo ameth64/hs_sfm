@@ -170,8 +170,14 @@ public:
   typedef CameraSharedYCovarianceInverse<Scalar> YCovarianceInverse;
 
   CameraSharedCeresOptimizor(const XVector& initial_x,
-                             int number_of_threads = 1)
-    : initial_x_(initial_x), number_of_threads_(number_of_threads) {}
+                             int number_of_threads = 1,
+                             int max_num_iterations = 50,
+                             double function_tolerance = 1e-6,
+                             double parameter_tolerance = 1e-8)
+    : initial_x_(initial_x), number_of_threads_(number_of_threads)
+    , max_num_iterations_(max_num_iterations)
+    , function_tolerance_(function_tolerance)
+    , parameter_tolerance_(parameter_tolerance) {}
 
   Err operator() (const VectorFunction& vector_function,
                   const YVector& near_y,
@@ -399,9 +405,13 @@ public:
     }
 
     ceres::Solver::Options options;
-    options.max_num_iterations = 50;
+    options.max_num_iterations = max_num_iterations_;
     options.num_threads = number_of_threads_ > 1 ? number_of_threads_ : 1;
     options.linear_solver_type = ceres::DENSE_SCHUR;
+    //options.linear_solver_type = ceres::ITERATIVE_SCHUR;
+    //options.preconditioner_type = ceres::SCHUR_JACOBI;
+    options.function_tolerance = function_tolerance_;
+    options.parameter_tolerance = parameter_tolerance_;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     //std::cout<<summary.FullReport()<<"\n";
@@ -417,6 +427,9 @@ public:
 private:
   XVector initial_x_;
   int number_of_threads_;
+  int max_num_iterations_;
+  double function_tolerance_;
+  double parameter_tolerance_;
 };
 
 }

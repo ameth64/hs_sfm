@@ -96,6 +96,21 @@ public:
       return -1;
     }
 
+    for (size_t i = 0; i < intrinsic_params_set_estimate.size(); i++)
+    {
+      std::cout<<"intrinsic_params_set_estimate["<<i<<"]:\n";
+      std::cout<<intrinsic_params_set_estimate[i].focal_length()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].skew()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].principal_point_x()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].principal_point_y()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].pixel_ratio()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].k1()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].k2()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].k3()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].d1()<<"\n";
+      std::cout<<intrinsic_params_set_estimate[i].d2()<<"\n";
+    }
+
     Tester tester;
     if (tester.TestReprojectiveError(
           keysets,

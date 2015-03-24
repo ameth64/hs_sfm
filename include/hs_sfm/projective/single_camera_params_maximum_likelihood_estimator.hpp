@@ -1,15 +1,10 @@
-#ifndef _HS_SFM_PROJECTIVE_SINGLE_CAMERA_PARAMS_MAXIMUM_LIKELIHOOD_ESTIMATOR_HPP_
+Ôªø#ifndef _HS_SFM_PROJECTIVE_SINGLE_CAMERA_PARAMS_MAXIMUM_LIKELIHOOD_ESTIMATOR_HPP_
 #define _HS_SFM_PROJECTIVE_SINGLE_CAMERA_PARAMS_MAXIMUM_LIKELIHOOD_ESTIMATOR_HPP_
-
-#ifdef _DEBUG
-
-#include <cassert>
-
-#endif
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/projective/pmatrix_dlt_calculator.hpp"
 #include "hs_sfm/projective/mle/intrinsic_constrained_levenberg_marquardt_optimizor.hpp"
+#include "hs_sfm/projective/mle/intrinsic_constrained_ceres_optimizor.hpp"
 
 namespace hs
 {
@@ -33,7 +28,7 @@ private:
   typedef typename DLTCalculator::PMatrix PMatrix;
   typedef IntrinsicConstrainedVectorFunction<Scalar> VectorFunction;
   typedef typename VectorFunction::Index Index;
-  typedef IntrinsicConstrainedLevenbergMarquardtOptimizor<VectorFunction>
+  typedef IntrinsicConstrainedCeresOptimizor<VectorFunction>
           Optimizor;
   typedef typename Optimizor::XVector XVector;
   typedef typename Optimizor::YVector YVector;
@@ -71,6 +66,7 @@ public:
     Matrix33 R;
     Vector3 t;
     GetRTFromPMatrix(P, K, R, t);
+    std::cout<<"K:\n"<<K<<"\n";
 
     YCovarianceInverse y_covariance_inverse;
     size_t number_of_correspondences = correspondences.size();
@@ -90,9 +86,10 @@ public:
     GetNearYVector(correspondences, intrinsic_params_initial, near_y);
 
     XVector initial_x;
-    GetInitialXVector(K, R, t, initial_x);
+    GetInitialXVector(intrinsic_params_initial, R, t, initial_x);
 
-    Optimizor optimizor(initial_x, 50, 1e-3, 1e-9, 1e-9);
+    //Optimizor optimizor(initial_x, 50, 1e-3, 1e-9, 1e-9);
+    Optimizor optimizor(initial_x);
     XVector optimized_x;
     if (optimizor(vector_function, near_y, y_covariance_inverse,
                   optimized_x) != 0)
@@ -114,7 +111,7 @@ private:
                         Vector3& t) const
   {
     K = P.template block<3, 3>(0, 0);
-    //∂‘M◊˜RQ∑÷Ω‚
+    //ÂØπM‰ΩúRQÂàÜËß£
     Scalar nx = K.template block<1, 2>(2, 1).norm();
     Scalar cx = -K(2, 2) / nx;
     Scalar sx = K(2, 1) / nx;
@@ -140,7 +137,7 @@ private:
           0, 0, 1;
     K = K * Qz;
 
-    // πKæÿ’Û∂‘Ω«œﬂ‘™Àÿæ˘Œ™’˝
+    //‰ΩøKÁü©ÈòµÂØπËßíÁ∫øÂÖÉÁ¥†Âùá‰∏∫Ê≠£
     PMatrix M = P;
     int negative = 0;
     if (K(0, 0) < Scalar(0)) negative++;
@@ -172,14 +169,6 @@ private:
     M = K.inverse() * M;
     R = M.template block<3, 3>(0, 0);
     t = M.col(3);
-
-#ifdef _DEBUG
-    PMatrix P_test;
-    P_test.template block<3, 3>(0, 0) = R;
-    P_test.col(3) = t;
-    P_test = K * P_test;
-    assert(P_test.isApprox(P, 1e-10) || P_test.isApprox(-P, 1e-10));
-#endif
 
     K /= K(2, 2);
   }
@@ -264,6 +253,26 @@ private:
     initial_x[10] = K(1, 1) / K(0, 0);
   }
 
+  void GetInitialXVector(const IntrinsicParams& intrinsic_params_initial,
+                         const Matrix33& R,
+                         const Vector3& t,
+                         XVector& initial_x) const
+  {
+    initial_x.resize(11);
+    Rotation rotation = R;
+    initial_x[0] = rotation[0];
+    initial_x[1] = rotation[1];
+    initial_x[2] = rotation[2];
+    initial_x[3] = t[0];
+    initial_x[4] = t[1];
+    initial_x[5] = t[2];
+    initial_x[6] = intrinsic_params_initial.focal_length();
+    initial_x[7] = intrinsic_params_initial.skew();
+    initial_x[8] = intrinsic_params_initial.principal_point_x();
+    initial_x[9] = intrinsic_params_initial.principal_point_y();
+    initial_x[10] = intrinsic_params_initial.pixel_ratio();
+  }
+
   void GetIntrinsicAndExtrinsicParamsFromXVector(
     const XVector& x,
     IntrinsicParams& intrinsic_params_estimate,
@@ -275,14 +284,14 @@ private:
     Vector3 t = x.template segment<3>(3);
     Matrix33 R = extrinsic_params_estimate.rotation();
     extrinsic_params_estimate.position() = -R.transpose() * t;
-    
+
     intrinsic_params_estimate.set_focal_length(x[6]);
     intrinsic_params_estimate.set_skew(x[7]);
     intrinsic_params_estimate.set_principal_point_x(x[8]);
     intrinsic_params_estimate.set_principal_point_y(x[9]);
     intrinsic_params_estimate.set_pixel_ratio(x[10]);
   }
-  
+
 };
 
 }
