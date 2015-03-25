@@ -226,7 +226,7 @@ public:
       for (size_t i = 0; i < 10; i++)
       {
         Scalar leading = A(i, i);
-        A.row(i) / leading;
+        A.row(i) /= leading;
         for (size_t j = i + 1; j < 10; j++)
         {
           A.row(j) -= A.row(i) * A(j, i);
