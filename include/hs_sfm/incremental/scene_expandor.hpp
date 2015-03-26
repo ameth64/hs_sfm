@@ -13,6 +13,14 @@
 #include "hs_sfm/incremental/point_expandor.hpp"
 #include "hs_sfm/incremental/bundle_adjustment_optimizor.hpp"
 
+#define DEBUG_TMP 1
+#if DEBUG_TMP
+#include <sstream>
+#include <fstream>
+#include <iomanip>
+#include "hs_sfm/incremental/reprojective_error_calculator.hpp"
+#endif
+
 namespace hs
 {
 namespace sfm
@@ -107,6 +115,12 @@ public:
       return -1;
     }
 
+#if DEBUG_TMP
+    double total_bundle_adjustment_time = 0.0;
+    double total_image_expansion_time = 0.0;
+    double total_point_expansion_time = 0.0;
+#endif
+
     while (1)
     {
       if (progress_manager)
@@ -117,8 +131,22 @@ public:
         }
       }
 
+#if DEBUG_TMP
+      ReprojectiveErrorCalculator<Scalar> reprojective_error_calculator;
+      Scalar reprojective_error_before =
+        reprojective_error_calculator(image_keysets,
+                                      intrinsic_params_set,
+                                      tracks,
+                                      image_intrinsic_map,
+                                      image_extrinsic_map,
+                                      track_point_map,
+                                      view_info_indexer,
+                                      extrinsic_params_set,
+                                      points);
+
       std::chrono::time_point<std::chrono::system_clock> start, end;
       start = std::chrono::system_clock::now();
+#endif
       BundleAdjustmentOptimizor bundle_adjustment_optimizor(
                                   number_of_threads_);
       if (bundle_adjustment_optimizor(image_keysets,
@@ -133,11 +161,59 @@ public:
       {
         break;
       }
+#if DEBUG_TMP
       end = std::chrono::system_clock::now();
       std::chrono::duration<double> elapsed_seconds = end - start;
+      total_bundle_adjustment_time += elapsed_seconds.count();
       std::cout<<"Bundle Adjustment took "<<elapsed_seconds.count()
                <<" seconds.\n";
+      Scalar reprojective_error_after =
+        reprojective_error_calculator(image_keysets,
+                                      intrinsic_params_set,
+                                      tracks,
+                                      image_intrinsic_map,
+                                      image_extrinsic_map,
+                                      track_point_map,
+                                      view_info_indexer,
+                                      extrinsic_params_set,
+                                      points);
+      std::stringstream ss;
+      ss<<"intrinsic_"<<extrinsic_params_set.size()<<".txt";
+      std::string intrinsic_path;
+      ss>>intrinsic_path;
+      std::ofstream intrinsic_file(intrinsic_path.c_str());
+      if (!intrinsic_file)
+      {
+        return -1;
+      }
+      intrinsic_file.setf(std::ios::fixed);
+      intrinsic_file<<std::setprecision(8);
 
+      intrinsic_file<<points.size()<<"\n";
+      intrinsic_file<<reprojective_error_before<<" "
+                    <<reprojective_error_after<<"\n";
+      for (size_t i = 0; i < intrinsic_params_set.size(); i++)
+      {
+        const IntrinsicParams& intrinsic_param = intrinsic_params_set[i];
+        intrinsic_file << i << " "
+                       << intrinsic_param.focal_length() << " "
+                       << intrinsic_param.skew() << " "
+                       << intrinsic_param.principal_point_x() << " "
+                       << intrinsic_param.principal_point_y() << " "
+                       << intrinsic_param.pixel_ratio() << " "
+                       << intrinsic_param.k1() << " "
+                       << intrinsic_param.k2() << " "
+                       << intrinsic_param.k3() << " "
+                       << intrinsic_param.d1() << " "
+                       << intrinsic_param.d2() << "\n";
+      }
+
+
+#endif
+
+#if DEBUG_TMP
+      start = std::chrono::system_clock::now();
+#endif
       ExtrinsicParamsContainer new_extrinsic_params_set;
       std::vector<size_t> new_image_ids;
       if (image_expandor_(image_keysets,
@@ -160,7 +236,15 @@ public:
         extrinsic_params_set.push_back(new_extrinsic_params_set[i]);
         image_extrinsic_map[new_image_ids[i]] = extrinsic_params_set.size() - 1;
       }
-      std::cout<<new_image_ids.size()<<" images added.\n";
+#if DEBUG_TMP
+      std::cout<<new_image_ids.size()
+               <<" images added(Total: "<<extrinsic_params_set.size()<<").\n";
+      end = std::chrono::system_clock::now();
+      elapsed_seconds = end - start;
+      total_image_expansion_time += elapsed_seconds.count();
+
+      start = std::chrono::system_clock::now();
+#endif
 
       PointExpandor point_expandor;
       if (point_expandor(image_keysets,
@@ -178,12 +262,25 @@ public:
         break;
       }
 
+#if DEBUG_TMP
+      end = std::chrono::system_clock::now();
+      elapsed_seconds = end - start;
+      total_point_expansion_time += elapsed_seconds.count();
+#endif
+
       if (progress_manager)
       {
         progress_manager->SetCurrentSubProgressCompleteRatio(
           float(extrinsic_params_set.size() / float(image_keysets.size())));
       }
     }
+
+#if DEBUG_TMP
+    std::ofstream time_file("time.txt");
+    time_file<<"Bundle adjustment took "<<total_bundle_adjustment_time<<" seconds\n";
+    time_file<<"Image expansion took "<<total_image_expansion_time<<" seconds\n";
+    time_file<<"Point expansion took "<<total_point_expansion_time<<" seconds\n";
+#endif
 
     return 0;
   }

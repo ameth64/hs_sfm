@@ -72,7 +72,6 @@ public:
     Matrix33 R;
     Vector3 t;
     GetRTFromPMatrix(P, K, R, t);
-    std::cout<<"K:\n"<<K<<"\n";
 
     YCovarianceInverse y_covariance_inverse;
     size_t number_of_correspondences = correspondences.size();

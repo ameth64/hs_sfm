@@ -107,6 +107,7 @@ public:
 
     refiner.SetAlphaThreshold(Scalar(0.95));
     refiner.SetDistanceThreshold(distance_threshold);
+    refiner.SetNumberOfSamples(512);
     CorrespondenceContainer best_correspondences;
     return (refiner(correspondences, refined_correspondences,
                     inlier_indices, best_correspondences));

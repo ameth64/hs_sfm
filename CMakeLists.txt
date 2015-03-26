@@ -109,6 +109,11 @@ set(INCREMENTAL_UTEST_SOURCES
   #"unit_test/incremental/test_bundle_adjustment_gcp_constrained_optimizor.cpp"
   #"unit_test/incremental/test_scene_expandor_gcp_constrained.cpp"
   )
+if (MSVC)
+  set_source_files_properties(
+    "unit_test/incremental/test_incremental.cpp"
+    PROPERTIES COMPILE_FLAGS "/bigobj")
+endif()
 hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
 add_definitions(-DBOOST_ALL_NO_LIB)
 hslib_add_dep(${INCREMENTAL_NAME}_utest

@@ -551,139 +551,14 @@ TEST(TestIncremental, RealTest)
   typedef Tester::KeysetContainer KeysetContainer;
   typedef Tester::PointContainer PointContainer;
 
-  typedef hs::sfm::incremental::RealDataGenerator<Scalar, ImageDimension>
-          Generator;
+  typedef hs::sfm::incremental::RealDataGenerator<Scalar> Generator;
 
   typedef hs::sfm::MatchContainer MatchContainer;
   typedef hs::sfm::TrackContainer TrackContainer;
 
-  //TODO:Hard code data here.
-  std::vector<std::string> image_paths;
   std::string data_path = hs::test::getTestDataPath();
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/002/DSC02616.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/002/DSC02769.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03118.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03126.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03212.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03214.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03220.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03221.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03349.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03350.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03351.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03352.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03353.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03354.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03355.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03356.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03357.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03358.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03359.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/003/DSC03360.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03454.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03455.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03456.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03457.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03458.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03459.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03460.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03461.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03462.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03463.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03464.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03465.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03466.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03519.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03520.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03521.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03522.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03523.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03524.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03525.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03526.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03527.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03528.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03529.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03530.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03531.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03532.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03533.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03586.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03587.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03588.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03589.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03590.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03591.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03592.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03593.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03594.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03595.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03596.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03597.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03598.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03631.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03632.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03633.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03634.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03635.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03636.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03637.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03638.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03639.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03640.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03641.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03642.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03643.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03644.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03645.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03681.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03682.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03683.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03684.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03685.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03686.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03687.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03688.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03689.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03690.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03691.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03692.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03693.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03694.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03695.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03699.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03700.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03701.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03702.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03703.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03704.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03705.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03706.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03707.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03708.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03709.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03710.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03711.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03747.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03748.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03749.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03750.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03751.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03752.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03753.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03754.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03755.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03756.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03757.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03759.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03764.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03767.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03769.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03771.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03772.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03810.JPG");
-  image_paths.push_back(data_path + "sfm/incremental/real_data/origin_image/004/DSC03811.JPG");
-  std::string gcp_path = data_path + "sfm/incremental/real_data/gcp/gcp.xml";
+  std::string out_path = data_path + "sfm/incremental/real_data/bundler.out";
+  std::string gcp_path = data_path + "sfm/incremental/real_data/gcp.xml";
   IntrinsicParamsContainer intrinsic_params_set_initial;
   intrinsic_params_set_initial.push_back(IntrinsicParams(7692.30769230769231,
                                                          0,
@@ -716,14 +591,9 @@ TEST(TestIncremental, RealTest)
   PointContainer gcps;
   TrackContainer tracks_gcp;
   KeysetContainer keysets_gcp;
-  Generator generator;
-  ASSERT_EQ(0, generator(image_paths,
-                         gcp_path,
-                         keysets,
-                         matches,
-                         gcps,
-                         tracks_gcp,
-                         keysets_gcp));
+  ASSERT_EQ(0, Generator::LoadBundlerOutFile(out_path, 6000, 4000,
+                                             keysets, matches));
+  ASSERT_EQ(0, Generator::LoadGCPs(gcp_path, gcps, tracks_gcp, keysets_gcp));
 
   Scalar key_stddev = Scalar(1);
   std::string test_name = "real_data";

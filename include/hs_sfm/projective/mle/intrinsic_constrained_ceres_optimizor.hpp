@@ -76,7 +76,7 @@ public:
     return (new ceres::AutoDiffCostFunction<
                   IntrinsicConstrainedProjection, ceres::DYNAMIC, 11>(
               new IntrinsicConstrainedProjection(observes, covariants, points),
-              observes.size()));
+              int(observes.size())));
   }
 
 protected:
