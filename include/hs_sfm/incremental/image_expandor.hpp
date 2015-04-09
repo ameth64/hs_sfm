@@ -79,8 +79,6 @@ public:
     //查找拍摄到当前点云的其他影像，设匹配数最多的影像为n，
     //选取所有匹配数大于0.75n的影像，
     //若匹配数最多的影像的匹配数没超过阈值，则函数执行不成功。
-    std::chrono::time_point<std::chrono::system_clock> start, end;
-    start = std::chrono::system_clock::now();
 
     size_t max_matches_image_id = 0;
     size_t max_number_of_view_tracks = 0;
@@ -116,9 +114,6 @@ public:
         max_matches_image_id = i;
       }
     }
-    end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    std::cout<<"Finding matches took "<<elapsed_seconds.count()<<" seconds.\n";
     if (max_number_of_view_tracks < add_new_image_matches_threshold_)
     {
       return -1;
@@ -163,8 +158,6 @@ public:
       }
 
       //Ransac剔除错误的对应
-      start = std::chrono::system_clock::now();
-
       IndexSet inlier_indices;
       PMatrixRasacRefiner ransac_refiner;
       CorrespondenceContainer refined_correspondences;
@@ -175,9 +168,6 @@ public:
       {
         continue;
       }
-      end = std::chrono::system_clock::now();
-      elapsed_seconds = end - start;
-      std::cout<<"Ransac took "<<elapsed_seconds.count()<<" seconds.\n";
 
       size_t number_of_inliers = inlier_indices.size();
       if (number_of_inliers < add_new_image_matches_threshold_)
@@ -193,8 +183,6 @@ public:
         view_info.is_blunder = false;
       }
       //使用剔除粗差的点计算外方位元素
-      start = std::chrono::system_clock::now();
-
       CameraParamsMLEstimator camera_ml_estimator;
       KeyCovariance key_covariance = KeyCovariance::Identity();
       IntrinsicParams intrinsic_params_estimate;
@@ -213,10 +201,6 @@ public:
       {
         new_extrinsic_params_set.push_back(new_extrinsic_params);
         new_image_ids.push_back(image_id);
-
-        end = std::chrono::system_clock::now();
-        elapsed_seconds = end - start;
-        std::cout<<"MLE took "<<elapsed_seconds.count()<<" seconds.\n";
       }
     }
 

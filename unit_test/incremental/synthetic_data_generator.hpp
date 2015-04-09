@@ -22,6 +22,19 @@ namespace sfm
 namespace incremental
 {
 
+template <typename _Scalar>
+struct RichTrack
+{
+  typedef _Scalar Scalar;
+  hs::sfm::Track track;
+  EIGEN_VECTOR(Scalar, 3) point;
+
+  bool operator < (const RichTrack<Scalar>& other) const
+  {
+    return (track < other.track);
+  }
+};
+
 template <typename _Scalar, typename _ImageDimension>
 class SyntheticDataGenerator
 {
@@ -36,6 +49,8 @@ private:
   typedef hs::sfm::synthetic::MultipleCameraKeysetGenerator<Scalar,
                                                             ImageDimension>
           KeysetGenerator;
+  typedef RichTrack<Scalar> RichTrackType;
+  typedef EIGEN_STD_VECTOR(RichTrackType) RichTrackContainer;
   //typedef hs::sfm::synthetic::RelativeGenerator<Scalar> RelativeGenerator;
 
 public:
@@ -71,7 +86,9 @@ public:
     Scalar outlier_ratio,
     Scalar key_stddev,
     const IntrinsicParamsContainer& intrinsic_params_set_true,
-    size_t number_of_points)
+    size_t number_of_points,
+    size_t number_of_gcps,
+    size_t number_of_check_points)
   : scene_generator_(flight_longitudinal_overlap_ratio,
                      flight_lateral_overlap_ratio,
                      north_west_angle,
@@ -81,9 +98,109 @@ public:
     outlier_ratio_(outlier_ratio),
     key_stddev_(key_stddev),
     intrinsic_params_set_true_(intrinsic_params_set_true),
-    number_of_points_(number_of_points) {}
+    number_of_points_(number_of_points),
+    number_of_gcps_(number_of_gcps),
+    number_of_check_points_(number_of_check_points) {}
 
 public:
+  Err Generate(std::vector<size_t>& image_intrinsic_map,
+               hs::sfm::MatchContainer& matches,
+               KeysetContainer& keysets_noised,
+               Point3DContainer& gcps,
+               hs::sfm::TrackContainer& tracks_gcp,
+               KeysetContainer& keysets_gcp_noised,
+               Point3DContainer& check_points,
+               hs::sfm::TrackContainer& tracks_check_point,
+               KeysetContainer& keysets_checkout_point_noised,
+               ExtrinsicParamsContainer& extrinsic_params_set_absolute_true,
+               Point3DContainer& points_absolute_true) const
+  {
+    ImageContainer images;
+    Point3DContainer points_absolute;
+    KeysetContainer keysets_true;
+    hs::sfm::TrackContainer tracks;
+    hs::sfm::CameraViewContainer camera_views;
+
+    Err result = 0;
+    while (1)
+    {
+      result = GenerateAbsoluteScene(extrinsic_params_set_absolute_true,
+                                     images,
+                                     points_absolute,
+                                     keysets_true,
+                                     image_intrinsic_map,
+                                     tracks,
+                                     camera_views);
+      if (result != 0) break;
+
+
+      RichTrackContainer rich_tracks;
+      for (size_t i = 0; i < number_of_points_; i++)
+      {
+        if (tracks[i].size() > 1)
+        {
+          RichTrackType rich_track;
+          rich_track.point = points_absolute[i];
+          rich_track.track = tracks[i];
+          std::sort(rich_track.track.begin(), rich_track.track.end());
+          rich_tracks.push_back(rich_track);
+        }
+      }
+      std::sort(rich_tracks.begin(), rich_tracks.end());
+      size_t number_of_rich_tracks = rich_tracks.size();
+      TrackContainer tracks_true(number_of_rich_tracks);
+
+      points_absolute_true.resize(number_of_rich_tracks);
+      for (size_t i = 0; i < number_of_rich_tracks; i++)
+      {
+        tracks_true[i] = rich_tracks[i].track;
+        points_absolute_true[i] = rich_tracks[i].point;
+      }
+
+      hs::sfm::MatchesTracksConvertor matches_tracks_convertor;
+      result = matches_tracks_convertor(tracks_true, matches);
+      if (result != 0) break;
+
+      result = GenerateNoisedKeysets(keysets_true, images, keysets_noised);
+      if (result != 0) break;
+
+      KeysetContainer keysets_gcp_true;
+      result = GenerateGCPData(intrinsic_params_set_true_,
+                               extrinsic_params_set_absolute_true,
+                               images,
+                               image_intrinsic_map,
+                               number_of_gcps_,
+                               keysets_gcp_true,
+                               gcps,
+                               tracks_gcp);
+      if (result != 0) break;
+
+      result = GenerateNoisedKeysets(keysets_gcp_true, images,
+                                     keysets_gcp_noised, false);
+      if (result != 0) break;
+
+      KeysetContainer keysets_check_point_true;
+      result = GenerateGCPData(intrinsic_params_set_true_,
+                               extrinsic_params_set_absolute_true,
+                               images,
+                               image_intrinsic_map,
+                               number_of_check_points_,
+                               keysets_check_point_true,
+                               check_points,
+                               tracks_check_point);
+      if (result != 0) break;
+
+      result = GenerateNoisedKeysets(keysets_check_point_true, images,
+                                     keysets_checkout_point_noised, false);
+      if (result != 0) break;
+
+      break;
+    }
+
+    return result;
+  }
+
+private:
   Err GenerateAbsoluteScene(
     ExtrinsicParamsContainer& extrinsic_params_set_absolute,
     ImageContainer& images,
@@ -205,7 +322,8 @@ public:
 
   Err GenerateNoisedKeysets(const KeysetContainer& keysets_true,
                             const ImageContainer& images,
-                            KeysetContainer& keysets_noised) const
+                            KeysetContainer& keysets_noised,
+                            bool generate_outliers = true) const
   {
     typedef EIGEN_VECTOR(Scalar, 2) Key;
     keysets_noised = keysets_true;
@@ -221,7 +339,7 @@ public:
         Scalar random;
         hs::math::random::UniformRandomVar<Scalar, 1>::Generate(
           0, 1, random);
-        if (random < outlier_ratio_)
+        if (random < outlier_ratio_ && generate_outliers)
         {
           Key min_key;
           min_key.setZero();
@@ -303,6 +421,8 @@ private:
   Scalar key_stddev_;
   IntrinsicParamsContainer intrinsic_params_set_true_;
   size_t number_of_points_;
+  size_t number_of_gcps_;
+  size_t number_of_check_points_;
 };
 
 }

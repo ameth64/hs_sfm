@@ -15,8 +15,9 @@
 #include "hs_sfm/incremental/best_pair_selector.hpp"
 #include "hs_sfm/incremental/scene_expandor.hpp"
 
-#if 1
-#include "hs_sfm/sfm_file_io/scene_ply_saver.hpp"
+#define DEBUG_TMP 0
+#if DEBUG_TMP
+#include "hs_sfm/sfm_utility/debug_tmp.hpp"
 #endif
 
 namespace hs
@@ -40,6 +41,10 @@ public:
   typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinsicParamsContainer;
   typedef EIGEN_VECTOR(Scalar, 3) Point;
   typedef EIGEN_STD_VECTOR(Point) PointContainer;
+
+#if DEBUG_TMP
+  typedef DebugTrue<Scalar> DebugTrueType;
+#endif
 
 private:
   typedef BestPairSelector<Scalar> BestPairSelector;
@@ -71,7 +76,11 @@ public:
                   TrackContainer& tracks,
                   hs::sfm::ObjectIndexMap& track_point_map,
                   hs::sfm::ViewInfoIndexer& view_info_indexer,
-                  hs::progress::ProgressManager* progress_manager = NULL) const
+                  hs::progress::ProgressManager* progress_manager = NULL
+#if DEBUG_TMP
+                  , const DebugTrueType& debug_true = DebugTrueType()
+#endif
+                  ) const
   {
     hs::sfm::MatchesTracksConvertor matches_track_convertor;
     if (matches_track_convertor(matches, tracks) != 0)
@@ -160,7 +169,11 @@ public:
                  points,
                  track_point_map,
                  view_info_indexer,
-                 progress_manager) != 0)
+                 progress_manager
+#if DEBUG_TMP
+                 , debug_true
+#endif
+                 ) != 0)
     {
       return -1;
     }

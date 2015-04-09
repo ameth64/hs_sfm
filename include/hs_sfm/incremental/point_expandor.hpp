@@ -53,6 +53,7 @@ public:
                   TrackPointMap& track_point_map,
                   ViewInfoIndexer& view_info_indexer) const
   {
+    const Scalar base_height_ratio_threshold = Scalar(7);
     //获取仍未被加入的三维点
     size_t number_of_tracks = tracks.size();
 
@@ -119,12 +120,37 @@ public:
               }
             }//for (size_t i = 0; i < track_size; i++)
 
-            if (!is_blunder)
+            //计算最长基线和点到相机距离的最小值
+            bool is_too_far = false;
+            Scalar max_base_line = Scalar(0);
+            Scalar min_camera_distance = std::numeric_limits<Scalar>::max();
+            for (size_t i = 0; i < track_size; i++)
+            {
+              for (size_t j = i + 1; j < track_size; j++)
+              {
+                Scalar base_line =
+                  (extrinsic_params_set_view[i].position() -
+                   extrinsic_params_set_view[j].position()).norm();
+                max_base_line = std::max(base_line, max_base_line);
+              }
+              Scalar camera_distance =
+                (extrinsic_params_set_view[i].position() - point).norm();
+              min_camera_distance = std::min(camera_distance,
+                                             min_camera_distance);
+            }
+            if (max_base_line == Scalar(0) ||
+                min_camera_distance / max_base_line >
+                  base_height_ratio_threshold)
+            {
+              is_too_far = true;
+            }
+
+            if (!is_blunder && !is_too_far)
             {
               points.push_back(point);
               track_point_map[track_id] = points.size() - 1;
             }//if (!is_blunder)
-            else
+            else if (is_blunder)
             {
               for (size_t i = 0; i < number_of_views; i++)
               {

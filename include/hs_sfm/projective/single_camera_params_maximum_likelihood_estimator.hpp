@@ -72,6 +72,9 @@ public:
     Matrix33 R;
     Vector3 t;
     GetRTFromPMatrix(P, K, R, t);
+    PMatrix P_test;
+    P_test.template block<3, 3>(0, 0) = K * R;
+    P_test.template block<3, 1>(0, 3) = K * t;
 
     YCovarianceInverse y_covariance_inverse;
     size_t number_of_correspondences = correspondences.size();

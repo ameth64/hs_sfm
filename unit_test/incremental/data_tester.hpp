@@ -60,7 +60,6 @@ public:
                      view_info_indexer,
                      extrinsic_params_set,
                      points);
-    std::cout<<"reprojective error:"<<error<<"\n";
     if (error < key_stddev + 1)
     {
       return 0;

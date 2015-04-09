@@ -13,12 +13,15 @@
 #include "hs_sfm/incremental/point_expandor.hpp"
 #include "hs_sfm/incremental/bundle_adjustment_optimizor.hpp"
 
-#define DEBUG_TMP 1
+#define DEBUG_TMP 0
 #if DEBUG_TMP
 #include <sstream>
 #include <fstream>
 #include <iomanip>
 #include "hs_sfm/incremental/reprojective_error_calculator.hpp"
+#include "hs_sfm/sfm_file_io/scene_ply_saver.hpp"
+#include "hs_sfm/sfm_utility/debug_tmp.hpp"
+#include "hs_sfm/sfm_utility/similar_transform_estimator.hpp"
 #endif
 
 namespace hs
@@ -46,6 +49,10 @@ public:
   typedef ObjectIndexMap TrackPointMap;
   typedef ObjectIndexMap ImageIntrinsicMap;
   typedef ObjectIndexMap ImageExtrinsicMap;
+
+#if DEBUG_TMP
+  typedef DebugTrue<Scalar> DebugTrueType;
+#endif
 
 protected:
   typedef ImageExpandor<Scalar> ImageExpandor;
@@ -79,7 +86,11 @@ public:
                   PointContainer& points,
                   TrackPointMap& track_point_map,
                   ViewInfoIndexer& view_info_indexer,
-                  hs::progress::ProgressManager* progress_manager = NULL) const
+                  hs::progress::ProgressManager* progress_manager = NULL
+#if DEBUG_TMP
+                  , const DebugTrueType& debug_true = DebugTrueType()
+#endif
+                  ) const
   {
     return Run(image_keysets,
                image_intrinsic_map,
@@ -90,7 +101,11 @@ public:
                points,
                track_point_map,
                view_info_indexer,
-               progress_manager);
+               progress_manager
+#if DEBUG_TMP
+               , debug_true
+#endif
+               );
   }
 
   Err Run(const ImageKeysetContainer& image_keysets,
@@ -102,7 +117,11 @@ public:
           PointContainer& points,
           TrackPointMap& track_point_map,
           ViewInfoIndexer& view_info_indexer,
-          hs::progress::ProgressManager* progress_manager = NULL) const
+          hs::progress::ProgressManager* progress_manager = NULL
+#if DEBUG_TMP
+          , const DebugTrueType& debug_true = DebugTrueType()
+#endif
+          ) const
   {
     size_t number_of_images = image_keysets.size();
     if (image_intrinsic_map.Size() != number_of_images) return -1;
@@ -119,6 +138,10 @@ public:
     double total_bundle_adjustment_time = 0.0;
     double total_image_expansion_time = 0.0;
     double total_point_expansion_time = 0.0;
+
+    std::string points_added_accuracy_path =
+      debug_true.prefix() + "_points_added_accuracy.txt";
+    std::ofstream points_added_accuracy_file(points_added_accuracy_path);
 #endif
 
     while (1)
@@ -146,6 +169,13 @@ public:
 
       std::chrono::time_point<std::chrono::system_clock> start, end;
       start = std::chrono::system_clock::now();
+
+      std::stringstream ss;
+      ss<<"extrinsic_before_"<<extrinsic_params_set.size()<<".ply";
+      std::string extrinsic_before_path;
+      ss>>extrinsic_before_path;
+      OutputScene(extrinsic_before_path,
+                  extrinsic_params_set, points, intrinsic_params_set[0]);
 #endif
       BundleAdjustmentOptimizor bundle_adjustment_optimizor(
                                   number_of_threads_);
@@ -177,15 +207,12 @@ public:
                                       view_info_indexer,
                                       extrinsic_params_set,
                                       points);
-      std::stringstream ss;
+      ss.clear();
+      ss.str("");
       ss<<"intrinsic_"<<extrinsic_params_set.size()<<".txt";
       std::string intrinsic_path;
       ss>>intrinsic_path;
       std::ofstream intrinsic_file(intrinsic_path.c_str());
-      if (!intrinsic_file)
-      {
-        return -1;
-      }
       intrinsic_file.setf(std::ios::fixed);
       intrinsic_file<<std::setprecision(8);
 
@@ -208,6 +235,15 @@ public:
                        << intrinsic_param.d2() << "\n";
       }
 
+      intrinsic_file.close();
+
+      ss.clear();
+      ss.str("");
+      ss<<"extrinsic_after_"<<extrinsic_params_set.size()<<".ply";
+      std::string extrinsic_after_path;
+      ss>>extrinsic_after_path;
+      OutputScene(extrinsic_after_path,
+                  extrinsic_params_set, points, intrinsic_params_set[0]);
 
 #endif
 
@@ -232,7 +268,10 @@ public:
 
       for (size_t i = 0; i < new_extrinsic_params_set.size(); i++)
       {
+#if DEBUG_TMP
         std::cout<<"Added Image "<<new_image_ids[i]<<"\n";
+        std::cout<<"Position:\n"<<new_extrinsic_params_set[i].position()<<"\n";
+#endif
         extrinsic_params_set.push_back(new_extrinsic_params_set[i]);
         image_extrinsic_map[new_image_ids[i]] = extrinsic_params_set.size() - 1;
       }
@@ -243,7 +282,21 @@ public:
       elapsed_seconds = end - start;
       total_image_expansion_time += elapsed_seconds.count();
 
+      if (bundle_adjustment_optimizor(image_keysets,
+                                      image_intrinsic_map,
+                                      tracks,
+                                      image_extrinsic_map,
+                                      track_point_map,
+                                      view_info_indexer,
+                                      intrinsic_params_set,
+                                      extrinsic_params_set,
+                                      points) != 0)
+      {
+        break;
+      }
+
       start = std::chrono::system_clock::now();
+      size_t number_of_points_before_adding = points.size();
 #endif
 
       PointExpandor point_expandor;
@@ -266,6 +319,51 @@ public:
       end = std::chrono::system_clock::now();
       elapsed_seconds = end - start;
       total_point_expansion_time += elapsed_seconds.count();
+
+      if (!debug_true.points_true().empty())
+      {
+        PointContainer points_added_estimate;
+        PointContainer points_added_true;
+        for (size_t i = 0; i < tracks.size(); i++)
+        {
+          if (track_point_map.IsValid(i))
+          {
+            size_t point_id = track_point_map[i];
+            if (point_id >= number_of_points_before_adding)
+            {
+              points_added_estimate.push_back(points[point_id]);
+              points_added_true.push_back(debug_true.points_true()[i]);
+            }
+          }
+        }
+
+        SimilarTransformEstimator<Scalar> similar_estimator;
+        typename SimilarTransformEstimator<Scalar>::Rotation rotation_similar;
+        typename SimilarTransformEstimator<Scalar>::Translate translate_similar;
+        Scalar scale_similar;
+        similar_estimator(points_added_estimate, points_added_true,
+                          rotation_similar, translate_similar, scale_similar);
+        Scalar error_planar = Scalar(0);
+        Scalar error_height = Scalar(0);
+        for (size_t i = 0; i < points_added_estimate.size(); i++)
+        {
+          Point point_estimate = points_added_estimate[i];
+          const Point& point_true = points_added_true[i];
+          point_estimate = scale_similar * (rotation_similar * point_estimate) +
+                           translate_similar;
+          error_planar += (point_estimate.template segment<2>(0) -
+                           point_true.template segment<2>(0)).norm();
+          error_height += std::abs(point_estimate[2] - point_true[2]);
+        }
+        error_planar /= Scalar(points_added_estimate.size());
+        error_height /= Scalar(points_added_estimate.size());
+
+        points_added_accuracy_file<<extrinsic_params_set.size()<<" "
+                                  <<points_added_estimate.size()<<" "
+                                  <<error_planar<<" "
+                                  <<error_height<<"\n";
+      }
+
 #endif
 
       if (progress_manager)
@@ -280,6 +378,7 @@ public:
     time_file<<"Bundle adjustment took "<<total_bundle_adjustment_time<<" seconds\n";
     time_file<<"Image expansion took "<<total_image_expansion_time<<" seconds\n";
     time_file<<"Point expansion took "<<total_point_expansion_time<<" seconds\n";
+    points_added_accuracy_file.close();
 #endif
 
     return 0;
@@ -305,6 +404,28 @@ protected:
 
     return 0;
   }
+
+#if DEBUG_TMP
+  void OutputScene(const std::string& scene_path,
+                   const ExtrinsicParamsContainer& extrinsic_params_set,
+                   const PointContainer& points,
+                   const IntrinsicParams& intrinsic_params) const
+  {
+    typedef hs::sfm::fileio::ScenePLYSaver<Scalar, size_t> SceneSaver;
+    typedef typename SceneSaver::Image Image;
+    typedef typename SceneSaver::ImageContainer ImageContainer;
+
+    IntrinsicParamsContainer intrinsic_params_out(extrinsic_params_set.size(),
+                                                  intrinsic_params);
+    Image image_out;
+    image_out.m_width = 6000;
+    image_out.m_height = 4000;
+    ImageContainer images_out(extrinsic_params_set.size(), image_out);
+    SceneSaver saver(Scalar(0.5));
+    saver(scene_path,
+          intrinsic_params_out, extrinsic_params_set, images_out, points);
+  }
+#endif
 
 protected:
   ImageExpandor image_expandor_;
