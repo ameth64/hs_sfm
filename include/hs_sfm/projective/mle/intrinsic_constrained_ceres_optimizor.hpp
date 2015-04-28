@@ -8,6 +8,11 @@
 #include "hs_sfm/projective/mle/intrinsic_constrained_vector_function.hpp"
 #include "hs_sfm/projective/mle/intrinsic_constrained_y_covariance_inverse.hpp"
 
+#define  DEBUG_TMP 1
+#if DEBUG_TMP
+#include <iostream>
+#endif
+
 namespace hs
 {
 namespace sfm
@@ -50,6 +55,19 @@ public:
       camera_point[2] += x[5];
       T normalized_x = camera_point[0] / camera_point[2];
       T normalized_y = camera_point[1] / camera_point[2];
+
+      T r2 = normalized_x * normalized_x + normalized_y * normalized_y;
+      T r4 = r2 * r2;
+      T r6 = r2 * r4;
+      T radial_coeff = x[11] * r2 + x[12] * r4 + x[13] * r6;
+      T radial_x = radial_coeff * normalized_x;
+      T radial_y = radial_coeff * normalized_y;
+
+      T decentering_x = 2.0 * x[14] * normalized_x * normalized_y +
+                        x[15] * (r2 + 2.0 * normalized_x * normalized_x);
+      T decentering_y = 2.0 * x[15] * normalized_x * normalized_y +
+                        x[14] * (r2 + 2.0 * normalized_y * normalized_y);
+
       T image_x = x[6] * normalized_x + x[7] * normalized_y + x[8];
       T image_y = x[6] * x[10] * normalized_y + x[9];
       T diff_x = image_x - T(observes_[i * 2 + 0]);
@@ -74,7 +92,7 @@ public:
     const std::vector<double>& points)
   {
     return (new ceres::AutoDiffCostFunction<
-                  IntrinsicConstrainedProjection, ceres::DYNAMIC, 11>(
+                  IntrinsicConstrainedProjection, ceres::DYNAMIC, 16>(
               new IntrinsicConstrainedProjection(observes, covariants, points),
               int(observes.size())));
   }
@@ -139,6 +157,11 @@ public:
     double expected_principal_x = near_y[Index(number_of_points) * 2 + 2];
     double expected_principal_y = near_y[Index(number_of_points) * 2 + 3];
     double expected_pixel_ratio = near_y[Index(number_of_points) * 2 + 4];
+    double expected_k1 = near_y[Index(number_of_points) * 2 + 5];
+    double expected_k2 = near_y[Index(number_of_points) * 2 + 6];
+    double expected_k3 = near_y[Index(number_of_points) * 2 + 7];
+    double expected_d1 = near_y[Index(number_of_points) * 2 + 8];
+    double expected_d2 = near_y[Index(number_of_points) * 2 + 9];
 
     std::vector<double> observes;
     std::vector<double> covariants;
@@ -189,6 +212,36 @@ public:
     problem.SetParameterUpperBound(
       x_data, 10, expected_pixel_ratio +
                  y_covariance_inverse.pixel_ratio_stddev);
+    problem.SetParameterLowerBound(
+      x_data, 11, expected_k1 -
+                  y_covariance_inverse.k1_stddev);
+    problem.SetParameterUpperBound(
+      x_data, 11, expected_k1 +
+                  y_covariance_inverse.k1_stddev);
+    problem.SetParameterLowerBound(
+      x_data, 12, expected_k2 -
+                  y_covariance_inverse.k2_stddev);
+    problem.SetParameterUpperBound(
+      x_data, 12, expected_k2 +
+                  y_covariance_inverse.k2_stddev);
+    problem.SetParameterLowerBound(
+      x_data, 13, expected_k3 -
+                  y_covariance_inverse.k3_stddev);
+    problem.SetParameterUpperBound(
+      x_data, 13, expected_k3 +
+                  y_covariance_inverse.k3_stddev);
+    problem.SetParameterLowerBound(
+      x_data, 14, expected_d1 -
+                  y_covariance_inverse.d1_stddev);
+    problem.SetParameterUpperBound(
+      x_data, 14, expected_d1 +
+                  y_covariance_inverse.d1_stddev);
+    problem.SetParameterLowerBound(
+      x_data, 15, expected_d2 -
+                  y_covariance_inverse.d2_stddev);
+    problem.SetParameterUpperBound(
+      x_data, 15, expected_d2 +
+                  y_covariance_inverse.d2_stddev);
 
     ceres::Solver::Options options;
     options.max_num_iterations = 50;
@@ -196,7 +249,13 @@ public:
     options.parameter_tolerance = 1e-9;
     options.logging_type = ceres::SILENT;
     ceres::Solver::Summary summary;
+#if DEBUG_TMP
+    std::cout<<"number_of_points:"<<number_of_points<<"\n";
+#endif
     ceres::Solve(options, &problem, &summary);
+#if DEBUG_TMP
+    std::cout<<"Solve success.\n";
+#endif
 
     if (!std::is_same<Scalar, double>::value)
     {

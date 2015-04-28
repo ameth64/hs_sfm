@@ -16,6 +16,11 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_y_covariance_inverse.hpp"
 
+#define DEBUG_TMP 1
+#if DEBUG_TMP
+#include <iostream>
+#endif
+
 namespace hs
 {
 namespace sfm
@@ -277,24 +282,45 @@ public:
       if (itr_point_constraint->mask[POINT_CONSTRAIN_X])
       {
         expected_values[0] = double(near_y[y_offset]);
+        //double expected_value = double(near_y[y_offset]);
         constraints[0] =
           y_covariance_inverse.GetConstraint(constraint_offset);
+        //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
+        //stddev = 1.0 / std::sqrt(stddev);
+        //problem.SetParameterLowerBound(x_data + x_offset, 0,
+        //                               expected_value - stddev);
+        //problem.SetParameterUpperBound(x_data + x_offset, 0,
+        //                               expected_value + stddev);
         y_offset++;
         constraint_offset++;
       }
       if (itr_point_constraint->mask[POINT_CONSTRAIN_Y])
       {
         expected_values[1] = double(near_y[y_offset]);
+        //double expected_value = double(near_y[y_offset]);
         constraints[1] =
           y_covariance_inverse.GetConstraint(constraint_offset);
+        //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
+        //stddev = 1.0 / std::sqrt(stddev);
+        //problem.SetParameterLowerBound(x_data + x_offset, 1,
+        //                               expected_value - stddev);
+        //problem.SetParameterUpperBound(x_data + x_offset, 1,
+        //                               expected_value + stddev);
         y_offset++;
         constraint_offset++;
       }
       if (itr_point_constraint->mask[POINT_CONSTRAIN_Z])
       {
         expected_values[2] = double(near_y[y_offset]);
+        //double expected_value = double(near_y[y_offset]);
         constraints[2] =
           y_covariance_inverse.GetConstraint(constraint_offset);
+        //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
+        //stddev = 1.0 / std::sqrt(stddev);
+        //problem.SetParameterLowerBound(x_data + x_offset, 2,
+        //                               expected_value - stddev);
+        //problem.SetParameterUpperBound(x_data + x_offset, 2,
+        //                               expected_value + stddev);
         y_offset++;
         constraint_offset++;
       }
@@ -324,6 +350,14 @@ public:
           expected_values[i] = double(near_y[y_offset + i]);
           constraints[i] =
             y_covariance_inverse.GetConstraint(constraint_offset + i);
+          //double expected_value = double(near_y[y_offset + i]);
+          //double stddev =
+          //  y_covariance_inverse.GetConstraint(constraint_offset + i);
+          //stddev = 1.0 / std::sqrt(stddev);
+          //problem.SetParameterLowerBound(x_data + x_offset, i,
+          //                               expected_value - stddev);
+          //problem.SetParameterUpperBound(x_data + x_offset, i,
+          //                               expected_value + stddev);
         }
         y_offset += 3;
         constraint_offset += 3;
@@ -335,6 +369,14 @@ public:
           expected_values[3 + i] = double(near_y[y_offset]);
           constraints[3 + i] =
             y_covariance_inverse.GetConstraint(constraint_offset);
+          //double expected_value = double(near_y[y_offset]);
+          //double stddev =
+          //  y_covariance_inverse.GetConstraint(constraint_offset);
+          //stddev = 1.0 / std::sqrt(stddev);
+          //problem.SetParameterLowerBound(x_data + x_offset, 3 + i,
+          //                               expected_value - stddev);
+          //problem.SetParameterUpperBound(x_data + x_offset, 3 + i,
+          //                               expected_value + stddev);
           y_offset++;
           constraint_offset++;
         }
@@ -375,6 +417,13 @@ public:
           expected_values[i] = double(near_y[y_offset]);
           constraints[i] =
             y_covariance_inverse.GetConstraint(constraint_offset);
+          //double expected_value = double(near_y[y_offset]);
+          //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
+          //stddev = 1.0 / std::sqrt(stddev);
+          //problem.SetParameterLowerBound(x_data + x_offset, i,
+          //                               expected_value - stddev);
+          //problem.SetParameterUpperBound(x_data + x_offset, i,
+          //                               expected_value + stddev);
           y_offset++;
           constraint_offset++;
         }
@@ -388,6 +437,13 @@ public:
           expected_values[3 + i] = double(near_y[y_offset]);
           constraints[3 + i] =
             y_covariance_inverse.GetConstraint(constraint_offset);
+          //double expected_value = double(near_y[y_offset]);
+          //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
+          //stddev = 1.0 / std::sqrt(stddev);
+          //problem.SetParameterLowerBound(x_data + x_offset, 3 + i,
+          //                               expected_value - stddev);
+          //problem.SetParameterUpperBound(x_data + x_offset, 3 + i,
+          //                               expected_value + stddev);
           y_offset++;
           constraint_offset++;
         }
@@ -400,6 +456,13 @@ public:
           expected_values[5 + i] = double(near_y[y_offset]);
           constraints[5 + i] =
             y_covariance_inverse.GetConstraint(constraint_offset);
+          //double expected_value = double(near_y[y_offset]);
+          //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
+          //stddev = 1.0 / std::sqrt(stddev);
+          //problem.SetParameterLowerBound(x_data + x_offset, 5 + i,
+          //                               expected_value - stddev);
+          //problem.SetParameterUpperBound(x_data + x_offset, 5 + i,
+          //                               expected_value + stddev);
           y_offset++;
           constraint_offset++;
         }

@@ -15,7 +15,7 @@
 #include "hs_sfm/incremental/best_pair_selector.hpp"
 #include "hs_sfm/incremental/scene_expandor.hpp"
 
-#define DEBUG_TMP 0
+#define DEBUG_TMP 1
 #if DEBUG_TMP
 #include "hs_sfm/sfm_utility/debug_tmp.hpp"
 #endif

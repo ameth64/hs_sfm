@@ -24,6 +24,11 @@ struct IntrinsicConstrainedYCovarianceInverse
   Scalar principal_point_x_stddev;
   Scalar principal_point_y_stddev;
   Scalar pixel_ratio_stddev;
+  Scalar k1_stddev;
+  Scalar k2_stddev;
+  Scalar k3_stddev;
+  Scalar d1_stddev;
+  Scalar d2_stddev;
 };
 
 }

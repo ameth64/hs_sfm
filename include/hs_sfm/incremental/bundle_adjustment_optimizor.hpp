@@ -7,7 +7,7 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 
-#define TMP_DEBUG 0
+#define TMP_DEBUG 1
 #if TMP_DEBUG
 #include "hs_sfm/incremental/reprojective_error_calculator.hpp"
 #endif
@@ -235,6 +235,9 @@ public:
       function_tolerance = 1e-4;
       parameter_tolerance = 1e-4;
     }
+#if DEBUG_TMP
+    std::cout<<"Start optimizing.\n";
+#endif
     BAOptimizor ba_optimizor(initial_x, int(number_of_threads_),
                              max_num_iterations, function_tolerance,
                              parameter_tolerance);
@@ -244,6 +247,9 @@ public:
     {
       return -1;
     }
+#if DEBUG_TMP
+    std::cout<<"Finish optimizing.\n";
+#endif
 
     for (Index i = 0; i < number_of_points; i++)
     {

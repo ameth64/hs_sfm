@@ -89,11 +89,14 @@ set(TRIANGULATE_UTEST_SOURCES
   "unit_test/triangulate/test_multiple_view_normal_mle_meta.hpp"
   "unit_test/triangulate/test_multiple_view_vector_function.cpp"
   "unit_test/triangulate/test_multiple_view_monte_carlo_simulate.cpp"
+  "unit_test/triangulate/test_multiple_view_maximum_likelihood_estimator.cpp"
   )
 hslib_add_utest(${TRIANGULATE_NAME} SOURCES ${TRIANGULATE_UTEST_SOURCES})
 hslib_add_dep(${TRIANGULATE_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
-  HS_DEPS hs_math HEADONLY)
+  HS_DEPS hs_math HEADONLY
+  HS_DEPS hs_test_utility DEP_LIBS test_env)
+hslib_add_mkl_dep(${TRIANGULATE_NAME}_utest)
 hslib_post_build(${TRIANGULATE_NAME}_utest)
 
 #incremental
@@ -156,6 +159,7 @@ hslib_add_utest(${ESSENTIAL_NAME} SOURCES ${ESSENTIAL_UTEST_SOURCES})
 hslib_add_dep(${ESSENTIAL_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   HS_DEPS hs_math HEADONLY)
+hslib_add_mkl_dep(${ESSENTIAL_NAME}_utest)
 hslib_post_build(${ESSENTIAL_NAME}_utest)
 
 #fundamental
@@ -281,3 +285,19 @@ hslib_add_dep(${CALIBRATE_NAME}_utest
   HS_DEPS hs_math HEADONLY
   )
 hslib_post_build(${CALIBRATE_NAME}_utest)
+
+#sfm global
+set(GLOBAL_NAME "sfm_global")
+set(GLOBAL_SOURCES
+  )
+hslib_add_library(${GLOBAL_NAME} ${HSPRJ_NAME} ${GLOBAL_SOURCES})
+
+set(GLOBAL_UTEST_SOURCES
+  "unit_test/test_main.cpp"
+  "unit_test/sfm_global/test_global_position_average.cpp"
+  "unit_test/sfm_global/test_global_rotation_average.cpp"
+  "unit_test/sfm_global/test_global_sfm.cpp"
+  )
+hslib_add_utest(${GLOBAL_NAME} SOURCES ${GLOBAL_UTEST_SOURCES})
+hslib_post_build(${GLOBAL_NAME}_utest)
+

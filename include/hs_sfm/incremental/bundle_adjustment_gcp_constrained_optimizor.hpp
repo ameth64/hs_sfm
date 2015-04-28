@@ -8,6 +8,11 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 #include "hs_sfm/triangulate/multiple_view_maximum_likelihood_estimator.hpp"
 
+#define DEBUG_TMP 1
+#if DEBUG_TMP
+#include <iostream>
+#endif
+
 namespace hs
 {
 namespace sfm
@@ -174,12 +179,11 @@ public:
     for (size_t gcp_estimate_id = 0; gcp_estimate_id < gcps_estimate.size();
          gcp_estimate_id++)
     {
-      size_t track_gcp_id = estimate_measure_map[gcp_estimate_id];
-      size_t number_of_views = tracks_gcp[track_gcp_id].size();
+      size_t number_of_views = tracks_gcp_estimate[gcp_estimate_id].size();
       for (size_t view_id = 0; view_id < number_of_views; view_id++)
       {
-        size_t image_id = tracks_gcp[track_gcp_id][view_id].first;
-        size_t key_id = tracks_gcp[track_gcp_id][view_id].second;
+        size_t image_id = tracks_gcp[gcp_estimate_id][view_id].first;
+        size_t key_id = tracks_gcp[gcp_estimate_id][view_id].second;
         size_t extrinsic_id = image_extrinsic_map[image_id];
         feature_maps.push_back(
           std::make_pair(extrinsic_id,
@@ -378,6 +382,11 @@ public:
     int max_num_iterations = 50;
     double function_tolerance = 1e-6;
     double parameter_tolerance = 1e-8;
+#if DEBUG_TMP
+    std::cout<<"number_of_tracks_bundle:"<<number_of_tracks_bundle<<"\n";
+    std::cout<<"number_of_points:"<<number_of_points<<"\n";
+    std::cout<<"Start gcp constrained optimizing.\n";
+#endif
     BAOptimizor ba_optimizor(initial_x, int(number_of_threads_),
                              max_num_iterations, function_tolerance,
                              parameter_tolerance);
@@ -387,6 +396,9 @@ public:
     {
       return -1;
     }
+#if DEBUG_TMP
+    std::cout<<"Finish gcp constrained optimizing.\n";
+#endif
 
     for (size_t track_bundle_id = 0; track_bundle_id < number_of_tracks_bundle;
          track_bundle_id++)

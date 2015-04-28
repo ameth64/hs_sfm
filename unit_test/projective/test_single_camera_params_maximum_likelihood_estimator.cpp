@@ -177,6 +177,11 @@ public:
     Scalar principal_point_x_stddev = 1;
     Scalar principal_point_y_stddev = 1;
     Scalar pixel_ratio_stddev = 1e-5;
+    Scalar k1_stddev = 1e-5;
+    Scalar k2_stddev = 1e-5;
+    Scalar k3_stddev = 1e-5;
+    Scalar d1_stddev = 1e-7;
+    Scalar d2_stddev = 1e-7;
     IntrinsicParams intrinsic_params_estimate;
     ExtrinsicParams extrinsic_params_estimate;
     if (estimator(correspondences, key_covariance,
@@ -186,6 +191,11 @@ public:
                   principal_point_x_stddev,
                   principal_point_y_stddev,
                   pixel_ratio_stddev,
+                  k1_stddev,
+                  k2_stddev,
+                  k3_stddev,
+                  d1_stddev,
+                  d2_stddev,
                   intrinsic_params_estimate,
                   extrinsic_params_estimate) != 0)
     {
@@ -229,6 +239,41 @@ public:
     {
       std::cout<<"pixel_ratio_diff:"<<pixel_ratio_diff<<"\n";
       //return -1;
+    }
+    Scalar k1_diff = std::abs(intrinsic_params_true.k1() -
+                              intrinsic_params_estimate.k1());
+    if (k1_diff > k1_stddev * 2)
+    {
+      std::cout<<"k1_diff:"<<k1_diff<<"\n";
+      //return -1
+    }
+    Scalar k2_diff = std::abs(intrinsic_params_true.k2() -
+                              intrinsic_params_estimate.k2());
+    if (k2_diff > k2_stddev * 2)
+    {
+      std::cout<<"k2_diff:"<<k2_diff<<"\n";
+      //return -1
+    }
+    Scalar k3_diff = std::abs(intrinsic_params_true.k3() -
+                              intrinsic_params_estimate.k3());
+    if (k3_diff > k3_stddev * 2)
+    {
+      std::cout<<"k3_diff:"<<k3_diff<<"\n";
+      //return -1
+    }
+    Scalar d1_diff = std::abs(intrinsic_params_true.d1() -
+                              intrinsic_params_estimate.d1());
+    if (d1_diff > d1_stddev * 2)
+    {
+      std::cout<<"d1_diff:"<<d1_diff<<"\n";
+      //return -1
+    }
+    Scalar d2_diff = std::abs(intrinsic_params_true.d2() -
+                              intrinsic_params_estimate.d2());
+    if (d2_diff > d2_stddev * 2)
+    {
+      std::cout<<"d2_diff:"<<d2_diff<<"\n";
+      //return -1
     }
 
     if (std::abs(extrinsic_params_true.rotation()[0] -

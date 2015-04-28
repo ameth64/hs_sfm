@@ -3,6 +3,7 @@
 #include "data_tester.hpp"
 #include "synthetic_data_generator.hpp"
 #include "real_data_generator.hpp"
+#include "real_synthetic_data_generator.hpp"
 
 #include "hs_test_utility/test_env/data_path.hpp"
 
@@ -11,9 +12,12 @@
 #include "hs_sfm/incremental/gcp_similar_transform_estimator.hpp"
 #include "hs_sfm/triangulate/multiple_view_maximum_likelihood_estimator.hpp"
 #include "hs_sfm/incremental/bundle_adjustment_gcp_constrained_optimizor.hpp"
-#define DEBUG_TMP 0
+#define DEBUG_TMP 1
 #if DEBUG_TMP
 #include "hs_sfm/sfm_utility/debug_tmp.hpp"
+#include "hs_sfm/sfm_file_io/scene_ply_saver.hpp"
+#include <fstream>
+#include <iomanip>
 #endif
 
 namespace
@@ -36,7 +40,7 @@ public:
     GCP_CONSTRAINED_OPTIMIZATION_FAILED,
     GCP_ACCURACY_TOO_BAD,
     CHECK_POINT_ACCURACY_TOO_BAD,
-    ESTRINSIC_ACCRURACY_TOO_BAD,
+    EXTRINSIC_ACCRURACY_TOO_BAD,
     POINT_ACCURACY_TOO_BAD
   };
 
@@ -327,6 +331,49 @@ private:
     //  gcp = scale_similar * (rotation_similar * gcp) + translate_similar;
     //}
 
+#if DEBUG_TMP
+    typedef hs::sfm::fileio::ScenePLYSaver<Scalar, size_t> SceneSaver;
+    typedef typename SceneSaver::Image Image;
+    typedef typename SceneSaver::ImageContainer ImageContainer;
+    std::string abs_scene_path = test_name_ + "_abs_scene.ply";
+    SceneSaver saver(Scalar(10));
+    IntrinsicParamsContainer intrinsic_params_set_out(
+      extrinsic_params_set_absolute_estimate.size(),
+      intrinsic_params_set_absolute_estimate[0]);
+    Image image_out;
+    image_out.m_width = 6000;
+    image_out.m_height = 4000;
+    ImageContainer images_out(extrinsic_params_set_absolute_estimate.size(),
+                              image_out);
+    saver(abs_scene_path,
+          intrinsic_params_set_out,
+          extrinsic_params_set_absolute_estimate,
+          images_out,
+          points_absolute_estimate);
+
+    std::string abs_intrinsic_path = test_name_ + "_abs_intrinsic.txt";
+    std::ofstream abs_intrinsic_file(abs_intrinsic_path);
+    abs_intrinsic_file.setf(std::ios::fixed);
+    abs_intrinsic_file<<std::setprecision(8);
+    for (size_t i = 0; i < intrinsic_params_set_absolute_estimate.size(); i++)
+    {
+      const IntrinsicParams& intrinsic_params =
+        intrinsic_params_set_absolute_estimate[i];
+      abs_intrinsic_file<<intrinsic_params.focal_length()<<" "
+                        <<intrinsic_params.skew()<<" "
+                        <<intrinsic_params.principal_point_x()<<" "
+                        <<intrinsic_params.principal_point_y()<<" "
+                        <<intrinsic_params.pixel_ratio()<<" "
+                        <<intrinsic_params.k1()<<" "
+                        <<intrinsic_params.k2()<<" "
+                        <<intrinsic_params.k3()<<" "
+                        <<intrinsic_params.d1()<<" "
+                        <<intrinsic_params.d2()<<"\n";
+    }
+    abs_intrinsic_file.close();
+
+#endif
+
     size_t number_of_gcps_estimate = gcps_absolute_estimate.size();
     PointContainer gcps_absolute_true_reordered(number_of_gcps_estimate);
     for (size_t i = 0; i < number_of_gcps_estimate; i++)
@@ -435,7 +482,7 @@ private:
             extrinsic_accuracy_incremental_path,
             ground_resolution_ * 8) != 0)
       {
-        return ESTRINSIC_ACCRURACY_TOO_BAD;
+        return EXTRINSIC_ACCRURACY_TOO_BAD;
       }
       else
       {
@@ -999,10 +1046,10 @@ TEST(TestIncremental, Synthetic480ImagesTest)
   size_t number_of_points_0 = 10000;
   Scalar lateral_overlap_ratio_0 = 0.6;
   Scalar longitudinal_overlap_ratio_0 = 0.8;
-  Scalar scene_max_height_0 = 50;
-  Scalar camera_height_stddev_0 = 2;
-  Scalar camera_planar_stddev_0 = 2;
-  Scalar camera_rotation_stddev_0 = 10;
+  Scalar scene_max_height_0 = 100;
+  Scalar camera_height_stddev_0 = 20;
+  Scalar camera_planar_stddev_0 = 20;
+  Scalar camera_rotation_stddev_0 = 60;
   FlightGenerator flight_generator_0(
     focal_length_in_metre_0,
     number_of_strips_0,
@@ -1046,10 +1093,10 @@ TEST(TestIncremental, Synthetic480ImagesTest)
   size_t number_of_points_1 = 10000;
   Scalar lateral_overlap_ratio_1 = 0.6;
   Scalar longitudinal_overlap_ratio_1 = 0.8;
-  Scalar scene_max_height_1 = 50;
-  Scalar camera_height_stddev_1 = 2;
-  Scalar camera_planar_stddev_1 = 2;
-  Scalar camera_rotation_stddev_1 = 10;
+  Scalar scene_max_height_1 = 100;
+  Scalar camera_height_stddev_1 = 20;
+  Scalar camera_planar_stddev_1 = 20;
+  Scalar camera_rotation_stddev_1 = 60;
   FlightGenerator flight_generator_1(
     focal_length_in_metre_1,
     number_of_strips_1,
@@ -1093,10 +1140,10 @@ TEST(TestIncremental, Synthetic480ImagesTest)
   size_t number_of_points_2 = 10000;
   Scalar lateral_overlap_ratio_2 = 0.6;
   Scalar longitudinal_overlap_ratio_2 = 0.8;
-  Scalar scene_max_height_2 = 50;
-  Scalar camera_height_stddev_2 = 2;
-  Scalar camera_planar_stddev_2 = 2;
-  Scalar camera_rotation_stddev_2 = 10;
+  Scalar scene_max_height_2 = 100;
+  Scalar camera_height_stddev_2 = 20;
+  Scalar camera_planar_stddev_2 = 20;
+  Scalar camera_rotation_stddev_2 = 60;
   FlightGenerator flight_generator_2(
     focal_length_in_metre_2,
     number_of_strips_2,
@@ -1373,7 +1420,7 @@ TEST(TestIncremental, Synthetic960ImagesTest)
   size_t number_of_gcps = 10;
   size_t number_of_check_points = 500;
   //TODO:Outlier test needed!
-  Scalar outlier_ratio = 0.1;
+  Scalar outlier_ratio = 0.2;
   Scalar key_stddev = 1.0;
 
   Generator generator(flight_longitudinal_overlap_ratio,
@@ -1431,72 +1478,315 @@ TEST(TestIncremental, Synthetic960ImagesTest)
 
 }
 
-//TEST(TestIncremental, Real120ImageTest)
-//{
-//  typedef double Scalar;
-//  typedef size_t ImageDimension;
-//  typedef TestIncremental<Scalar> Tester;
-//  typedef Tester::IntrinsicParams IntrinsicParams;
-//  typedef Tester::IntrinsicParamsContainer IntrinsicParamsContainer;
-//  typedef Tester::KeysetContainer KeysetContainer;
-//  typedef Tester::PointContainer PointContainer;
+TEST(TestIncremental, Real242ImagesTest)
+{
+  typedef double Scalar;
+  typedef size_t ImageDimension;
+  typedef TestIncremental<Scalar> Tester;
+  typedef Tester::IntrinsicParams IntrinsicParams;
+  typedef Tester::IntrinsicParamsContainer IntrinsicParamsContainer;
+  typedef Tester::KeysetContainer KeysetContainer;
+  typedef Tester::PointContainer PointContainer;
 
-//  typedef hs::sfm::incremental::RealDataGenerator<Scalar> Generator;
+  typedef hs::sfm::incremental::RealDataGenerator<Scalar> Generator;
 
-//  typedef hs::sfm::MatchContainer MatchContainer;
-//  typedef hs::sfm::TrackContainer TrackContainer;
+  typedef hs::sfm::MatchContainer MatchContainer;
+  typedef hs::sfm::TrackContainer TrackContainer;
 
-//  std::string data_path = hs::test::getTestDataPath();
-//  std::string out_path =
-//    data_path + "sfm/incremental/real_data_120_images/bundler.out";
-//  std::string gcp_path =
-//    data_path + "sfm/incremental/real_data_120_images/gcp.xml";
-//  IntrinsicParamsContainer intrinsic_params_set_initial;
-//  intrinsic_params_set_initial.push_back(IntrinsicParams(7692.30769230769231,
-//                                                         0,
-//                                                         3000,
-//                                                         2000));
-//  intrinsic_params_set_initial.push_back(IntrinsicParams(7692.30769230769231,
-//                                                         0,
-//                                                         3000,
-//                                                         2000));
-//  intrinsic_params_set_initial.push_back(IntrinsicParams(7692.30769230769231,
-//                                                         0,
-//                                                         3000,
-//                                                         2000));
-//  std::vector<size_t> image_intrinsic_map(123);
-//  for (size_t i = 0; i < 2; i++)
-//  {
-//    image_intrinsic_map[i] = 0;
-//  }
-//  for (size_t i = 2; i < 20; i++)
-//  {
-//    image_intrinsic_map[i] = 1;
-//  }
-//  for (size_t i = 20; i < 123; i++)
-//  {
-//    image_intrinsic_map[i] = 2;
-//  }
+  std::string data_path = hs::test::getTestDataPath();
+  std::string out_path =
+    data_path + "sfm/incremental/real_data_242_images/bundler.out";
+  std::string gcp_path =
+    data_path + "sfm/incremental/real_data_242_images/gcp.xml";
+  IntrinsicParamsContainer intrinsic_params_set_initial;
+  intrinsic_params_set_initial.push_back(IntrinsicParams(4666.67,
+                                                         0,
+                                                         3000,
+                                                         2000));
+  std::vector<size_t> image_intrinsic_map(242);
+  for (size_t i = 0; i < 242; i++)
+  {
+    image_intrinsic_map[i] = 0;
+  }
 
-//  KeysetContainer keysets;
-//  MatchContainer matches;
-//  PointContainer gcps;
-//  TrackContainer tracks_gcp;
-//  KeysetContainer keysets_gcp;
-//  ASSERT_EQ(0, Generator::LoadBundlerOutFile(out_path, 6000, 4000,
-//                                             keysets, matches));
-//  ASSERT_EQ(0, Generator::LoadGCPs(gcp_path, gcps, tracks_gcp, keysets_gcp));
+  KeysetContainer keysets;
+  MatchContainer matches;
+  PointContainer gcps;
+  TrackContainer tracks_gcp;
+  KeysetContainer keysets_gcp;
+  PointContainer check_points;
+  TrackContainer tracks_check_point;
+  KeysetContainer keysets_check_point;
+  ASSERT_EQ(0, Generator::LoadGCPs(
+    gcp_path,
+    gcps, tracks_gcp, keysets_gcp,
+    check_points, tracks_check_point, keysets_check_point));
+  ASSERT_EQ(0, Generator::LoadBundlerOutFile(out_path, 6000, 4000,
+                                             keysets, matches));
 
-//  Scalar key_stddev = Scalar(1);
-//  std::string test_name = "real_data";
-//  Tester tester(0.1, key_stddev, test_name);
-//  ASSERT_EQ(0, tester(intrinsic_params_set_initial,
-//                      image_intrinsic_map,
-//                      matches,
-//                      keysets,
-//                      gcps,
-//                      tracks_gcp,
-//                      keysets_gcp));
-//}
+  Scalar key_stddev = Scalar(1);
+  std::string test_name = "real_data_242_images";
+  Tester tester(0.1, key_stddev, test_name);
+  ASSERT_EQ(0, tester(intrinsic_params_set_initial,
+                      image_intrinsic_map,
+                      matches,
+                      keysets,
+                      gcps,
+                      tracks_gcp,
+                      keysets_gcp,
+                      check_points,
+                      tracks_check_point,
+                      keysets_check_point));
+}
+
+TEST(TestIncremental, Real1067ImagesTest)
+{
+  typedef double Scalar;
+  typedef size_t ImageDimension;
+  typedef TestIncremental<Scalar> Tester;
+  typedef Tester::IntrinsicParams IntrinsicParams;
+  typedef Tester::IntrinsicParamsContainer IntrinsicParamsContainer;
+  typedef Tester::KeysetContainer KeysetContainer;
+  typedef Tester::PointContainer PointContainer;
+
+  typedef hs::sfm::incremental::RealDataGenerator<Scalar> Generator;
+
+  typedef hs::sfm::MatchContainer MatchContainer;
+  typedef hs::sfm::TrackContainer TrackContainer;
+
+  std::string data_path = hs::test::getTestDataPath();
+  std::string out_path =
+    data_path + "sfm/incremental/real_data_1067_images/bundler.out";
+  std::string gcp_path =
+    data_path + "sfm/incremental/real_data_1067_images/gcp.xml";
+  IntrinsicParamsContainer intrinsic_params_set_initial;
+  intrinsic_params_set_initial.push_back(IntrinsicParams(7500.0,
+                                                         0,
+                                                         3000,
+                                                         2000));
+  intrinsic_params_set_initial.push_back(IntrinsicParams(7500.0,
+                                                         0,
+                                                         3000,
+                                                         2000));
+  std::vector<size_t> image_intrinsic_map(1067);
+  for (size_t i = 0; i < 491; i++)
+  {
+    image_intrinsic_map[i] = 0;
+  }
+  for (size_t i = 491; i < 1067; i++)
+  {
+    image_intrinsic_map[i] = 1;
+  }
+
+  KeysetContainer keysets;
+  MatchContainer matches;
+  PointContainer gcps;
+  TrackContainer tracks_gcp;
+  KeysetContainer keysets_gcp;
+  PointContainer check_points;
+  TrackContainer tracks_check_point;
+  KeysetContainer keysets_check_point;
+  ASSERT_EQ(0, Generator::LoadGCPs(
+    gcp_path,
+    gcps, tracks_gcp, keysets_gcp,
+    check_points, tracks_check_point, keysets_check_point));
+  ASSERT_EQ(0, Generator::LoadBundlerOutFile(out_path, 6000, 4000,
+                                             keysets, matches));
+
+  Scalar key_stddev = Scalar(1);
+  std::string test_name = "real_data_1067_images";
+  Tester tester(0.1, key_stddev, test_name);
+  ASSERT_EQ(0, tester(intrinsic_params_set_initial,
+                      image_intrinsic_map,
+                      matches,
+                      keysets,
+                      gcps,
+                      tracks_gcp,
+                      keysets_gcp,
+                      check_points,
+                      tracks_check_point,
+                      keysets_check_point));
+}
+
+TEST(TestIncremental, RealSynthetic242ImagesTest)
+{
+  typedef double Scalar;
+  typedef size_t ImageDimension;
+  typedef TestIncremental<Scalar> Tester;
+  typedef Tester::IntrinsicParams IntrinsicParams;
+  typedef Tester::IntrinsicParamsContainer IntrinsicParamsContainer;
+  typedef Tester::ExtrinsicParams ExtrinsicParams;
+  typedef Tester::ExtrinsicParamsContainer ExtrinsicParamsContainer;
+  typedef Tester::KeysetContainer KeysetContainer;
+  typedef Tester::PointContainer PointContainer;
+
+  typedef hs::sfm::incremental::RealSyntheticDataGenerator<Scalar> Generator;
+
+  typedef hs::sfm::MatchContainer MatchContainer;
+  typedef hs::sfm::TrackContainer TrackContainer;
+
+  std::string data_path = hs::test::getTestDataPath();
+  std::string out_path =
+    data_path + "sfm/incremental/real_data_242_images/bundler.out";
+  std::string gcp_path =
+    data_path + "sfm/incremental/real_data_242_images/gcp.xml";
+  IntrinsicParamsContainer intrinsic_params_set_initial;
+  intrinsic_params_set_initial.push_back(IntrinsicParams(4666.67,
+                                                         0,
+                                                         3000,
+                                                         2000));
+  IntrinsicParamsContainer intrinsic_params_set_true;
+  intrinsic_params_set_true.push_back(IntrinsicParams(4880.22,
+                                                      0,
+                                                      3026.11,
+                                                      1992.36,
+                                                      1,
+                                                      -0.100423,
+                                                      0.128487,
+                                                      -0.0482081,
+                                                      -3.17902e-05,
+                                                      7.75629e-05));
+  std::vector<size_t> image_intrinsic_map(242);
+  for (size_t i = 0; i < 242; i++)
+  {
+    image_intrinsic_map[i] = 0;
+  }
+
+  KeysetContainer keysets;
+  MatchContainer matches;
+  PointContainer gcps;
+  TrackContainer tracks_gcp;
+  KeysetContainer keysets_gcp;
+  PointContainer check_points;
+  TrackContainer tracks_check_point;
+  KeysetContainer keysets_check_point;
+  PointContainer points_true;
+  ExtrinsicParamsContainer extrinsic_params_set_true;
+  Scalar key_stddev = Scalar(1);
+  Scalar outlier_ratio = Scalar(0.1);
+
+  Generator generator(outlier_ratio, key_stddev);
+  generator.Generate(out_path, gcp_path,
+                     intrinsic_params_set_true, image_intrinsic_map,
+                     6000, 4000, matches,
+                     points_true, extrinsic_params_set_true, keysets,
+                     gcps, tracks_gcp, keysets_gcp,
+                     check_points, tracks_check_point, keysets_check_point);
+
+  std::string test_name = "real_synthetic_data_242_images";
+  Tester tester(0.1, key_stddev, test_name);
+  ASSERT_EQ(0, tester(intrinsic_params_set_initial,
+                      image_intrinsic_map,
+                      matches,
+                      keysets,
+                      gcps,
+                      tracks_gcp,
+                      keysets_gcp,
+                      check_points,
+                      tracks_check_point,
+                      keysets_check_point,
+                      intrinsic_params_set_true,
+                      extrinsic_params_set_true,
+                      points_true));
+}
+
+TEST(TestIncremental, RealSynthetic1067ImagesTest)
+{
+  typedef double Scalar;
+  typedef size_t ImageDimension;
+  typedef TestIncremental<Scalar> Tester;
+  typedef Tester::IntrinsicParams IntrinsicParams;
+  typedef Tester::IntrinsicParamsContainer IntrinsicParamsContainer;
+  typedef Tester::ExtrinsicParams ExtrinsicParams;
+  typedef Tester::ExtrinsicParamsContainer ExtrinsicParamsContainer;
+  typedef Tester::KeysetContainer KeysetContainer;
+  typedef Tester::PointContainer PointContainer;
+
+  typedef hs::sfm::incremental::RealSyntheticDataGenerator<Scalar> Generator;
+
+  typedef hs::sfm::MatchContainer MatchContainer;
+  typedef hs::sfm::TrackContainer TrackContainer;
+
+  std::string data_path = hs::test::getTestDataPath();
+  std::string out_path =
+    data_path + "sfm/incremental/real_data_1067_images/bundler.out";
+  std::string gcp_path =
+    data_path + "sfm/incremental/real_data_1067_images/gcp.xml";
+  IntrinsicParamsContainer intrinsic_params_set_initial;
+  intrinsic_params_set_initial.push_back(IntrinsicParams(7500.00,
+                                                         0,
+                                                         3000,
+                                                         2000));
+  intrinsic_params_set_initial.push_back(IntrinsicParams(7500.00,
+                                                         0,
+                                                         3000,
+                                                         2000));
+  IntrinsicParamsContainer intrinsic_params_set_true;
+  intrinsic_params_set_true.push_back(IntrinsicParams(7680.93,
+                                                      0,
+                                                      3005.66,
+                                                      2002.71,
+                                                      1,
+                                                      -0.139239,
+                                                      0.264343,
+                                                      0.157404));
+  intrinsic_params_set_true.push_back(IntrinsicParams(7687.72,
+                                                      0,
+                                                      3001.87,
+                                                      2010.12,
+                                                      1,
+                                                      -0.138811,
+                                                      0.250986,
+                                                      0.20556,
+                                                      -0.00040312,
+                                                      0.000140978));
+
+  std::vector<size_t> image_intrinsic_map(1067);
+  for (size_t i = 0; i < 491; i++)
+  {
+    image_intrinsic_map[i] = 0;
+  }
+  for (size_t i = 491; i < 1067; i++)
+  {
+    image_intrinsic_map[i] = 1;
+  }
+
+  KeysetContainer keysets;
+  MatchContainer matches;
+  PointContainer gcps;
+  TrackContainer tracks_gcp;
+  KeysetContainer keysets_gcp;
+  PointContainer check_points;
+  TrackContainer tracks_check_point;
+  KeysetContainer keysets_check_point;
+  PointContainer points_true;
+  ExtrinsicParamsContainer extrinsic_params_set_true;
+  Scalar key_stddev = Scalar(1);
+  Scalar outlier_ratio = Scalar(0.0);
+
+  Generator generator(outlier_ratio, key_stddev);
+  generator.Generate(out_path, gcp_path,
+                     intrinsic_params_set_true, image_intrinsic_map,
+                     6000, 4000, matches,
+                     points_true, extrinsic_params_set_true, keysets,
+                     gcps, tracks_gcp, keysets_gcp,
+                     check_points, tracks_check_point, keysets_check_point);
+
+  std::string test_name = "real_synthetic_data_1067_images";
+  Tester tester(0.1, key_stddev, test_name);
+  ASSERT_EQ(0, tester(intrinsic_params_set_initial,
+                      image_intrinsic_map,
+                      matches,
+                      keysets,
+                      gcps,
+                      tracks_gcp,
+                      keysets_gcp,
+                      check_points,
+                      tracks_check_point,
+                      keysets_check_point,
+                      intrinsic_params_set_true,
+                      extrinsic_params_set_true,
+                      points_true));
+}
 
 }

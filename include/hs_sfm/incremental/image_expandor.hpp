@@ -2,11 +2,19 @@
 #define _HS_SFM_INCREMENTAL_IMAGE_EXPANDOR_HPP_
 
 #include <map>
+#include <algorithm>
+#include <cmath>
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
+#include "hs_sfm/sfm_utility/projective_functions.hpp"
 #include "hs_sfm/projective/single_camera_params_maximum_likelihood_estimator.hpp"
 #include "hs_sfm/projective/pmatrix_dlt_ransac_refiner.hpp"
+
+#define DEBUG_TMP 1
+#if DEBUG_TMP
+#include <iostream>
+#endif
 
 namespace hs
 {
@@ -27,6 +35,7 @@ public:
   typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinsicParamsContainer;
   typedef ImageKeys<Scalar> ImageKeyset;
   typedef EIGEN_STD_VECTOR(ImageKeyset) ImageKeysetContainer;
+  typedef EIGEN_VECTOR(Scalar, 2) Key;
   typedef EIGEN_VECTOR(Scalar, 3) Point;
   typedef EIGEN_STD_VECTOR(Point) PointContainer;
 
@@ -175,30 +184,105 @@ public:
         continue;
       }
 
-      for (size_t i = 0; i < number_of_inliers; i++)
-      {
-        size_t track_id = key_track_map[inlier_indices[i]];
-        ViewInfo& view_info =
-          view_info_indexer.GetViewInfoByTrackImage(track_id, image_id);
-        view_info.is_blunder = false;
-      }
       //使用剔除粗差的点计算外方位元素
       CameraParamsMLEstimator camera_ml_estimator;
       KeyCovariance key_covariance = KeyCovariance::Identity();
       IntrinsicParams intrinsic_params_estimate;
       size_t intrinsic_id = image_intrinsic_map[image_id];
       ExtrinsicParams new_extrinsic_params;
-      if (camera_ml_estimator(refined_correspondences,
-                              key_covariance,
-                              intrinsic_params_set[intrinsic_id],
-                              Scalar(1),
-                              Scalar(0.01),
-                              Scalar(1),
-                              Scalar(1),
-                              Scalar(1e-4),
-                              intrinsic_params_estimate,
-                              new_extrinsic_params) == 0)
+      IndexSet mle_inlier_indices = inlier_indices;
+      CorrespondenceContainer mle_correspondences = refined_correspondences;
+      bool estimate_success = false;
+      while (1)
       {
+        if (camera_ml_estimator(mle_correspondences,
+                                key_covariance,
+                                intrinsic_params_set[intrinsic_id],
+                                Scalar(1),
+                                Scalar(0.01),
+                                Scalar(1),
+                                Scalar(1),
+                                Scalar(1e-4),
+                                Scalar(1e-5),
+                                Scalar(1e-5),
+                                Scalar(1e-5),
+                                Scalar(1e-7),
+                                Scalar(1e-7),
+                                intrinsic_params_estimate,
+                                new_extrinsic_params) == 0)
+        {
+          estimate_success = true;
+          std::vector<Scalar> errors(mle_correspondences.size());
+          for (size_t i = 0; i < mle_correspondences.size(); i++)
+          {
+            Key key =
+              hs::sfm::ProjectiveFunctions<Scalar>::WorldPointProjectToImageKey(
+                intrinsic_params_estimate, new_extrinsic_params,
+                mle_correspondences[i].second);
+
+            errors[i] = (key - mle_correspondences[i].first).norm();
+          }
+
+          size_t nth = size_t(0.95 * double(mle_correspondences.size()));
+          std::vector<Scalar> errors_copy = errors;
+          std::nth_element(errors_copy.begin(),
+                           errors_copy.begin() + nth,
+                           errors_copy.end());
+          Scalar nth_median = errors_copy[nth];
+          Scalar threshold = Scalar(2.4) * nth_median;
+#if DEBUG_TMP
+          std::cout<<"threshold:"<<threshold<<"\n";
+#endif
+          threshold = std::max(std::min(threshold, Scalar(24)), Scalar(12));
+          CorrespondenceContainer mle_correspondences_next;
+          IndexSet mle_inlier_indices_next;
+          for (size_t i = 0; i < errors.size(); i++)
+          {
+            if (errors[i] < threshold)
+            {
+              mle_correspondences_next.push_back(mle_correspondences[i]);
+              mle_inlier_indices_next.push_back(mle_inlier_indices[i]);
+            }
+#if DEBUG_TMP
+            else
+            {
+              std::cout<<"Add image error:"<<errors[i]
+                       <<" threshold:"<<threshold<<"\n";
+            }
+#endif
+          }
+
+          if (mle_correspondences_next.size() == mle_correspondences.size())
+          {
+            break;
+          }
+          else if (mle_correspondences_next.empty())
+          {
+            estimate_success = false;
+            break;
+          }
+          else
+          {
+            mle_correspondences.swap(mle_correspondences_next);
+            mle_inlier_indices.swap(mle_inlier_indices_next);
+          }
+        }
+        else
+        {
+          break;
+        }
+      }
+
+      if (estimate_success)
+      {
+        for (size_t i = 0; i < mle_inlier_indices.size(); i++)
+        {
+          size_t track_id =
+            key_track_map[mle_inlier_indices[i]];
+          ViewInfo& view_info =
+            view_info_indexer.GetViewInfoByTrackImage(track_id, image_id);
+          view_info.is_blunder = false;
+        }
         new_extrinsic_params_set.push_back(new_extrinsic_params);
         new_image_ids.push_back(image_id);
       }

@@ -45,6 +45,9 @@ private:
   typedef typename Initializor::HomogeneousKeyContainer
           HomogeneousKeyContainer;
   typedef hs::sfm::CameraFunctions<Scalar> Camera;
+  typedef typename VectorFunction::ExtrinsicParams ExtrinsicParams;
+  typedef typename ExtrinsicParams::Rotation Rotation;
+  typedef typename ExtrinsicParams::Position Position;
 
 public:
   Err operator()(const VectorFunction& vector_function,
@@ -57,7 +60,7 @@ public:
     const ExtrinsicParamsContainer& extrins =
       vector_function.extrinsic_params_set();
     Index number_of_views = intrins.size();
-    if (number_of_views != extrins.size())
+    if (number_of_views != extrins.size() || number_of_views < 2)
     {
       return -1;
     }

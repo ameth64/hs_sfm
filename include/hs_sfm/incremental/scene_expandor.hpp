@@ -13,7 +13,7 @@
 #include "hs_sfm/incremental/point_expandor.hpp"
 #include "hs_sfm/incremental/bundle_adjustment_optimizor.hpp"
 
-#define DEBUG_TMP 0
+#define DEBUG_TMP 1
 #if DEBUG_TMP
 #include <sstream>
 #include <fstream>
@@ -275,12 +275,6 @@ public:
         extrinsic_params_set.push_back(new_extrinsic_params_set[i]);
         image_extrinsic_map[new_image_ids[i]] = extrinsic_params_set.size() - 1;
       }
-#if DEBUG_TMP
-      std::cout<<new_image_ids.size()
-               <<" images added(Total: "<<extrinsic_params_set.size()<<").\n";
-      end = std::chrono::system_clock::now();
-      elapsed_seconds = end - start;
-      total_image_expansion_time += elapsed_seconds.count();
 
       if (bundle_adjustment_optimizor(image_keysets,
                                       image_intrinsic_map,
@@ -294,6 +288,13 @@ public:
       {
         break;
       }
+
+#if DEBUG_TMP
+      std::cout<<new_image_ids.size()
+               <<" images added(Total: "<<extrinsic_params_set.size()<<").\n";
+      end = std::chrono::system_clock::now();
+      elapsed_seconds = end - start;
+      total_image_expansion_time += elapsed_seconds.count();
 
       start = std::chrono::system_clock::now();
       size_t number_of_points_before_adding = points.size();

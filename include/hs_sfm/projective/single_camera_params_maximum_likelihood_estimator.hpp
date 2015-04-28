@@ -58,6 +58,11 @@ public:
                   Scalar principal_point_x_stddev,
                   Scalar principal_point_y_stddev,
                   Scalar pixel_ratio_stddev,
+                  Scalar k1_stddev,
+                  Scalar k2_stddev,
+                  Scalar k3_stddev,
+                  Scalar d1_stddev,
+                  Scalar d2_stddev,
                   IntrinsicParams& intrinsic_params_estimate,
                   ExtrinsicParams& extrinsic_params_estimate) const
   {
@@ -84,6 +89,11 @@ public:
                           principal_point_x_stddev,
                           principal_point_y_stddev,
                           pixel_ratio_stddev,
+                          k1_stddev,
+                          k2_stddev,
+                          k3_stddev,
+                          d1_stddev,
+                          d2_stddev,
                           number_of_correspondences,
                           y_covariance_inverse);
 
@@ -94,7 +104,7 @@ public:
     GetNearYVector(correspondences, intrinsic_params_initial, near_y);
 
     XVector initial_x;
-    GetInitialXVector(intrinsic_params_initial, R, t, initial_x);
+    GetInitialXVector(K, R, t, initial_x);
 
     //Optimizor optimizor(initial_x, 50, 1e-3, 1e-9, 1e-9);
     Optimizor optimizor(initial_x);
@@ -187,6 +197,11 @@ private:
                              Scalar principal_point_x_stddev,
                              Scalar principal_point_y_stddev,
                              Scalar pixel_ratio_stddev,
+                             Scalar k1_stddev,
+                             Scalar k2_stddev,
+                             Scalar k3_stddev,
+                             Scalar d1_stddev,
+                             Scalar d2_stddev,
                              size_t number_of_correspondences,
                              YCovarianceInverse& y_covariance_inverse) const
   {
@@ -206,6 +221,16 @@ private:
       principal_point_y_stddev;
     y_covariance_inverse.pixel_ratio_stddev =
       pixel_ratio_stddev;
+    y_covariance_inverse.k1_stddev =
+      k1_stddev;
+    y_covariance_inverse.k2_stddev =
+      k2_stddev;
+    y_covariance_inverse.k3_stddev =
+      k3_stddev;
+    y_covariance_inverse.d1_stddev =
+      d1_stddev;
+    y_covariance_inverse.d2_stddev =
+      d2_stddev;
   }
 
   void GetVectorFunction(const CorrespondenceContainer& correspondences,
@@ -224,7 +249,7 @@ private:
                       YVector& near_y) const
   {
     Index number_of_keys = Index(correspondences.size());
-    near_y.resize(number_of_keys * 2 + 5);
+    near_y.resize(number_of_keys * 2 + 10);
     for (Index i = 0; i < number_of_keys; i++)
     {
       near_y.segment(i * 2, 2) = correspondences[i].first;
@@ -239,6 +264,16 @@ private:
       intrinsic_params_initial.principal_point_y();
     near_y[number_of_keys * 2 + 4] =
       intrinsic_params_initial.pixel_ratio();
+    near_y[number_of_keys * 2 + 5] =
+      intrinsic_params_initial.k1();
+    near_y[number_of_keys * 2 + 6] =
+      intrinsic_params_initial.k2();
+    near_y[number_of_keys * 2 + 7] =
+      intrinsic_params_initial.k3();
+    near_y[number_of_keys * 2 + 8] =
+      intrinsic_params_initial.d1();
+    near_y[number_of_keys * 2 + 9] =
+      intrinsic_params_initial.d2();
   }
 
   void GetInitialXVector(const Matrix33& K,
@@ -246,7 +281,7 @@ private:
                          const Vector3& t,
                          XVector& initial_x) const
   {
-    initial_x.resize(11);
+    initial_x.resize(16);
     Rotation rotation = R;
     initial_x[0] = rotation[0];
     initial_x[1] = rotation[1];
@@ -259,6 +294,11 @@ private:
     initial_x[8] = K(0, 2);
     initial_x[9] = K(1, 2);
     initial_x[10] = K(1, 1) / K(0, 0);
+    initial_x[11] = Scalar(0);
+    initial_x[12] = Scalar(0);
+    initial_x[13] = Scalar(0);
+    initial_x[14] = Scalar(0);
+    initial_x[15] = Scalar(0);
   }
 
   void GetInitialXVector(const IntrinsicParams& intrinsic_params_initial,
@@ -266,7 +306,7 @@ private:
                          const Vector3& t,
                          XVector& initial_x) const
   {
-    initial_x.resize(11);
+    initial_x.resize(16);
     Rotation rotation = R;
     initial_x[0] = rotation[0];
     initial_x[1] = rotation[1];
@@ -279,6 +319,11 @@ private:
     initial_x[8] = intrinsic_params_initial.principal_point_x();
     initial_x[9] = intrinsic_params_initial.principal_point_y();
     initial_x[10] = intrinsic_params_initial.pixel_ratio();
+    initial_x[11] = intrinsic_params_initial.k1();
+    initial_x[12] = intrinsic_params_initial.k2();
+    initial_x[13] = intrinsic_params_initial.k3();
+    initial_x[14] = intrinsic_params_initial.d1();
+    initial_x[15] = intrinsic_params_initial.d2();
   }
 
   void GetIntrinsicAndExtrinsicParamsFromXVector(
@@ -298,6 +343,11 @@ private:
     intrinsic_params_estimate.set_principal_point_x(x[8]);
     intrinsic_params_estimate.set_principal_point_y(x[9]);
     intrinsic_params_estimate.set_pixel_ratio(x[10]);
+    intrinsic_params_estimate.set_k1(x[11]);
+    intrinsic_params_estimate.set_k2(x[12]);
+    intrinsic_params_estimate.set_k3(x[13]);
+    intrinsic_params_estimate.set_d1(x[14]);
+    intrinsic_params_estimate.set_d2(x[15]);
   }
 
 };

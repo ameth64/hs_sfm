@@ -3,6 +3,9 @@
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
+#include "hs_sfm/sfm_utility/projective_functions.hpp"
+#include "hs_sfm/sfm_utility/camera_type.hpp"
+
 namespace hs
 {
 namespace sfm
@@ -25,6 +28,10 @@ public:
 private:
   typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
+  typedef hs::sfm::ProjectiveFunctions<Scalar> ProjectiveFunctionsType;
+  typedef typename ProjectiveFunctionsType::IntrinsicParams IntrinsicParams;
+  typedef typename ProjectiveFunctionsType::ExtrinsicParams ExtrinsicParams;
+  typedef typename ProjectiveFunctionsType::Key Key;
 
 public:
   Err operator() (const XVector& x, YVector& y) const
@@ -32,51 +39,36 @@ public:
     Index y_size = GetYSize();
     y.resize(y_size);
     Index number_of_points = Index(points_.size());
-    Vector3 rotation  = x.template segment<3>(0);
-    Vector3 translate =  x.template segment<3>(3);
-    Matrix33 K;
-    K << x[6], x[7], x[8],
-         0, x[6] * x[10], x[9],
-         0, 0, 1;
-    Scalar theta = rotation.norm();
-    if (theta != Scalar(0))
-    {
-      rotation /= theta;
-    }
+    IntrinsicParams intrinsic_params(x[6], x[7], x[8], x[9], x[10],
+                                     x[11], x[12], x[13], x[14], x[15]);
+    ExtrinsicParams extrinsic_params;
+    extrinsic_params.rotation()[0] = x[0];
+    extrinsic_params.rotation()[1] = x[1];
+    extrinsic_params.rotation()[2] = x[2];
+    extrinsic_params.position()[0] = x[3];
+    extrinsic_params.position()[1] = x[4];
+    extrinsic_params.position()[2] = x[5];
     for (Index i = 0; i < number_of_points; i++)
     {
       const Vector3& point = points_[i];
-      Vector3 key_homogeneous;
-      if (theta == Scalar(0))
-      {
-        key_homogeneous = K * (point + translate);
-      }
-      else
-      {
-        key_homogeneous =
-          cos(theta) * point +
-          sin(theta) * rotation.cross(point) +
-          (1 - cos(theta)) * point.dot(rotation) * rotation +
-          translate;
-        key_homogeneous = K * key_homogeneous;
-      }
-      key_homogeneous /= key_homogeneous[2];
-      y.template segment<2>(i * 2) = key_homogeneous.template segment<2>(0);
+      Key key = ProjectiveFunctionsType::WorldPointProjectToImageKey(
+                  intrinsic_params, extrinsic_params, point);
+      y.template segment<2>(i * 2) = key;
     }
 
-    y.template segment<5>(2 * number_of_points) = x.template segment<5>(6);
+    y.template segment<10>(2 * number_of_points) = x.template segment<10>(6);
 
     return 0;
   }
 
   Index GetXSize() const
   {
-    return 11;
+    return 16;
   }
 
   Index GetYSize() const
   {
-    return Index(points_.size() * 2 + 5);
+    return Index(points_.size() * 2 + 10);
   }
 
   const Point3DContainer&  points() const
