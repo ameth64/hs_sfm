@@ -1,5 +1,5 @@
-﻿#ifndef _HS_SFM_INCREMENTAL_IMAGE_EXPANDOR_HPP_
-#define _HS_SFM_INCREMENTAL_IMAGE_EXPANDOR_HPP_
+﻿#ifndef _HS_SFM_SFM_PIPELINE_IMAGE_EXPANDOR_HPP_
+#define _HS_SFM_SFM_PIPELINE_IMAGE_EXPANDOR_HPP_
 
 #include <map>
 #include <algorithm>
@@ -20,7 +20,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>

@@ -1,5 +1,5 @@
-﻿#ifndef _HS_SFM_INCREMENTAL_BUNDLE_ADJUSTMENT_OPTIMIZOR_HPP_
-#define _HS_SFM_INCREMENTAL_BUNDLE_ADJUSTMENT_OPTIMIZOR_HPP_
+﻿#ifndef _HS_SFM_SFM_PIPELINE_BUNDLE_ADJUSTMENT_OPTIMIZOR_HPP_
+#define _HS_SFM_SFM_PIPELINE_BUNDLE_ADJUSTMENT_OPTIMIZOR_HPP_
 
 #include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/camera_type.hpp"
@@ -9,14 +9,14 @@
 
 #define TMP_DEBUG 1
 #if TMP_DEBUG
-#include "hs_sfm/incremental/reprojective_error_calculator.hpp"
+#include "hs_sfm/sfm_pipeline/reprojective_error_calculator.hpp"
 #endif
 
 namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>

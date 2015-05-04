@@ -1,5 +1,5 @@
-﻿#ifndef _HS_SFM_INCREMENTAL_SCENE_EXPANDOR_HPP_
-#define _HS_SFM_INCREMENTAL_SCENE_EXPANDOR_HPP_
+﻿#ifndef _HS_SFM_SFM_PIPELINE_SCENE_EXPANDOR_HPP_
+#define _HS_SFM_SFM_PIPELINE_SCENE_EXPANDOR_HPP_
 
 #include <vector>
 #include <map>
@@ -9,16 +9,16 @@
 #include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
-#include "hs_sfm/incremental/image_expandor.hpp"
-#include "hs_sfm/incremental/point_expandor.hpp"
-#include "hs_sfm/incremental/bundle_adjustment_optimizor.hpp"
+#include "hs_sfm/sfm_pipeline/image_expandor.hpp"
+#include "hs_sfm/sfm_pipeline/point_expandor.hpp"
+#include "hs_sfm/sfm_pipeline/bundle_adjustment_optimizor.hpp"
 
 #define DEBUG_TMP 1
 #if DEBUG_TMP
 #include <sstream>
 #include <fstream>
 #include <iomanip>
-#include "hs_sfm/incremental/reprojective_error_calculator.hpp"
+#include "hs_sfm/sfm_pipeline/reprojective_error_calculator.hpp"
 #include "hs_sfm/sfm_file_io/scene_ply_saver.hpp"
 #include "hs_sfm/sfm_utility/debug_tmp.hpp"
 #include "hs_sfm/sfm_utility/similar_transform_estimator.hpp"
@@ -28,7 +28,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>

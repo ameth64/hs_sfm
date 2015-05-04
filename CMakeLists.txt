@@ -99,49 +99,47 @@ hslib_add_dep(${TRIANGULATE_NAME}_utest
 hslib_add_mkl_dep(${TRIANGULATE_NAME}_utest)
 hslib_post_build(${TRIANGULATE_NAME}_utest)
 
-#incremental
-set(INCREMENTAL_NAME "incremental")
-set(INCREMENTAL_SOURCES
+#pipeline
+set(PIPELINE_NAME "sfm_pipeline")
+set(PIPELINE_SOURCES
   )
-hslib_add_library(${INCREMENTAL_NAME} ${HSPRJ_NAME} ${INCREMENTAL_SOURCES})
+hslib_add_library(${PIPELINE_NAME} ${HSPRJ_NAME} ${PIPELINE_SOURCES})
 
-set(INCREMENTAL_UTEST_SOURCES
+set(PIPELINE_UTEST_SOURCES
   "unit_test/test_main.cpp"
-  "unit_test/incremental/test_incremental.cpp"
-  #"unit_test/incremental/test_scene_expandor.cpp"
-  #"unit_test/incremental/test_bundle_adjustment_gcp_constrained_optimizor.cpp"
-  #"unit_test/incremental/test_scene_expandor_gcp_constrained.cpp"
+  "unit_test/sfm_pipeline/test_incremental_sfm.cpp"
+  "unit_test/sfm_pipeline/test_global_sfm.cpp"
   )
 if (MSVC)
   set_source_files_properties(
-    "unit_test/incremental/test_incremental.cpp"
+    "unit_test/sfm_pipeline/test_pipeline.cpp"
     PROPERTIES COMPILE_FLAGS "/bigobj")
 endif()
-hslib_add_utest(${INCREMENTAL_NAME} SOURCES ${INCREMENTAL_UTEST_SOURCES})
+hslib_add_utest(${PIPELINE_NAME} SOURCES ${PIPELINE_UTEST_SOURCES})
 add_definitions(-DBOOST_ALL_NO_LIB)
-hslib_add_dep(${INCREMENTAL_NAME}_utest
+hslib_add_dep(${PIPELINE_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   3RDPARTY_DEPS ceres DEP_LIBS ceres
   3RDPARTY_DEPS boost DEP_LIBS boost_filesystem boost_system
-  3RDPARTY_DEPS tiff DEP_LIBS tiff
-  3RDPARTY_DEPS jpeg DEP_LIBS jpeg
-  3RDPARTY_DEPS png DEP_LIBS png
-  3RDPARTY_DEPS z DEP_LIBS z
-  3RDPARTY_DEPS opencv
-    DEP_LIBS opencv_calib3d
-             opencv_core
-             opencv_cudaarithm
-             opencv_imgproc
-             opencv_features2d
-             opencv_highgui
-             opencv_flann
-             opencv_nonfree
+  #3RDPARTY_DEPS tiff DEP_LIBS tiff
+  #3RDPARTY_DEPS jpeg_turbo DEP_LIBS jpeg_turbo
+  #3RDPARTY_DEPS png DEP_LIBS png
+  #3RDPARTY_DEPS z DEP_LIBS z
+  #3RDPARTY_DEPS opencv
+  #  DEP_LIBS opencv_calib3d
+  #           opencv_core
+  #           opencv_cudaarithm
+  #           opencv_imgproc
+  #           opencv_features2d
+  #           opencv_highgui
+  #           opencv_flann
+  #           opencv_nonfree
   HS_DEPS hs_math HEADONLY
-  HS_DEPS hs_image_io DEP_LIBS whole_io
+  #HS_DEPS hs_image_io DEP_LIBS whole_io
   HS_DEPS hs_progress DEP_LIBS progress_utility
   HS_DEPS hs_test_utility DEP_LIBS test_env)
-hslib_add_mkl_dep(${INCREMENTAL_NAME}_utest)
-hslib_post_build(${INCREMENTAL_NAME}_utest)
+hslib_add_mkl_dep(${PIPELINE_NAME}_utest)
+hslib_post_build(${PIPELINE_NAME}_utest)
 
 #essential
 set(ESSENTIAL_NAME "essential")
@@ -285,19 +283,3 @@ hslib_add_dep(${CALIBRATE_NAME}_utest
   HS_DEPS hs_math HEADONLY
   )
 hslib_post_build(${CALIBRATE_NAME}_utest)
-
-#sfm global
-set(GLOBAL_NAME "sfm_global")
-set(GLOBAL_SOURCES
-  )
-hslib_add_library(${GLOBAL_NAME} ${HSPRJ_NAME} ${GLOBAL_SOURCES})
-
-set(GLOBAL_UTEST_SOURCES
-  "unit_test/test_main.cpp"
-  "unit_test/sfm_global/test_global_position_average.cpp"
-  "unit_test/sfm_global/test_global_rotation_average.cpp"
-  "unit_test/sfm_global/test_global_sfm.cpp"
-  )
-hslib_add_utest(${GLOBAL_NAME} SOURCES ${GLOBAL_UTEST_SOURCES})
-hslib_post_build(${GLOBAL_NAME}_utest)
-

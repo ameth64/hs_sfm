@@ -1,5 +1,5 @@
-﻿#ifndef _HS_SFM_INCREMENTAL_INCREMENTAL_HPP_
-#define _HS_SFM_INCREMENTAL_INCREMENTAL_HPP_
+﻿#ifndef _HS_SFM_SFM_PIPELINE_INCREMENTAL_HPP_
+#define _HS_SFM_SFM_PIPELINE_INCREMENTAL_HPP_
 
 #include <map>
 #include <limits>
@@ -12,8 +12,8 @@
 #include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
 #include "hs_sfm/sfm_utility/matches_tracks_convertor.hpp"
-#include "hs_sfm/incremental/best_pair_selector.hpp"
-#include "hs_sfm/incremental/scene_expandor.hpp"
+#include "hs_sfm/sfm_pipeline/best_pair_selector.hpp"
+#include "hs_sfm/sfm_pipeline/scene_expandor.hpp"
 
 #define DEBUG_TMP 1
 #if DEBUG_TMP
@@ -24,7 +24,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>

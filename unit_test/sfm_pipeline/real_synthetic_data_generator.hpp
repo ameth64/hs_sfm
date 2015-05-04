@@ -1,5 +1,5 @@
-#ifndef _HS_SFM_UNIT_TEST_INCREMENTAL_REAL_SYNTHETIC_DATA_GENERATOR_HPP_
-#define _HS_SFM_UNIT_TEST_INCREMENTAL_REAL_SYNTHETIC_DATA_GENERATOR_HPP_
+﻿#ifndef _HS_SFM_UNIT_TEST_SFM_PIPELINE_REAL_SYNTHETIC_DATA_GENERATOR_HPP_
+#define _HS_SFM_UNIT_TEST_SFM_PIPELINE_REAL_SYNTHETIC_DATA_GENERATOR_HPP_
 
 #include <string>
 #include <fstream>
@@ -20,7 +20,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>
@@ -57,6 +57,7 @@ public:
                const IntrinsicParamsContainer& intrinsic_params_set_true,
                const std::vector<size_t>& image_intrinsic_map,
                ImageDimension image_width, ImageDimension image_height,
+               hs::sfm::TrackContainer& tracks,
                hs::sfm::MatchContainer& matches,
                PointContainer& points_absolute_true,
                ExtrinsicParamsContainer& extrinsic_params_set_absolute_true,
@@ -78,6 +79,7 @@ public:
                                   extrinsic_params_set_absolute_true,
                                   points_absolute_true,
                                   keysets_true,
+                                  tracks,
                                   matches);
       if (result != 0) break;
 
@@ -151,6 +153,7 @@ private:
     ExtrinsicParamsContainer& extrinsic_params_set_absolute_true,
     PointContainer& points_absolute_true,
     KeysetContainer& keysets_true,
+    hs::sfm::TrackContainer& tracks,
     hs::sfm::MatchContainer& matches) const
   {
     std::ifstream bundler_out_file(bundler_out_path);
@@ -203,8 +206,8 @@ private:
         extrinsic_params_set_absolute_true.size() - 1;
     }
 
-    hs::sfm::TrackContainer tracks;
     keysets_true.resize(extrinsic_params_set_absolute_true.size());
+    tracks.clear();
     for (size_t point_id = 0; point_id < number_of_points; point_id++)
     {
       GETLINE;

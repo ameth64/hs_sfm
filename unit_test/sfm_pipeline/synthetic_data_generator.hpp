@@ -1,5 +1,5 @@
-﻿#ifndef _HS_SFM_UNIT_TEST_INCREMENTAL_SYNTHETIC_DATA_GENERATOR_HPP_
-#define _HS_SFM_UNIT_TEST_INCREMENTAL_SYNTHETIC_DATA_GENERATOR_HPP_
+﻿#ifndef _HS_SFM_UNIT_TEST_SFM_PIPELINE_SYNTHETIC_DATA_GENERATOR_HPP_
+#define _HS_SFM_UNIT_TEST_SFM_PIPELINE_SYNTHETIC_DATA_GENERATOR_HPP_
 
 #include <string>
 
@@ -11,6 +11,7 @@
 //#include "hs_sfm/synthetic/relative_generator.hpp"
 #include "hs_sfm/synthetic/multiple_flight_generator.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
+#include "hs_sfm/sfm_utility/matches_tracks_convertor.hpp"
 #if 1
 #include "hs_sfm/sfm_file_io/scene_ply_saver.hpp"
 #endif
@@ -19,7 +20,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>

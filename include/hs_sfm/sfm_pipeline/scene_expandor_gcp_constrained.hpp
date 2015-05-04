@@ -1,8 +1,8 @@
-#ifndef _HS_SFM_INCREMENTAL_SCENE_EXPANDOR_GCP_CONSTRAINED_HPP_
-#define _HS_SFM_INCREMENTAL_SCENE_EXPANDOR_GCP_CONSTRAINED_HPP_
+#ifndef _HS_SFM_SFM_PIPELINE_SCENE_EXPANDOR_GCP_CONSTRAINED_HPP_
+#define _HS_SFM_SFM_PIPELINE_SCENE_EXPANDOR_GCP_CONSTRAINED_HPP_
 
 #include "hs_sfm/sfm_utility/similar_transform_estimator.hpp"
-#include "hs_sfm/incremental/scene_expandor.hpp"
+#include "hs_sfm/sfm_pipeline/scene_expandor.hpp"
 #include "hs_sfm/bundle_adjustment/ba_gcp_constrained_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/ba_gcp_constrained_levenberg_marquardt_optimizor.hpp"
 
@@ -10,7 +10,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>

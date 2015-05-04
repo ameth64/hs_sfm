@@ -1,5 +1,5 @@
-﻿#ifndef _HS_SFM_INCREMENTAL_BEST_PAIR_SELECTOR_HPP_
-#define _HS_SFM_INCREMENTAL_BEST_PAIR_SELECTOR_HPP_
+﻿#ifndef _HS_SFM_SFM_PIPELINE_BEST_PAIR_SELECTOR_HPP_
+#define _HS_SFM_SFM_PIPELINE_BEST_PAIR_SELECTOR_HPP_
 
 #include <map>
 #include <limits>
@@ -21,7 +21,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 /**

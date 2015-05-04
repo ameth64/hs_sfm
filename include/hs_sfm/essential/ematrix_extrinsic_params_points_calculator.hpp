@@ -2,6 +2,9 @@
 #define _HS_SFM_ESSENTIAL_EMATRIX_EXTRINSIC_PARAMS_POINTS_CALCULATOR_HPP_
 
 #include <utility>
+#include <vector>
+
+#include <boost/random.hpp>
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/triangulate/multiple_view_vector_function.hpp"
@@ -100,6 +103,109 @@ public:
     }
 
     return -1;
+  }
+
+  Err operator() (const EMatrix& e_matrix,
+                  const HKeyPairContainer& key_pairs,
+                  size_t sample_size,
+                  size_t number_of_samples,
+                  ExtrinsicParams& extrin_params) const
+  {
+    typedef boost::mt19937 RandomGenerator;
+    typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
+    typedef EIGEN_STD_VECTOR(Matrix33) Matrix33Container;
+
+    Err result = -1;
+    Matrix33 W;
+    W << 0, -1, 0,
+         1, 0, 0,
+         0, 0, 1;
+    Matrix33 WT = W.transpose();
+
+    Eigen::JacobiSVD<EMatrix> svd(e_matrix, Eigen::ComputeFullU |
+      Eigen::ComputeFullV);
+    RMatrix Ra = svd.matrixU() * W * (svd.matrixV().transpose());
+    RMatrix Rb = svd.matrixU() * WT * (svd.matrixV().transpose());
+    Point t = svd.matrixU().col(2);
+    if (Ra.determinant() < 0) Ra *= -1;
+    if (Rb.determinant() < 0) Rb *= -1;
+
+    Matrix33Container solutions_R(4);
+    PointContainer solutions_t(4);
+    solutions_R[0] = Ra;
+    solutions_t[0] = t;
+    solutions_R[1] = Ra;
+    solutions_t[1] = -t;
+    solutions_R[2] = Rb;
+    solutions_t[2] = t;
+    solutions_R[3] = Rb;
+    solutions_t[3] = -t;
+    boost::random::uniform_int_distribution<size_t> 
+      distribution(0, key_pairs.size() - 1);
+    RandomGenerator random_generator;
+    size_t adopted_solution_id = std::numeric_limits<size_t>::max();
+    for (size_t sample_id = 0; sample_id < number_of_samples; sample_id++)
+    {
+      std::vector<size_t> sample_ids(sample_size);
+      HKeyPairContainer key_pairs_sample(sample_size);
+      size_t round = 0;
+      for (size_t id_id = 0; id_id < sample_size; id_id++)
+      {
+        if (round == 1000)
+        {
+          return -1;
+        }
+        size_t id = distribution(random_generator);
+
+        bool is_picked = false;
+        for (size_t i = 0; i < id_id; i++)
+        {
+          if (sample_ids[i] == id)
+          {
+            is_picked = true;
+            break;
+          }
+        }
+        if (is_picked)
+        {
+          round++;
+          id_id--;
+          continue;
+        }
+        sample_ids[id_id] = id;
+        key_pairs_sample[id_id] = key_pairs[id];
+      }
+
+      for (size_t solution_id = 0; solution_id < 4; solution_id++)
+      {
+        PointContainer points_sample;
+        if (TriangulatePoints(key_pairs_sample,
+                              solutions_R[solution_id],
+                              solutions_t[solution_id],
+                              points_sample) != 0)
+        {
+          return -1;
+        }
+
+        if (IsValidPoints(solutions_R[solution_id],
+                          solutions_t[solution_id],
+                          points_sample) == 0)
+        {
+          if (solution_id != adopted_solution_id &&
+              adopted_solution_id != std::numeric_limits<size_t>::max())
+          {
+            return -1;
+          }
+          adopted_solution_id = solution_id;
+        }
+      }
+    }
+
+    extrin_params.rotation() = solutions_R[adopted_solution_id];
+    extrin_params.position() = -solutions_R[adopted_solution_id].transpose() *
+                                solutions_t[adopted_solution_id];
+
+    return 0;
   }
 
 private:

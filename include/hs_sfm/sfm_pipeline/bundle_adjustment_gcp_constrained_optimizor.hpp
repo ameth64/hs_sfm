@@ -1,5 +1,5 @@
-#ifndef _HS_SFM_INCREMENTAL_BUNDLE_ADJUSTMENT_GCP_CONSTRAINED_OPTIMIZOR_HPP_
-#define _HS_SFM_INCREMENTAL_BUNDLE_ADJUSTMENT_GCP_CONSTRAINED_OPTIMIZOR_HPP_
+#ifndef _HS_SFM_SFM_PIPELINE_BUNDLE_ADJUSTMENT_GCP_CONSTRAINED_OPTIMIZOR_HPP_
+#define _HS_SFM_SFM_PIPELINE_BUNDLE_ADJUSTMENT_GCP_CONSTRAINED_OPTIMIZOR_HPP_
 
 #include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/camera_type.hpp"
@@ -17,7 +17,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>

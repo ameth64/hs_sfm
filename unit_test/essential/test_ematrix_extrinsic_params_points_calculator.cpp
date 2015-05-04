@@ -184,6 +184,14 @@ public:
       return -1;
     }
 
+    ExtrinsicParams extrinsic_params_relative_sample;
+    if (calculator(e_matrix, key_pairs, 20, 10,
+                   extrinsic_params_relative_sample) != 0)
+    {
+      std::cout<<"calculator failed!\n";
+      return -1;
+    }
+
     Scalar threshold = Scalar(1e-7);
     //检查相机外参数
     EIGEN_MATRIX(Scalar, 3, 3) rmatrix_relative_estimated =
@@ -202,20 +210,37 @@ public:
       return -1;
     }
 
-    //检查三维点
-    size_t number_of_points = points_relative.size();
-    for (size_t i = 0; i < number_of_points; i++)
+    EIGEN_MATRIX(Scalar, 3, 3) rmatrix_relative_estimated_sample =
+      extrinsic_params_relative_sample.rotation();
+    if (!rmatrix_relative_estimated_sample.isApprox(
+          rotation_relative, threshold))
     {
-      Point3D point_absolute = points_relative[i];
-      point_absolute = rotation * point_absolute;
-      point_absolute = scale * point_absolute + translate;
-      if (!points_absolute[i].isApprox(point_absolute, threshold))
-      {
-        std::cout<<"point_absolute:\n"<<point_absolute<<"\n";
-        std::cout<<"points_absolute[i]:\n"<<points_absolute[i]<<"\n";
-        return -1;
-      }
+      std::cout<<"rotation_relative:"<<rotation_relative<<"\n";
+      return -1;
     }
+    if (!extrinsic_params_relative.position().isApprox(position_relative,
+      threshold))
+    {
+      std::cout<<"position_relative:\n"<<position_relative<<"\n";
+      std::cout<<"extrinsic_params_relative.position():\n"
+               <<extrinsic_params_relative.position()<<"\n";
+      return -1;
+    }
+
+    //检查三维点
+    //size_t number_of_points = points_relative.size();
+    //for (size_t i = 0; i < number_of_points; i++)
+    //{
+    //  Point3D point_absolute = points_relative[i];
+    //  point_absolute = rotation * point_absolute;
+    //  point_absolute = scale * point_absolute + translate;
+    //  if (!points_absolute[i].isApprox(point_absolute, threshold))
+    //  {
+    //    std::cout<<"point_absolute:\n"<<point_absolute<<"\n";
+    //    std::cout<<"points_absolute[i]:\n"<<points_absolute[i]<<"\n";
+    //    return -1;
+    //  }
+    //}
 
     return 0;
   }

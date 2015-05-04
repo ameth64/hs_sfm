@@ -1,5 +1,5 @@
-﻿#ifndef _HS_SFM_INCREMENTAL_GCP_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
-#define _HS_SFM_INCREMENTAL_GCP_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
+﻿#ifndef _HS_SFM_SFM_PIPELINE_GCP_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
+#define _HS_SFM_SFM_PIPELINE_GCP_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
@@ -7,13 +7,13 @@
 #include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
 #include "hs_sfm/sfm_utility/similar_transform_estimator.hpp"
-#include "hs_sfm/incremental/point_expandor.hpp"
+#include "hs_sfm/sfm_pipeline/point_expandor.hpp"
 
 namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>

@@ -1,5 +1,5 @@
-﻿#ifndef _HS_SFM_UNIT_TEST_INCREMENTAL_REAL_DATA_GENERATOR_HPP_
-#define _HS_SFM_UNIT_TEST_INCREMENTAL_REAL_DATA_GENERATOR_HPP_
+﻿#ifndef _HS_SFM_UNIT_TEST_SFM_PIPELINE_REAL_DATA_GENERATOR_HPP_
+#define _HS_SFM_UNIT_TEST_SFM_PIPELINE_REAL_DATA_GENERATOR_HPP_
 
 #include <string>
 #include <vector>
@@ -20,7 +20,7 @@ namespace hs
 {
 namespace sfm
 {
-namespace incremental
+namespace pipeline
 {
 
 template <typename _Scalar>
@@ -316,10 +316,10 @@ public:
                            MatchContainer& matches_filtered)
   {
     typedef hs::sfm::fundamental::Linear8PointsRansacRefiner<Scalar> Refiner;
-    typedef Refiner::Key Key;
-    typedef Refiner::KeyPair RefinerKeyPair;
-    typedef Refiner::KeyPairContainer RefinerKeyPairContainer;
-    typedef Refiner::IndexSet IndexSet;
+    typedef typename Refiner::Key Key;
+    typedef typename Refiner::KeyPair RefinerKeyPair;
+    typedef typename Refiner::KeyPairContainer RefinerKeyPairContainer;
+    typedef typename Refiner::IndexSet IndexSet;
 
     auto itr_key_pairs = matches_initial.begin();
     auto itr_key_pairs_end = matches_initial.end();
