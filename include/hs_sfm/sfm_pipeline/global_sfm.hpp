@@ -1,6 +1,8 @@
 ﻿#ifndef _HS_SFM_SFM_PIPELINE_GLOBAL_SFM_HPP_
 #define _HS_SFM_SFM_PIPELINE_GLOBAL_SFM_HPP_
 
+#include <algorithm>
+
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 #include "hs_progress/progress_utility/progress_manager.hpp"
 
@@ -14,13 +16,22 @@
 #include "hs_sfm/sfm_pipeline/global_rotation_average.hpp"
 #include "hs_sfm/sfm_pipeline/global_position_average.hpp"
 #include "hs_sfm/sfm_pipeline/point_expandor.hpp"
+//#include "hs_sfm/sfm_pipeline/epipolar_edges_calculator.hpp"
+#include "hs_sfm/sfm_pipeline/epipolar_edges_calculator_openmvg.hpp"
 
-#define TRY_1DSFM 1
+#define DEBUG_TMP 1
+#if DEBUG_TMP
+#include <iostream>
+#endif
+
+#define TRY_1DSFM 0
 #if TRY_1DSFM
 #include <fstream>
 #include <iostream>
 #include <iomanip>
 #include "hs_sfm/sfm_file_io/scene_ply_saver.hpp"
+#include "hs_sfm/sfm_utility/projective_functions.hpp"
+#include "hs_sfm/fundamental/linear_8_points_ransac_refiner.hpp"
 #endif
 
 namespace hs
@@ -48,14 +59,18 @@ public:
 private:
   typedef hs::sfm::pipeline::RotationPair<Scalar> RotationPair;
   typedef hs::sfm::pipeline::PositionPair<Scalar> PositionPair;
+  typedef hs::sfm::pipeline::EpipolarEdge<Scalar> EpipolarEdge;
+  typedef EpipolarEdgesCalculatorOpenMVG<Scalar> EdgesCalculator;
+  typedef typename EdgesCalculator::EpipolarEdgeContainer EpipolarEdgeContainer;
   typedef typename RotationPair::Index Index;
-  struct EpipolarEdge
-  {
-    Index first_id;
-    Index second_id;
-    ExtrinsicParams extrinsic_params_relative;
-  };
-  typedef EIGEN_STD_VECTOR(EpipolarEdge) EpipolarEdgeContainer;
+#if TRY_1DSFM
+  typedef typename Keyset::Key Key;
+  typedef typename EIGEN_VECTOR(Scalar, 3) HKey;
+  typedef hs::sfm::ProjectiveFunctions<Scalar> ProjectiveFunctions;
+  typedef hs::sfm::fundamental::Linear8PointsRansacRefiner<Scalar> FRefiner;
+  typedef typename FRefiner::KeyPairContainer FKeyPairContainer;
+  typedef typename FRefiner::KeyPair FKeyPair;
+#endif
 
 public:
   GlobalSFM()
@@ -134,9 +149,14 @@ public:
       {
         EIGEN_MATRIX(Scalar, 3, 3) R =
           itr_edge->extrinsic_params_relative.rotation();
-        const Point& c = itr_edge->extrinsic_params_relative.position();
-        Point t = -R * c;
+        Point c = itr_edge->extrinsic_params_relative.position();
         R.transposeInPlace();
+        R.col(1) *= Scalar(-1);
+        R.col(2) *= Scalar(-1);
+        R.row(1) *= Scalar(-1);
+        R.row(2) *= Scalar(-1);
+        c[1] *= Scalar(-1);
+        c[2] *= Scalar(-1);
         eg_file<<itr_edge->first_id<<" "<<itr_edge->second_id<<" "
                <<R(0, 0)<<" "<<R(0, 1)<<" "<<R(0, 2)<<" "
                <<R(1, 0)<<" "<<R(1, 1)<<" "<<R(1, 2)<<" "
@@ -255,7 +275,7 @@ public:
       typedef hs::sfm::fileio::ScenePLYSaver<Scalar, size_t> SceneSaver;
       typedef typename SceneSaver::Image Image;
       typedef typename SceneSaver::ImageContainer ImageContainer;
-      SceneSaver scene_saver(0.5);
+      SceneSaver scene_saver(0.1);
       size_t number_of_images = image_intrinsic_map.Size();
       IntrinsicParamsContainer intrinsic_params_set_saver(number_of_images);
       ExtrinsicParamsContainer extrinsic_params_set_saver(number_of_images);
@@ -284,6 +304,22 @@ public:
                   points);
 
 #endif
+
+      image_extrinsic_map.Resize(image_intrinsic_map.Size());
+      result = RotationAverage(matches,
+                               epipolar_edges,
+                               image_extrinsic_map,
+                               extrinsic_params_set);
+      if (result != 0) break;
+
+      result = TranslateAverage(keysets,
+                                image_intrinsic_map,
+                                intrinsic_params_set,
+                                matches,
+                                epipolar_edges,
+                                image_extrinsic_map,
+                                extrinsic_params_set);
+      if (result != 0) break;
 
       result = TriangluatePoints(keysets,
                                  intrinsic_params_set,
@@ -324,81 +360,240 @@ private:
                            const IntrinsicParamsContainer& intrinsic_params_set,
                            EpipolarEdgeContainer& epipolar_edges) const
   {
-    typedef hs::sfm::essential::EMatrix5PointsRansacRefiner<Scalar>
-            EMatrixRansacRefiner;
-    typedef hs::sfm::essential::EMatrix5PointsCalculator<Scalar>
-            EMatrixCalculator;
-    typedef hs::sfm::essential::EMatrixExtrinsicParamsPointsCalculator<Scalar>
-            ExtrinsicParamsPointsCalculator;
-    typedef typename ExtrinsicParamsPointsCalculator::HKeyPair HKeyPair;
-    typedef typename ExtrinsicParamsPointsCalculator::HKeyPairContainer
-                     HKeyPairContainer;
-    typedef typename ExtrinsicParamsPointsCalculator::EMatrix EMatrix;
-    typedef typename IntrinsicParams::KMatrix KMatrix;
-    typedef typename EMatrixRansacRefiner::IndexSet IndexSet;
+    EdgesCalculator calculator;
 
-    EMatrixRansacRefiner ransac_refiner;
-    ExtrinsicParamsPointsCalculator extrinsic_params_calculator;
-    auto itr_image_pair = matches.begin();
-    auto itr_image_pair_end = matches.end();
-    for (; itr_image_pair != itr_image_pair_end; ++itr_image_pair)
+    return calculator(image_intrinsic_map,
+                      matches,
+                      keysets,
+                      intrinsic_params_set,
+                      epipolar_edges);
+  }
+
+  Err RotationAverage(const hs::sfm::MatchContainer& matches,
+                      const EpipolarEdgeContainer& epipolar_edges,
+                      hs::sfm::ObjectIndexMap& image_extrinsic_map,
+                      ExtrinsicParamsContainer& extrinsic_params_set) const
+  {
+    typedef GlobalRotationAverage<Scalar> RotationAverage;
+    typedef typename RotationAverage::RotationPairContainer
+            RotationPairContainer;
+    typedef typename RotationAverage::IndexContainer IndexContainer;
+    typedef typename RotationAverage::RotationContainer RotationContainer;
+
+#if DEBUG_TMP
+    std::cout<<"RotationAverage Start\n";
+#endif
+
+    RotationPairContainer rotation_pairs(epipolar_edges.size());
+    std::vector<size_t> matches_counts;
+    matches_counts.reserve(epipolar_edges.size());
+    for (size_t i = 0; i < epipolar_edges.size(); i++)
     {
-      HKeyPairContainer key_pairs;
-      size_t image_id_left = itr_image_pair->first.first;
-      size_t image_id_right = itr_image_pair->first.second;
-      size_t intrinsic_id_left = image_intrinsic_map[image_id_left];
-      size_t intrinsic_id_right = image_intrinsic_map[image_id_right];
-      const IntrinsicParams& intrinsic_params_left =
-        intrinsic_params_set[intrinsic_id_left];
-      const IntrinsicParams& intrinsic_params_right =
-        intrinsic_params_set[intrinsic_id_right];
-      KMatrix K_left_inverse = intrinsic_params_left.GetKMatrix().inverse();
-      KMatrix K_right_inverse = intrinsic_params_right.GetKMatrix().inverse();
-      auto itr_key_pair = itr_image_pair->second.begin();
-      auto itr_key_pair_end = itr_image_pair->second.end();
-      for (; itr_key_pair != itr_key_pair_end; ++itr_key_pair)
+      rotation_pairs[i].first_id = epipolar_edges[i].first_id;
+      rotation_pairs[i].second_id = epipolar_edges[i].second_id;
+      rotation_pairs[i].rotation =
+        epipolar_edges[i].extrinsic_params_relative.rotation();
+      auto itr_image_pair =
+        matches.find(std::make_pair(epipolar_edges[i].first_id,
+                                    epipolar_edges[i].second_id));
+      if (itr_image_pair != matches.end())
       {
-        size_t key_left_id = itr_key_pair->first;
-        size_t key_right_id = itr_key_pair->second;
-        HKeyPair key_pair;
-        key_pair.first.segment(0, 2) = keysets[image_id_left][key_left_id];
-        key_pair.first[2] = Scalar(1);
-        key_pair.second.segment(0, 2) = keysets[image_id_right][key_right_id];
-        key_pair.second[2] = Scalar(1);
-        key_pair.first = K_left_inverse * key_pair.first;
-        key_pair.second = K_right_inverse * key_pair.second;
-        key_pairs.push_back(key_pair);
+        matches_counts.push_back(itr_image_pair->second.size());
       }
-
-      EpipolarEdge epipolar_edge;
-      epipolar_edge.first_id = image_id_left;
-      epipolar_edge.second_id = image_id_right;
-      HKeyPairContainer key_pairs_refined;
-      IndexSet inlier_indices;
-      EMatrix e_matrix;
-      if (ransac_refiner(key_pairs, 8/ intrinsic_params_left.focal_length(),
-                         key_pairs_refined, inlier_indices,
-                         e_matrix) != 0) continue;
-
-      PointContainer points_essential;
-      if (extrinsic_params_calculator(
-            e_matrix, key_pairs_refined,
-            epipolar_edge.extrinsic_params_relative,
-            points_essential) != 0) continue;
-
-      epipolar_edges.push_back(epipolar_edge);
     }
 
+#if DEBUG_TMP
+    std::cout<<"epipolar_edges.size():"<<epipolar_edges.size()<<"\n";
+    std::cout<<"Finish fill rotation pairs.\n";
+#endif
+
+    std::partial_sort(matches_counts.begin(),
+                      matches_counts.begin() + matches_counts.size() / 2,
+                      matches_counts.end());
+    size_t median_count = matches_counts[matches_counts.size() / 2 - 1];
+
+#if DEBUG_TMP
+    std::cout<<"median_count:"<<median_count<<"\n";
+#endif
+
+    for (size_t i = 0; i < rotation_pairs.size(); i++)
+    {
+      auto itr_image_pair =
+        matches.find(std::make_pair(epipolar_edges[i].first_id,
+                                    epipolar_edges[i].second_id));
+      if (itr_image_pair != matches.end())
+      {
+        rotation_pairs[i].weight =
+          Scalar(itr_image_pair->second.size()) / Scalar(median_count);
+      }
+      else
+      {
+        rotation_pairs[i].weight = Scalar(1);
+      }
+    }
+
+#if DEBUG_TMP
+    std::cout<<"Finish compute weight.\n";
+#endif
+
+    RotationAverage rotation_average;
+    IndexContainer global_rotation_indices;
+    RotationContainer global_rotations;
+    Err result = rotation_average(rotation_pairs,
+                                  global_rotation_indices,
+                                  global_rotations);
+#if DEBUG_TMP
+    std::cout<<"Finish rotation average.\n";
+#endif
+    if (result != 0) return result;
+
+#if DEBUG_TMP
+    std::cout<<"Copy rotation average output.\n";
+#endif
+
+    for (size_t i = 0; i < global_rotation_indices.size(); i++)
+    {
+      size_t image_id = global_rotation_indices[i];
+      image_extrinsic_map[image_id] = i;
+      ExtrinsicParams extrinsic_params;
+      extrinsic_params.rotation() = global_rotations[i];
+      extrinsic_params_set.push_back(extrinsic_params);
+    }
+
+#if DEBUG_TMP
+    std::cout<<"RotationAverage End\n";
+#endif
     return 0;
   }
 
-  Err RotationAverage() const
+  Err TranslateAverage(const KeysetContainer& keysets,
+                       const hs::sfm::ObjectIndexMap& image_intrinsic_map,
+                       const IntrinsicParamsContainer& intrinsic_params_set,
+                       const hs::sfm::MatchContainer& matches,
+                       const EpipolarEdgeContainer& epipolar_edges,
+                       hs::sfm::ObjectIndexMap& image_extrinsic_map,
+                       ExtrinsicParamsContainer& extrinsic_params_set) const
   {
-    return 0;
-  }
+    typedef GlobalPositionAverage<Scalar> PositionAverage;
+    typedef typename PositionAverage::PositionPairContainer
+            PositionPairContainer;
+    typedef typename PositionAverage::IndexContainer IndexContainer;
+    typedef typename PositionAverage::PositionContainer PositionContainer;
+    typedef typename PositionAverage::RotationContainer RotationContainer;
 
-  Err TranslateAverage() const
-  {
+#if DEBUG_TMP
+    std::cout<<"TranslateAverage Start\n";
+#endif
+
+    PositionPairContainer position_pairs;
+    std::vector<size_t> matches_counts;
+    for (size_t i = 0; i < epipolar_edges.size(); i++)
+    {
+      if (image_extrinsic_map.IsValid(epipolar_edges[i].first_id) &&
+          image_extrinsic_map.IsValid(epipolar_edges[i].second_id))
+      {
+        PositionPair position_pair;
+        position_pair.first_id = epipolar_edges[i].first_id;
+        position_pair.second_id = epipolar_edges[i].second_id;
+        position_pair.position =
+          epipolar_edges[i].extrinsic_params_relative.position();
+        auto itr_image_pair =
+          matches.find(std::make_pair(epipolar_edges[i].first_id,
+                                      epipolar_edges[i].second_id));
+        if (itr_image_pair != matches.end())
+        {
+          matches_counts.push_back(itr_image_pair->second.size());
+        }
+      }
+    }
+
+#if DEBUG_TMP
+    std::cout<<"Finish fill position pairs.\n";
+#endif
+
+    std::partial_sort(matches_counts.begin(),
+                      matches_counts.begin() + matches_counts.size() / 2,
+                      matches_counts.end());
+    size_t median_count = matches_counts[matches_counts.size() / 2 - 1];
+
+    for (size_t i = 0; i < position_pairs.size(); i++)
+    {
+      auto itr_image_pair =
+        matches.find(std::make_pair(epipolar_edges[i].first_id,
+                                    epipolar_edges[i].second_id));
+      if (itr_image_pair != matches.end())
+      {
+        position_pairs[i].weight =
+          Scalar(itr_image_pair->second.size()) / Scalar(median_count);
+      }
+      else
+      {
+        position_pairs[i].weight = Scalar(1);
+      }
+    }
+
+#if DEBUG_TMP
+    std::cout<<"Finish compute position weight.\n";
+#endif
+
+    RotationContainer global_rotations;
+    for (size_t image_id = 0; image_id < image_extrinsic_map.Size(); image_id++)
+    {
+      if (image_extrinsic_map.IsValid(image_id))
+      {
+        size_t extrinsic_id = image_extrinsic_map[image_id];
+        global_rotations[image_id] =
+          extrinsic_params_set[extrinsic_id].rotation();
+      }
+    }
+
+#if DEBUG_TMP
+    std::cout<<"Finish fill global rotation.\n";
+#endif
+
+    PositionAverage position_average;
+    IndexContainer global_position_indices;
+    PositionContainer global_positions;
+    Err result = position_average(keysets,
+                                  image_intrinsic_map,
+                                  intrinsic_params_set,
+                                  matches,
+                                  position_pairs,
+                                  global_rotations,
+                                  global_position_indices,
+                                  global_positions);
+
+#if DEBUG_TMP
+    std::cout<<"Finish position average.\n";
+#endif
+
+    if (result != 0) return result;
+
+#if DEBUG_TMP
+    std::cout<<"Copy global position.\n";
+#endif
+
+    hs::sfm::ObjectIndexMap image_extrinsic_map_position(
+      image_extrinsic_map.Size());
+    ExtrinsicParamsContainer extrinsic_params_set_position;
+    for (size_t i = 0; i < global_position_indices.size(); i++)
+    {
+      size_t image_id = global_position_indices[i];
+      image_extrinsic_map_position[image_id] = i;
+      ExtrinsicParams extrinsic_params;
+      size_t extrinsic_id = image_extrinsic_map[image_id];
+      extrinsic_params.rotation() =
+        extrinsic_params_set[extrinsic_id].rotation();
+      extrinsic_params.position() = global_positions[i];
+      extrinsic_params_set_position.push_back(extrinsic_params);
+    }
+    std::swap(image_extrinsic_map_position, image_extrinsic_map);
+    std::swap(extrinsic_params_set_position, extrinsic_params_set);
+
+#if DEBUG_TMP
+    std::cout<<"TranslateAverage End\n";
+#endif
+
     return 0;
   }
 

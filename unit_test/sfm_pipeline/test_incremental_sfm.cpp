@@ -1131,16 +1131,20 @@ TEST(TestIncrementalSFM, RealSynthetic242ImagesTest)
                                                          3000,
                                                          2000));
   IntrinsicParamsContainer intrinsic_params_set_true;
-  intrinsic_params_set_true.push_back(IntrinsicParams(4880.22,
+  //intrinsic_params_set_true.push_back(IntrinsicParams(4880.22,
+  //                                                    0,
+  //                                                    3026.11,
+  //                                                    1992.36,
+  //                                                    1,
+  //                                                    -0.100423,
+  //                                                    0.128487,
+  //                                                    -0.0482081,
+  //                                                    -3.17902e-05,
+  //                                                    7.75629e-05));
+  intrinsic_params_set_true.push_back(IntrinsicParams(4666.67,
                                                       0,
-                                                      3026.11,
-                                                      1992.36,
-                                                      1,
-                                                      -0.100423,
-                                                      0.128487,
-                                                      -0.0482081,
-                                                      -3.17902e-05,
-                                                      7.75629e-05));
+                                                      3000,
+                                                      2000));
   std::vector<size_t> image_intrinsic_map(242);
   for (size_t i = 0; i < 242; i++)
   {
@@ -1158,8 +1162,8 @@ TEST(TestIncrementalSFM, RealSynthetic242ImagesTest)
   KeysetContainer keysets_check_point;
   PointContainer points_true;
   ExtrinsicParamsContainer extrinsic_params_set_true;
-  Scalar key_stddev = Scalar(1);
-  Scalar outlier_ratio = Scalar(0.1);
+  Scalar key_stddev = Scalar(0);
+  Scalar outlier_ratio = Scalar(0.0);
 
   Generator generator(outlier_ratio, key_stddev);
   generator.Generate(out_path, gcp_path,

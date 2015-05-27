@@ -23,9 +23,16 @@ class ObjectIndexMap
 {
 public:
   ObjectIndexMap(){}
+  ObjectIndexMap(const ObjectIndexMap& other) {mapper_ = other.mapper_;}
   ObjectIndexMap(size_t number_of_objects)
     : mapper_(number_of_objects, invalid_value()) {}
 public:
+
+  ObjectIndexMap& operator = (const ObjectIndexMap& other)
+  {
+    mapper_ = other.mapper_;
+    return *this;
+  }
 
   size_t GetMappedId(size_t object_id) const
   {

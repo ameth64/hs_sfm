@@ -293,27 +293,32 @@ private:
       point = scale_similar * (rotation_similar * point) + translate_similar;
     }
 
-    PointContainer gcps_absolute_estimate;
-    ObjectIndexMap estimate_measure_map;
+    PointContainer gcps_absolute_estimate = gcps_relative;
+    for (size_t i = 0; i < gcps_absolute_estimate.size(); i++)
+    {
+      Point& gcp = gcps_absolute_estimate[i];
+      gcp = scale_similar * (rotation_similar * gcp) + translate_similar;
+    }
+    ObjectIndexMap estimate_measure_map = track_point_map_gcp;
     GCPConstrainedOptimizor gcp_constrained_optimizor(
                               1, Scalar(0.005), Scalar(0.01));
-    if (gcp_constrained_optimizor(keysets,
-                                  image_intrinsic_map,
-                                  tracks,
-                                  image_extrinsic_map,
-                                  track_point_map,
-                                  view_info_indexer,
-                                  keysets_gcp,
-                                  tracks_gcp,
-                                  gcps,
-                                  intrinsic_params_set_absolute_estimate,
-                                  extrinsic_params_set_absolute_estimate,
-                                  points_absolute_estimate,
-                                  gcps_absolute_estimate,
-                                  estimate_measure_map) != 0)
-    {
-      return GCP_CONSTRAINED_OPTIMIZATION_FAILED;
-    }
+    //if (gcp_constrained_optimizor(keysets,
+    //                              image_intrinsic_map,
+    //                              tracks,
+    //                              image_extrinsic_map,
+    //                              track_point_map,
+    //                              view_info_indexer,
+    //                              keysets_gcp,
+    //                              tracks_gcp,
+    //                              gcps,
+    //                              intrinsic_params_set_absolute_estimate,
+    //                              extrinsic_params_set_absolute_estimate,
+    //                              points_absolute_estimate,
+    //                              gcps_absolute_estimate,
+    //                              estimate_measure_map) != 0)
+    //{
+    //  return GCP_CONSTRAINED_OPTIMIZATION_FAILED;
+    //}
 
 #if DEBUG_TMP
     typedef hs::sfm::fileio::ScenePLYSaver<Scalar, size_t> SceneSaver;
@@ -368,13 +373,13 @@ private:
       }
     }
 
-    std::string gcp_accuracy_incremental_path =
-      test_name_ + "_gcp_accuracy_incremental.txt";
+    std::string gcp_accuracy_path =
+      test_name_ + "_gcp_accuracy.txt";
     Tester tester;
     if (tester.TestPointsAccuracy(
         gcps_absolute_true_reordered,
         gcps_absolute_estimate,
-        gcp_accuracy_incremental_path,
+        gcp_accuracy_path,
         ground_resolution_ * 4) != 0) return GCP_ACCURACY_TOO_BAD;
 
     return 0;
@@ -426,13 +431,13 @@ private:
       }
     }
 
-    std::string check_point_accuracy_incremental_path =
-      test_name_ + "_check_point_accuracy_incremental.txt";
+    std::string check_point_accuracy_path =
+      test_name_ + "_check_point_accuracy.txt";
     Tester tester;
     if (tester.TestPointsAccuracy(
         check_points_true,
         check_points_estimate,
-        check_point_accuracy_incremental_path,
+        check_point_accuracy_path,
         ground_resolution_ * 4) != 0) return CHECK_POINT_ACCURACY_TOO_BAD;
 
     return 0;
@@ -445,8 +450,8 @@ private:
   {
     if (!extrinsic_params_set_absolute_true.empty())
     {
-      std::string extrinsic_accuracy_incremental_path =
-        test_name_ + "_extrinsic_accuracy_incremental.txt";
+      std::string extrinsic_accuracy_path =
+        test_name_ + "_extrinsic_accuracy.txt";
       ExtrinsicParamsContainer extrinsic_params_set_absolute_true_reordered(
         extrinsic_params_set_absolute_estimate.size());
       size_t number_of_images = extrinsic_params_set_absolute_true.size();
@@ -463,7 +468,7 @@ private:
       if (tester.TestExtrinsicAccuracy(
             extrinsic_params_set_absolute_true_reordered,
             extrinsic_params_set_absolute_estimate,
-            extrinsic_accuracy_incremental_path,
+            extrinsic_accuracy_path,
             ground_resolution_ * 8) != 0)
       {
         return EXTRINSIC_ACCRURACY_TOO_BAD;
@@ -498,13 +503,13 @@ private:
         }
       }
 
-      std::string point_accuracy_incremental_path =
-        test_name_ + "_point_accuracy_incremental.txt";
+      std::string point_accuracy_path =
+        test_name_ + "_point_accuracy.txt";
       Tester tester;
       if (tester.TestPointsAccuracy(
             points_absolute_true_reordered,
             points_absolute_estimate,
-            point_accuracy_incremental_path,
+            point_accuracy_path,
             ground_resolution_ * 4) != 0)
       {
         return POINT_ACCURACY_TOO_BAD;

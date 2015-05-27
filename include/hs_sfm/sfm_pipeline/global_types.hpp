@@ -3,6 +3,7 @@
 
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 #include "hs_math/geometry/rotation.hpp"
+#include "hs_sfm/sfm_utility/camera_type.hpp"
 
 namespace hs
 {
@@ -21,6 +22,7 @@ struct RotationPair
   Index first_id;
   Index second_id;
   Rotation rotation;
+  Scalar weight;
 };
 
 template <typename _Scalar>
@@ -33,7 +35,19 @@ struct PositionPair
   Index first_id;
   Index second_id;
   Position position;
-  Scalar wieght;
+  Scalar weight;
+};
+
+template <typename _Scalar>
+struct EpipolarEdge
+{
+  typedef _Scalar Scalar;
+  typedef size_t Index;
+  typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;
+
+  Index first_id;
+  Index second_id;
+  ExtrinsicParams extrinsic_params_relative;
 };
 
 }

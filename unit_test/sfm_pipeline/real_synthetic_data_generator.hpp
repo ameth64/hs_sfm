@@ -237,9 +237,9 @@ private:
           Key key = ProjectiveFunctions<Scalar>::WorldPointProjectToImageKey(
               intrinsic_params, extrinsic_params, point);
 
-          keysets_true[extrinsic_id].AddKey(key);
+          keysets_true[image_id].AddKey(key);
           track.push_back(
-            std::make_pair(image_id, keysets_true[extrinsic_id].size() - 1));
+            std::make_pair(image_id, keysets_true[image_id].size() - 1));
         }
       }
 

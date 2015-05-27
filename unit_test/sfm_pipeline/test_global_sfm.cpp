@@ -22,7 +22,7 @@
 #include <iomanip>
 #endif
 
-#define TRY_1DSFM 1
+#define TRY_1DSFM 0
 
 namespace
 {
@@ -88,7 +88,7 @@ TEST(TestGlobalSFM, RealSynthetic242ImageTest)
   PointContainer points_true;
   ExtrinsicParamsContainer extrinsic_params_set_true;
   Scalar key_stddev = Scalar(1);
-  Scalar outlier_ratio = Scalar(0.1);
+  Scalar outlier_ratio = Scalar(0.0);
 
   Generator generator(outlier_ratio, key_stddev);
   generator.Generate(out_path, gcp_path,
@@ -99,6 +99,9 @@ TEST(TestGlobalSFM, RealSynthetic242ImageTest)
                      check_points, tracks_check_point, keysets_check_point);
 
 #if TRY_1DSFM
+  typedef EIGEN_VECTOR(Scalar, 2) Key;
+  hs::sfm::ViewInfoIndexer view_info_indexer;
+  view_info_indexer.SetViewInfoByTracks(tracks);
   std::ofstream eg_file("EGs_true.txt");
   eg_file.setf(std::ios::fixed);
   eg_file<<std::setprecision(8);
@@ -108,6 +111,7 @@ TEST(TestGlobalSFM, RealSynthetic242ImageTest)
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
   for (; itr_image_pair != itr_image_pair_end; ++itr_image_pair)
   {
+    if (itr_image_pair->second.size() < 32) continue;
     size_t image_id_left = itr_image_pair->first.first;
     size_t image_id_right = itr_image_pair->first.second;
     const ExtrinsicParams& extrinsic_params_left =
@@ -131,6 +135,39 @@ TEST(TestGlobalSFM, RealSynthetic242ImageTest)
            <<R(1, 0)<<" "<<R(1, 1)<<" "<<R(1, 2)<<" "
            <<R(2, 0)<<" "<<R(2, 1)<<" "<<R(2, 2)<<" "
            <<c(0)<<" "<<c(1)<<" "<<c(2)<<"\n";
+
+    //size_t intrinsic_id_left = image_intrinsic_map[image_id_left];
+    //size_t intrinsic_id_right = image_intrinsic_map[image_id_right];
+    //const IntrinsicParams& intrinsic_params_left =
+    //  intrinsic_params_set_true[intrinsic_id_left];
+    //const IntrinsicParams& intrinsic_params_right =
+    //  intrinsic_params_set_true[intrinsic_id_right];
+    //auto itr_key_pair = itr_image_pair->second.begin();
+    //auto itr_key_pair_end = itr_image_pair->second.end();
+    //for (; itr_key_pair != itr_key_pair_end; ++itr_key_pair)
+    //{
+    //  size_t key_id_left = itr_key_pair->first;
+    //  size_t key_id_right = itr_key_pair->second;
+    //  Key key_left = keysets[image_id_left][key_id_left];
+    //  Key key_right = keysets[image_id_right][key_id_right];
+    //  hs::sfm::ViewInfo view_info_left =
+    //    view_info_indexer.GetViewInfoByImageKey(image_id_left,
+    //                                            key_id_left);
+    //  hs::sfm::ViewInfo view_info_right =
+    //    view_info_indexer.GetViewInfoByImageKey(image_id_right,
+    //                                            key_id_right);
+    //  ASSERT_EQ(view_info_left.track_id, view_info_right.track_id);
+    //  Vector3 point = points_true[view_info_left.track_id];
+    //  Key predicate_left =
+    //    hs::sfm::ProjectiveFunctions<Scalar>::WorldPointProjectToImageKey(
+    //      intrinsic_params_left, extrinsic_params_left, point);
+    //  Key predicate_right =
+    //    hs::sfm::ProjectiveFunctions<Scalar>::WorldPointProjectToImageKey(
+    //      intrinsic_params_right, extrinsic_params_right, point);
+    //  Scalar error = ((predicate_left - key_left).norm() +
+    //                  (predicate_right - key_right).norm()) * Scalar(0.5);
+    //  std::cout<<"error:"<<error<<"\n";
+    //}
   }
   eg_file.close();
 
@@ -171,9 +208,10 @@ TEST(TestGlobalSFM, RealSynthetic242ImageTest)
   typedef EIGEN_VECTOR(Scalar, 2) Vector2;
   for (size_t i = 0; i < points_true.size(); i++)
   {
-    gt_bundle_file<<points_true[i][0]<<" "
-                  <<points_true[i][1]<<" "
-                  <<points_true[i][2]<<"\n";
+    Vector3 pt = points_true[i];
+    pt = pt - c0;
+    pt = R0 * pt;
+    gt_bundle_file<<pt[0]<<" "<<pt[1]<<" "<<pt[2]<<"\n";
     gt_bundle_file<<"255 255 255\n";
     gt_bundle_file<<tracks[i].size();
     for (size_t j = 0; j < tracks[i].size(); j++)

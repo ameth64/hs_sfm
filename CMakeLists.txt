@@ -121,6 +121,17 @@ hslib_add_dep(${PIPELINE_NAME}_utest
   3RDPARTY_DEPS eigen HEADONLY
   3RDPARTY_DEPS ceres DEP_LIBS ceres
   3RDPARTY_DEPS boost DEP_LIBS boost_filesystem boost_system
+  3RDPARTY_DEPS openmvg
+    DEP_STATIC_LIBS openMVG_sfm
+                    openMVG_multiview
+                    openMVG_lInftyComputerVision
+                    openMVG_numeric
+                    openMVG_kvld
+                    openMVG_features
+                    openMVG_system
+                    openMVG_stlplus
+  3RDPARTY_DEPS osi_clp
+    DEP_STATIC_LIBS clp CoinUtils Osi OsiClpSolver
   #3RDPARTY_DEPS tiff DEP_LIBS tiff
   #3RDPARTY_DEPS jpeg_turbo DEP_LIBS jpeg_turbo
   #3RDPARTY_DEPS png DEP_LIBS png
