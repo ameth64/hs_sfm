@@ -292,12 +292,12 @@ set(GLOBAL_SOURCES
   )
 hslib_add_library(${GLOBAL_NAME} ${HSPRJ_NAME} ${GLOBAL_SOURCES})
 
-set(GLOBAL_UTEST_SOURCES
-  "unit_test/test_main.cpp"
-  "unit_test/sfm_global/test_global_position_average.cpp"
-  "unit_test/sfm_global/test_global_rotation_average.cpp"
-  "unit_test/sfm_global/test_global_sfm.cpp"
-  )
-hslib_add_utest(${GLOBAL_NAME} SOURCES ${GLOBAL_UTEST_SOURCES})
-hslib_post_build(${GLOBAL_NAME}_utest)
+#set(GLOBAL_UTEST_SOURCES
+#  "unit_test/test_main.cpp"
+#  "unit_test/sfm_global/test_global_position_average.cpp"
+#  "unit_test/sfm_global/test_global_rotation_average.cpp"
+#  "unit_test/sfm_global/test_global_sfm.cpp"
+#  )
+#hslib_add_utest(${GLOBAL_NAME} SOURCES ${GLOBAL_UTEST_SOURCES})
+#hslib_post_build(${GLOBAL_NAME}_utest)
 
