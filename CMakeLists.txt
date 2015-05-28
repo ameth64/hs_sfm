@@ -287,10 +287,10 @@ hslib_add_dep(${CALIBRATE_NAME}_utest
 hslib_post_build(${CALIBRATE_NAME}_utest)
 
 #sfm global
-set(GLOBAL_NAME "sfm_global")
-set(GLOBAL_SOURCES
-  )
-hslib_add_library(${GLOBAL_NAME} ${HSPRJ_NAME} ${GLOBAL_SOURCES})
+#set(GLOBAL_NAME "sfm_global")
+#set(GLOBAL_SOURCES
+#  )
+#hslib_add_library(${GLOBAL_NAME} ${HSPRJ_NAME} ${GLOBAL_SOURCES})
 
 #set(GLOBAL_UTEST_SOURCES
 #  "unit_test/test_main.cpp"
