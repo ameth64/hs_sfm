@@ -33,7 +33,7 @@ public:
   typedef ObjectIndexMap ImageIntrinsicMap;
 
 private:
-  typedef ProjectiveFunctions<Scalar> ProjectiveFunctions;
+  typedef hs::sfm::ProjectiveFunctions<Scalar> ProjectiveFunctions;
   typedef typename ProjectiveFunctions::Key Key;
 
 public:
