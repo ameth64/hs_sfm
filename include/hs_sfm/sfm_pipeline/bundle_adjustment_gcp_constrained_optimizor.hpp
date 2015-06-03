@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_SFM_PIPELINE_BUNDLE_ADJUSTMENT_GCP_CONSTRAINED_OPTIMIZOR_HPP_
+Ôªø#ifndef _HS_SFM_SFM_PIPELINE_BUNDLE_ADJUSTMENT_GCP_CONSTRAINED_OPTIMIZOR_HPP_
 #define _HS_SFM_SFM_PIPELINE_BUNDLE_ADJUSTMENT_GCP_CONSTRAINED_OPTIMIZOR_HPP_
 
 #include "hs_sfm/sfm_utility/key_type.hpp"
@@ -7,11 +7,6 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 #include "hs_sfm/triangulate/multiple_view_maximum_likelihood_estimator.hpp"
-
-#define DEBUG_TMP 1
-#if DEBUG_TMP
-#include <iostream>
-#endif
 
 namespace hs
 {
@@ -57,6 +52,7 @@ private:
   typedef hs::sfm::ba::CameraSharedCeresOptimizor<BAVectorFunction>
           BAOptimizor;
   typedef typename BAOptimizor::YCovarianceInverse YCovarianceInverse;
+  typedef typename YCovarianceInverse::KeyBlock KeyBlock;
 
   typedef typename IntrinsicParams::KMatrix KMatrix;
   typedef typename ExtrinsicParams::Position Position;
@@ -67,12 +63,17 @@ private:
   typedef typename TriangulateMLEstimator::KeyContainer TriangulateKeyContainer;
 
 public:
-  BundleAdjustmentGCPConstrainedOptimizor(size_t number_of_threads,
-                                          Scalar gcp_planar_accuracy,
-                                          Scalar gcp_height_accuracy)
+  BundleAdjustmentGCPConstrainedOptimizor(
+    size_t number_of_threads,
+    Scalar gcp_planar_accuracy,
+    Scalar gcp_height_accuracy,
+    Scalar image_accuracy = Scalar(0.1),
+    Scalar gcp_image_accuracy = Scalar(4))
     : number_of_threads_(number_of_threads)
     , gcp_planar_accuracy_(gcp_planar_accuracy)
-    , gcp_height_accuracy_(gcp_height_accuracy) {}
+    , gcp_height_accuracy_(gcp_height_accuracy)
+    , image_accuracy_(image_accuracy)
+    , gcp_image_accuracy_(gcp_image_accuracy) {}
 
   Err operator() (const ImageKeysetContainer& image_keysets,
                   const ImageIntrinsicMap& image_intrinsic_map,
@@ -128,7 +129,7 @@ public:
     {
       size_t number_of_views_gcp = tracks_gcp[track_id].size();
 
-      //»˝Ω«ªØœÒøÿµ„◊˜Œ™≥ı º÷µ
+      //‰∏âËßíÂåñÂÉèÊéßÁÇπ‰Ωú‰∏∫ÂàùÂßãÂÄº
       size_t track_size = tracks_gcp[track_id].size();
       TriangulateKeyContainer keys;
       IntrinsicParamsContainer intrinsic_params_set_triangulate;
@@ -161,7 +162,7 @@ public:
     }
     size_t number_of_gcps_estimate = gcps_estimate.size();
 
-    //…Ë÷√feature_maps
+    //ËÆæÁΩÆfeature_maps
     size_t number_of_tracks_bundle = tracks_bundle.size();
     FeatureMapContainer feature_maps;
     for (size_t track_id = 0; track_id < number_of_tracks_bundle; track_id++)
@@ -176,6 +177,7 @@ public:
         feature_maps.push_back(std::make_pair(extrinsic_id, track_id));
       }
     }
+    size_t number_of_feature_map_gcp = 0;
     for (size_t gcp_estimate_id = 0; gcp_estimate_id < gcps_estimate.size();
          gcp_estimate_id++)
     {
@@ -188,10 +190,10 @@ public:
         feature_maps.push_back(
           std::make_pair(extrinsic_id,
                          number_of_tracks_bundle + gcp_estimate_id));
+        number_of_feature_map_gcp++;
       }
     }
-
-    //…Ë÷√image_camera_map
+    //ËÆæÁΩÆimage_camera_map
     ImageCameraMap image_camera_map;
     ObjectIndexMap extrinsic_image_map(extrinsic_params_set.size());
     for (size_t image_id = 0; image_id < image_extrinsic_map.Size(); image_id++)
@@ -222,7 +224,7 @@ public:
     vector_function.set_image_camera_map(image_camera_map);
     vector_function.intrinsic_computations_mask().set();
 
-    //…Ë÷√µ„‘º ¯
+    //ËÆæÁΩÆÁÇπÁ∫¶Êùü
     PointConstraintContainer point_constraints;
     for (size_t gcp_estimate_id = 0; gcp_estimate_id < number_of_gcps_estimate;
          gcp_estimate_id++)
@@ -352,16 +354,21 @@ public:
     }
 
     YCovarianceInverse y_covariance_inverse;
-    y_covariance_inverse.SetKeysUniformStdDev(Scalar(1), number_of_keys);
+    y_covariance_inverse.SetKeysUniformStdDev(image_accuracy_, number_of_keys);
+    for (size_t i = 0; i < number_of_feature_map_gcp; i++)
+    {
+      size_t gcp_key_id = number_of_keys - number_of_feature_map_gcp + i;
+      KeyBlock& key_block = y_covariance_inverse.GetKeyBlock(gcp_key_id);
+      key_block(0, 0) = Scalar(gcp_image_accuracy_);
+      key_block(1, 1) = Scalar(gcp_image_accuracy_);
+    }
     auto itr_point_constriant = vector_function.point_constraints().begin();
     auto itr_point_constriant_end = vector_function.point_constraints().end();
     for (; itr_point_constriant != itr_point_constriant_end;
          ++itr_point_constriant)
     {
-      Scalar planar_constraint =
-        Scalar(1) / (gcp_planar_accuracy_ * gcp_planar_accuracy_);
-      Scalar height_constraint =
-        Scalar(1) / (gcp_height_accuracy_ * gcp_height_accuracy_);
+      Scalar planar_constraint = Scalar(1) / (gcp_planar_accuracy_);
+      Scalar height_constraint = Scalar(1) / (gcp_height_accuracy_);
       if (itr_point_constriant->mask[hs::sfm::ba::POINT_CONSTRAIN_X] &&
           itr_point_constriant->mask[hs::sfm::ba::POINT_CONSTRAIN_Y] &&
           !itr_point_constriant->mask[hs::sfm::ba::POINT_CONSTRAIN_Z])
@@ -380,13 +387,8 @@ public:
     }
 
     int max_num_iterations = 50;
-    double function_tolerance = 1e-6;
-    double parameter_tolerance = 1e-8;
-#if DEBUG_TMP
-    std::cout<<"number_of_tracks_bundle:"<<number_of_tracks_bundle<<"\n";
-    std::cout<<"number_of_points:"<<number_of_points<<"\n";
-    std::cout<<"Start gcp constrained optimizing.\n";
-#endif
+    double function_tolerance = 1e-8;
+    double parameter_tolerance = 1e-10;
     BAOptimizor ba_optimizor(initial_x, int(number_of_threads_),
                              max_num_iterations, function_tolerance,
                              parameter_tolerance);
@@ -396,9 +398,6 @@ public:
     {
       return -1;
     }
-#if DEBUG_TMP
-    std::cout<<"Finish gcp constrained optimizing.\n";
-#endif
 
     for (size_t track_bundle_id = 0; track_bundle_id < number_of_tracks_bundle;
          track_bundle_id++)
@@ -447,6 +446,8 @@ private:
   size_t number_of_threads_;
   Scalar gcp_planar_accuracy_;
   Scalar gcp_height_accuracy_;
+  Scalar image_accuracy_;
+  Scalar gcp_image_accuracy_;
 };
 
 }

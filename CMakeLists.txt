@@ -66,6 +66,7 @@ set(UTILITY_UTEST_SOURCES
   "unit_test/sfm_utility/test_ransac_fit_plane.cpp"
   "unit_test/sfm_utility/test_similar_transform_estimator.cpp"
   "unit_test/sfm_utility/test_matches_tracks_convertor.cpp"
+  "unit_test/sfm_utility/test_undistortor.cpp"
   )
 hslib_add_utest(${UTILITY_NAME} SOURCES ${UTILITY_UTEST_SOURCES})
 hslib_add_dep(${UTILITY_NAME}_utest
@@ -75,6 +76,7 @@ hslib_add_dep(${UTILITY_NAME}_utest
   HS_DEPS hs_test_utility DEP_LIBS test_env
   HS_DEPS hs_fit HEADONLY
   )
+hslib_add_mkl_dep(${UTILITY_NAME}_utest)
 hslib_post_build(${UTILITY_NAME}_utest)
 
 #triangulate

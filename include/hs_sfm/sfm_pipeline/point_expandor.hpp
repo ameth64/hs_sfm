@@ -145,12 +145,26 @@ public:
               is_too_far = true;
             }
 
-            if (!is_blunder && !is_too_far)
+            //判断点是否在所有相机正面
+            bool is_front = true;
+            for (size_t i = 0; i < track_size; i++)
+            {
+              Scalar depth =
+                (extrinsic_params_set_view[i].rotation() *
+                 (point - extrinsic_params_set_view[i].position()))[2];
+              if (depth < 0)
+              {
+                is_front = false;
+                break;
+              }
+            }
+
+            if (!is_blunder && !is_too_far && is_front)
             {
               points.push_back(point);
               track_point_map[track_id] = points.size() - 1;
             }//if (!is_blunder)
-            else if (is_blunder)
+            else if (is_blunder || !is_front)
             {
               for (size_t i = 0; i < number_of_views; i++)
               {

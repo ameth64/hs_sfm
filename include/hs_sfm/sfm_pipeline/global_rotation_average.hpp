@@ -35,9 +35,6 @@ public:
     openMVG::rotation_averaging::RelativeRotations relative_rotations(
       rotation_pairs.size());
 
-#if DEBUG_TMP
-    std::cout<<"rotation_pairs.size():"<<rotation_pairs.size()<<"\n";
-#endif
     for (size_t i = 0; i < rotation_pairs.size(); i++)
     {
       relative_rotations[i].i = openMVG::IndexT(rotation_pairs[i].first_id);

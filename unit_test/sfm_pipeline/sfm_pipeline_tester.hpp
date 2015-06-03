@@ -301,24 +301,53 @@ private:
     }
     ObjectIndexMap estimate_measure_map = track_point_map_gcp;
     GCPConstrainedOptimizor gcp_constrained_optimizor(
-                              1, Scalar(0.005), Scalar(0.01));
-    //if (gcp_constrained_optimizor(keysets,
-    //                              image_intrinsic_map,
-    //                              tracks,
-    //                              image_extrinsic_map,
-    //                              track_point_map,
-    //                              view_info_indexer,
-    //                              keysets_gcp,
-    //                              tracks_gcp,
-    //                              gcps,
-    //                              intrinsic_params_set_absolute_estimate,
-    //                              extrinsic_params_set_absolute_estimate,
-    //                              points_absolute_estimate,
-    //                              gcps_absolute_estimate,
-    //                              estimate_measure_map) != 0)
-    //{
-    //  return GCP_CONSTRAINED_OPTIMIZATION_FAILED;
-    //}
+                              1, Scalar(0.005), Scalar(0.005));
+    Tester tester;
+    if (tester.TestReprojectiveError(
+          keysets,
+          intrinsic_params_set_absolute_estimate,
+          tracks,
+          image_intrinsic_map,
+          image_extrinsic_map,
+          track_point_map,
+          view_info_indexer,
+          extrinsic_params_set_absolute_estimate,
+          points_absolute_estimate,
+          key_stddev_) != 0)
+    {
+      return REPROJECTIVE_ERROR_TOO_LARGE;
+    }
+    if (gcp_constrained_optimizor(keysets,
+                                  image_intrinsic_map,
+                                  tracks,
+                                  image_extrinsic_map,
+                                  track_point_map,
+                                  view_info_indexer,
+                                  keysets_gcp,
+                                  tracks_gcp,
+                                  gcps,
+                                  intrinsic_params_set_absolute_estimate,
+                                  extrinsic_params_set_absolute_estimate,
+                                  points_absolute_estimate,
+                                  gcps_absolute_estimate,
+                                  estimate_measure_map) != 0)
+    {
+      return GCP_CONSTRAINED_OPTIMIZATION_FAILED;
+    }
+    if (tester.TestReprojectiveError(
+          keysets,
+          intrinsic_params_set_absolute_estimate,
+          tracks,
+          image_intrinsic_map,
+          image_extrinsic_map,
+          track_point_map,
+          view_info_indexer,
+          extrinsic_params_set_absolute_estimate,
+          points_absolute_estimate,
+          key_stddev_) != 0)
+    {
+      return REPROJECTIVE_ERROR_TOO_LARGE;
+    }
 
 #if DEBUG_TMP
     typedef hs::sfm::fileio::ScenePLYSaver<Scalar, size_t> SceneSaver;
@@ -375,7 +404,6 @@ private:
 
     std::string gcp_accuracy_path =
       test_name_ + "_gcp_accuracy.txt";
-    Tester tester;
     if (tester.TestPointsAccuracy(
         gcps_absolute_true_reordered,
         gcps_absolute_estimate,

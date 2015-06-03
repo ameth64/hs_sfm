@@ -5,6 +5,7 @@
 #include "hs_optimizor/nllso/levenberg_marquardt.hpp"
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
+#include "hs_sfm/sfm_utility/undistortor.hpp"
 #include "hs_sfm/triangulate/multiple_view_vector_function.hpp"
 #include "hs_sfm/triangulate/multiple_view_dlt.hpp"
 
@@ -55,6 +56,10 @@ public:
                  const YCovarianceInverse& y_covariance_inverse,
                  XVector& optimized_x) const
   {
+    typedef EIGEN_VECTOR(Scalar, 2) Key;
+    typedef hs::sfm::Undistortor<Scalar> Undistortor;
+    typedef typename Undistortor::IntrinsicParams IntrinsicParams;
+
     const IntrinsicParamsContainer& intrins =
       vector_function.intrinsic_params_set();
     const ExtrinsicParamsContainer& extrins =
@@ -67,14 +72,18 @@ public:
 
     PMatrixContainer pmatrices;
     HomogeneousKeyContainer homogeneous_keys;
+    Undistortor undistortor;
     for (Index i = 0; i < number_of_views; i++)
     {
       PMatrix pmatrix = Camera::GetProjectionMatrix(intrins[i], extrins[i]);
       pmatrices.push_back(pmatrix);
       HomogeneousKey homogeneous_key;
-      homogeneous_key.segment(0, VectorFunction::params_per_feature_) = 
+      Key key_distort =
         near_y.segment(i * VectorFunction::params_per_feature_,
                        VectorFunction::params_per_feature_);
+      Key key_undistort =
+        undistortor.UndistortImagePoint(key_distort, intrins[i]);
+      homogeneous_key.segment(0, 2) = key_undistort;
       homogeneous_key[2] = Scalar(1);
       homogeneous_keys.push_back(homogeneous_key);
     }

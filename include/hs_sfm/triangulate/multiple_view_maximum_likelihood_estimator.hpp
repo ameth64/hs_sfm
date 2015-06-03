@@ -25,6 +25,7 @@ private:
   typedef typename Optimizor::XVector XVector;
   typedef typename Optimizor::YVector YVector;
   typedef typename Optimizor::YCovarianceInverse YCovarianceInverse;
+  typedef typename hs::sfm::Undistortor<Scalar> Undistortor;
 
 public:
   typedef typename VectorFunction::ExtrinsicParams ExtrinsicParams;
@@ -60,9 +61,10 @@ public:
 
     Index y_size = Index(number_of_cameras * 2);
     YVector near_y(y_size);
+    Undistortor undistortor;
     for (Index i = 0; i < Index(number_of_cameras); i++)
     {
-      near_y.segment(i * VectorFunction::params_per_feature_, 
+      near_y.segment(i * VectorFunction::params_per_feature_,
                      VectorFunction::params_per_feature_) = keys[i];
     }
 

@@ -1013,7 +1013,7 @@ TEST(TestIncrementalSFM, Real242ImagesTest)
     gcps, tracks_gcp, keysets_gcp,
     check_points, tracks_check_point, keysets_check_point));
   ASSERT_EQ(0, Generator::LoadBundlerOutFile(out_path, 6000, 4000,
-                                             keysets, matches));
+                                             keysets, matches, false));
 
   Scalar key_stddev = Scalar(1);
   std::string test_name = "real_data_242_images";
@@ -1131,20 +1131,20 @@ TEST(TestIncrementalSFM, RealSynthetic242ImagesTest)
                                                          3000,
                                                          2000));
   IntrinsicParamsContainer intrinsic_params_set_true;
-  //intrinsic_params_set_true.push_back(IntrinsicParams(4880.22,
-  //                                                    0,
-  //                                                    3026.11,
-  //                                                    1992.36,
-  //                                                    1,
-  //                                                    -0.100423,
-  //                                                    0.128487,
-  //                                                    -0.0482081,
-  //                                                    -3.17902e-05,
-  //                                                    7.75629e-05));
-  intrinsic_params_set_true.push_back(IntrinsicParams(4666.67,
+  intrinsic_params_set_true.push_back(IntrinsicParams(4880.22,
                                                       0,
-                                                      3000,
-                                                      2000));
+                                                      3026.11,
+                                                      1992.36,
+                                                      1,
+                                                      -0.100423,
+                                                      0.128487,
+                                                      -0.0482081,
+                                                      -3.17902e-05,
+                                                      7.75629e-05));
+  //intrinsic_params_set_true.push_back(IntrinsicParams(4666.67,
+  //                                                    0,
+  //                                                    3000,
+  //                                                    2000));
   std::vector<size_t> image_intrinsic_map(242);
   for (size_t i = 0; i < 242; i++)
   {
@@ -1162,8 +1162,8 @@ TEST(TestIncrementalSFM, RealSynthetic242ImagesTest)
   KeysetContainer keysets_check_point;
   PointContainer points_true;
   ExtrinsicParamsContainer extrinsic_params_set_true;
-  Scalar key_stddev = Scalar(0);
-  Scalar outlier_ratio = Scalar(0.0);
+  Scalar key_stddev = Scalar(1);
+  Scalar outlier_ratio = Scalar(0.1);
 
   Generator generator(outlier_ratio, key_stddev);
   generator.Generate(out_path, gcp_path,

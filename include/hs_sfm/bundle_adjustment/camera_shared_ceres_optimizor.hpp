@@ -16,11 +16,6 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_y_covariance_inverse.hpp"
 
-#define DEBUG_TMP 1
-#if DEBUG_TMP
-#include <iostream>
-#endif
-
 namespace hs
 {
 namespace sfm

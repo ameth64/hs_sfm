@@ -13,11 +13,6 @@
 #include "hs_sfm/sfm_pipeline/global_types.hpp"
 #include "hs_sfm/sfm_pipeline/openmvg_utility.hpp"
 
-#define DEBUG_TMP 1
-#if DEBUG_TMP
-#include <iostream>
-#endif
-
 namespace hs
 {
 namespace sfm

@@ -12,6 +12,8 @@
 #include "hs_sfm/sfm_utility/match_type.hpp"
 #include "hs_sfm/sfm_pipeline/reprojective_error_calculator.hpp"
 
+#define DEBUG_TMP 1
+
 namespace hs
 {
 namespace sfm
@@ -60,6 +62,9 @@ public:
                      view_info_indexer,
                      extrinsic_params_set,
                      points);
+#if DEBUG_TMP
+    std::cout<<"error:"<<error<<"\n";
+#endif
     if (error < key_stddev + 1)
     {
       return 0;

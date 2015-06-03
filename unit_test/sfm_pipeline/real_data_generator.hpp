@@ -41,7 +41,8 @@ public:
   static Err LoadBundlerOutFile(const std::string& out_path,
                                 size_t image_width, size_t image_height,
                                 KeysetContainer& keysets,
-                                MatchContainer& matches)
+                                MatchContainer& matches,
+                                bool is_filter = true)
   {
     typedef EIGEN_VECTOR(Scalar, 2) Key;
     typedef EIGEN_STD_MAP(size_t, Key) ShuffledKeyset;
@@ -119,7 +120,16 @@ public:
     MatchContainer matches_initial;
     convertor(tracks_shuffle, matches_initial);
 
-    return FilterMatches(keysets, matches_initial, matches);
+    if (is_filter)
+    {
+      return FilterMatches(keysets, matches_initial, matches);
+    }
+    else
+    {
+      matches = matches_initial;
+      return 0;
+    }
+
   }
 
   static Err LoadGCPs(const std::string& gcp_path,

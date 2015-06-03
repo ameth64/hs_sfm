@@ -7,11 +7,6 @@
 #include "hs_sfm/bundle_adjustment/camera_shared_vector_function.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 
-#define TMP_DEBUG 1
-#if TMP_DEBUG
-#include "hs_sfm/sfm_pipeline/reprojective_error_calculator.hpp"
-#endif
-
 namespace hs
 {
 namespace sfm
@@ -57,10 +52,6 @@ private:
   typedef typename IntrinsicParams::KMatrix KMatrix;
   typedef typename ExtrinsicParams::Position Position;
 
-#if TMP_DEBUG
-  typedef ReprojectiveErrorCalculator<Scalar> ReprojectiveErrorCalculatorType;
-#endif
-
 public:
   BundleAdjustmentOptimizor(size_t number_of_threads = 1)
     : number_of_threads_(number_of_threads) {}
@@ -75,19 +66,6 @@ public:
                   ExtrinsicParamsContainer& extrinsic_params_set,
                   PointContainer& points) const
   {
-#if TMP_DEBUG
-    ReprojectiveErrorCalculatorType reprojective_error_calculator;
-    Scalar error_before = reprojective_error_calculator(image_keysets,
-                                                     intrinsic_params_set,
-                                                     tracks,
-                                                     image_intrinsic_map,
-                                                     image_extrinsic_map,
-                                                     track_point_map,
-                                                     view_info_indexer,
-                                                     extrinsic_params_set,
-                                                     points);
-    std::cout<<"error_before:"<<error_before<<"\n";
-#endif
     size_t number_of_tracks = tracks.size();
     TrackContainer tracks_bundle;
     ObjectIndexMap bundle_point_map;
@@ -235,9 +213,6 @@ public:
       function_tolerance = 1e-4;
       parameter_tolerance = 1e-4;
     }
-#if DEBUG_TMP
-    std::cout<<"Start optimizing.\n";
-#endif
     BAOptimizor ba_optimizor(initial_x, int(number_of_threads_),
                              max_num_iterations, function_tolerance,
                              parameter_tolerance);
@@ -247,9 +222,6 @@ public:
     {
       return -1;
     }
-#if DEBUG_TMP
-    std::cout<<"Finish optimizing.\n";
-#endif
 
     for (Index i = 0; i < number_of_points; i++)
     {
@@ -283,34 +255,8 @@ public:
       intrinsic_params.set_principal_point_x(ba_camera[7]);
       intrinsic_params.set_principal_point_y(ba_camera[8]);
       intrinsic_params.set_pixel_ratio(ba_camera[9]);
-#if TMP_DEBUG
-      std::cout<<"camera "<<i<<":\n";
-      std::cout<<"k1:"<<ba_camera[0]<<"\n";
-      std::cout<<"k2:"<<ba_camera[1]<<"\n";
-      std::cout<<"k3:"<<ba_camera[2]<<"\n";
-      std::cout<<"d1:"<<ba_camera[3]<<"\n";
-      std::cout<<"d2:"<<ba_camera[4]<<"\n";
-      std::cout<<"focal_length:"<<ba_camera[5]<<"\n";
-      std::cout<<"skew:"<<ba_camera[6]<<"\n";
-      std::cout<<"principal_x:"<<ba_camera[7]<<"\n";
-      std::cout<<"principal_y:"<<ba_camera[8]<<"\n";
-      std::cout<<"pixel_ratio:"<<ba_camera[9]<<"\n";
-#endif
     }
 
-#if TMP_DEBUG
-    Scalar error_after = reprojective_error_calculator(image_keysets,
-                                                       intrinsic_params_set,
-                                                       tracks,
-                                                       image_intrinsic_map,
-                                                       image_extrinsic_map,
-                                                       track_point_map,
-                                                       view_info_indexer,
-                                                       extrinsic_params_set,
-                                                       points);
-    std::cout<<"error_after:"<<error_after<<"\n";
-    std::cout<<"number_of_points:"<<number_of_points<<"\n";
-#endif
     return 0;
   }
 

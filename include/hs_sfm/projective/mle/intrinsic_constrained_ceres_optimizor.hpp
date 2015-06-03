@@ -8,11 +8,6 @@
 #include "hs_sfm/projective/mle/intrinsic_constrained_vector_function.hpp"
 #include "hs_sfm/projective/mle/intrinsic_constrained_y_covariance_inverse.hpp"
 
-#define  DEBUG_TMP 1
-#if DEBUG_TMP
-#include <iostream>
-#endif
-
 namespace hs
 {
 namespace sfm
@@ -249,13 +244,7 @@ public:
     options.parameter_tolerance = 1e-9;
     options.logging_type = ceres::SILENT;
     ceres::Solver::Summary summary;
-#if DEBUG_TMP
-    std::cout<<"number_of_points:"<<number_of_points<<"\n";
-#endif
     ceres::Solve(options, &problem, &summary);
-#if DEBUG_TMP
-    std::cout<<"Solve success.\n";
-#endif
 
     if (!std::is_same<Scalar, double>::value)
     {
