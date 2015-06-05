@@ -135,6 +135,7 @@ public:
       {
         break;
       }
+
       ExtrinsicParamsContainer new_extrinsic_params_set;
       std::vector<size_t> new_image_ids;
       if (image_expandor_(image_keysets,

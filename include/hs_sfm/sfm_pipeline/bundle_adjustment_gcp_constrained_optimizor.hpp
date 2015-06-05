@@ -184,8 +184,8 @@ public:
       size_t number_of_views = tracks_gcp_estimate[gcp_estimate_id].size();
       for (size_t view_id = 0; view_id < number_of_views; view_id++)
       {
-        size_t image_id = tracks_gcp[gcp_estimate_id][view_id].first;
-        size_t key_id = tracks_gcp[gcp_estimate_id][view_id].second;
+        size_t image_id = tracks_gcp_estimate[gcp_estimate_id][view_id].first;
+        size_t key_id = tracks_gcp_estimate[gcp_estimate_id][view_id].second;
         size_t extrinsic_id = image_extrinsic_map[image_id];
         feature_maps.push_back(
           std::make_pair(extrinsic_id,

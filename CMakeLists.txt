@@ -134,6 +134,8 @@ hslib_add_dep(${PIPELINE_NAME}_utest
                     openMVG_stlplus
   3RDPARTY_DEPS osi_clp
     DEP_STATIC_LIBS clp CoinUtils Osi OsiClpSolver
+  3RDPARTY_DEPS cereal HEADONLY
+  3RDPARTY_DEPS lemon
   #3RDPARTY_DEPS tiff DEP_LIBS tiff
   #3RDPARTY_DEPS jpeg_turbo DEP_LIBS jpeg_turbo
   #3RDPARTY_DEPS png DEP_LIBS png
