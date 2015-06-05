@@ -40,14 +40,14 @@ public:
   typedef ObjectIndexMap ImageExtrinsicMap;
 
 protected:
-  typedef ImageExpandor<Scalar> ImageExpandor;
+  typedef hs::sfm::incremental::ImageExpandor<Scalar> ImageExpandor;
   typedef typename ImageExpandor::ImageViewTracks ImageViewTracks;
   typedef typename ImageExpandor::ImageViewTracksContainer
                    ImageViewTracksContainer;
 
-  typedef PointExpandor<Scalar> PointExpandor;
+  typedef hs::sfm::incremental::PointExpandor<Scalar> PointExpandor;
 
-  typedef BundleAdjustmentOptimizor<Scalar> BundleAdjustmentOptimizor;
+  typedef hs::sfm::incremental::BundleAdjustmentOptimizor<Scalar> BundleAdjustmentOptimizor;
 
 public:
   SceneExpandor(
