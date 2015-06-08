@@ -158,18 +158,18 @@ public:
         image_extrinsic_map[new_image_ids[i]] = extrinsic_params_set.size() - 1;
       }
 
-      if (bundle_adjustment_optimizor(image_keysets,
-                                      image_intrinsic_map,
-                                      tracks,
-                                      image_extrinsic_map,
-                                      track_point_map,
-                                      view_info_indexer,
-                                      intrinsic_params_set,
-                                      extrinsic_params_set,
-                                      points) != 0)
-      {
-        break;
-      }
+      //if (bundle_adjustment_optimizor(image_keysets,
+      //                                image_intrinsic_map,
+      //                                tracks,
+      //                                image_extrinsic_map,
+      //                                track_point_map,
+      //                                view_info_indexer,
+      //                                intrinsic_params_set,
+      //                                extrinsic_params_set,
+      //                                points) != 0)
+      //{
+      //  break;
+      //}
 
       PointExpandor point_expandor;
       if (point_expandor(image_keysets,
