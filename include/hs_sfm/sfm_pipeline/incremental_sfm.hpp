@@ -38,7 +38,11 @@ public:
   typedef EIGEN_STD_VECTOR(Point) PointContainer;
 
 private:
+<<<<<<< HEAD:include/hs_sfm/sfm_pipeline/incremental_sfm.hpp
   typedef hs::sfm::pipeline::BestPairSelector<Scalar> BestPairSelector;
+=======
+  typedef hs::sfm::incremental::BestPairSelector<Scalar> BestPairSelector;
+>>>>>>> 7606a2:include/hs_sfm/incremental/incremental.hpp
   typedef typename ExtrinsicParams::Rotation Rotation;
 
 public:
