@@ -4,6 +4,10 @@
 #include <vector>
 #include <map>
 
+#include "cereal/types/vector.hpp"
+#include "cereal/types/map.hpp"
+#include "cereal/types/utility.hpp"
+
 namespace hs
 {
 namespace sfm
@@ -79,6 +83,18 @@ public:
     return (mapper_ == other.mapper_);
   }
 
+  template <typename Archive>
+  void save(Archive& archive) const
+  {
+    archive(mapper_);
+  }
+
+  template <typename Archive>
+  void load(Archive& archive)
+  {
+    archive(mapper_);
+  }
+
 private:
   inline size_t invalid_value() const
   {
@@ -99,9 +115,15 @@ struct ViewInfo
   bool operator == (const ViewInfo& other) const
   {
     return (track_id == other.track_id &&
-            image_id == other.image_id &&
-            key_id == other.key_id &&
-            is_blunder == other.is_blunder);
+      image_id == other.image_id &&
+      key_id == other.key_id &&
+      is_blunder == other.is_blunder);
+  }
+
+  template <typename Archive>
+  void serialize(Archive& archive)
+  {
+    archive(track_id, image_id, key_id, is_blunder);
   }
 };
 
@@ -173,6 +195,12 @@ public:
     return (views_info_ == other.views_info_ &&
             track_image_index_ == other.track_image_index_ &&
             image_key_index_ == other.image_key_index_);
+  }
+
+  template <typename Archive>
+  void serialize(Archive& archive)
+  {
+    archive(views_info_, track_image_index_, image_key_index_);
   }
 
 private:

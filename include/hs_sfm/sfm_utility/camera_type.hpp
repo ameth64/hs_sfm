@@ -188,6 +188,21 @@ public:
     d2_ = d2;
   }
 
+  template <class Archive>
+  void serialize(Archive & archive)
+  {
+    archive(focal_length_,
+            skew_,
+            principal_point_x_,
+            principal_point_y_,
+            pixel_ratio_,
+            k1_,
+            k2_,
+            k3_,
+            d1_,
+            d2_);
+  }
+
 private:
   /**
    *  焦距
@@ -276,6 +291,26 @@ public:
   Position& position()
   {
     return position_;
+  }
+
+  template <class Archive>
+  void save(Archive& archive) const
+  {
+    archive(rotation_[0], rotation_[1], rotation_[2],
+            position_[0], position_[1], position_[2]);
+  }
+
+  template <class Archive>
+  void load(Archive& archive)
+  {
+    Scalar r0, r1, r2, p0, p1, p2;
+    archive(r0, r1, r2, p0, p1, p2);
+    rotation_[0] = r0;
+    rotation_[1] = r1;
+    rotation_[2] = r2;
+    position_[0] = p0;
+    position_[1] = p1;
+    position_[2] = p2;
   }
 
 private:

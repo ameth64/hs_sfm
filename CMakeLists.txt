@@ -63,6 +63,8 @@ hslib_add_library(${UTILITY_NAME} ${HSPRJ_NAME} ${UTILITY_SOURCES})
 set(UTILITY_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/sfm_utility/test_camera_type.cpp"
+  "unit_test/sfm_utility/test_key_type.cpp"
+  "unit_test/sfm_utility/test_match_type.cpp"
   "unit_test/sfm_utility/test_ransac_fit_plane.cpp"
   "unit_test/sfm_utility/test_similar_transform_estimator.cpp"
   "unit_test/sfm_utility/test_matches_tracks_convertor.cpp"

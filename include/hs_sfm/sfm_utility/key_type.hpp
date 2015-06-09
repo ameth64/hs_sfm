@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include <cereal/types/vector.hpp>
+
 #include "hs_math/linear_algebra/eigen_macro.hpp"
 
 namespace hs
@@ -30,12 +32,20 @@ public:
   void AddKey(const Key& key) {keys_.push_back(key);}
   Key operator [] (KeyId i) const {return keys_[i];}
   Key& operator [] (KeyId i) {return keys_[i];}
-  bool operator == (const ImageKeys& image_keys)
+  bool operator == (const ImageKeys& image_keys) const
   {
     return keys_ == image_keys.keys_;
   }
 
 private:
+  friend class cereal::access;
+
+  template <class Archive>
+  void serialize(Archive& archive)
+  {
+    archive(keys_);
+  }
+
   KeysContainer keys_;
 };
 
