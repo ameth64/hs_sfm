@@ -40,14 +40,14 @@ private:
                            ImagePoint& point) const
   {
     KMatrix K_inv = intrinsic_params.GetKMatrix().inverse();
-    point = K_inv.block(0, 0, 2, 2) * point + K_inv.col(2);
+    point = K_inv.block(0, 0, 2, 2) * point + K_inv.block(0, 2, 2, 1);
   }
 
   void DenormalizedImagePoint(const IntrinsicParams& intrinsic_params,
                               ImagePoint& point) const
   {
     KMatrix K = intrinsic_params.GetKMatrix();
-    point = K.block(0, 0, 2, 2) * point + K.col(2);
+    point = K.block(0, 0, 2, 2) * point + K.block(0, 2, 2, 1);
   }
 
   void UndistortNormalizedImagePoint(const IntrinsicParams& intrinsic_params,

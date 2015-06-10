@@ -29,7 +29,7 @@ public:
     KMatrix K = intrinsic_params.GetKMatrix();
     KMatrix K_inv = K.inverse();
     point_distort = K_inv.block(0, 0, 2, 2) * point_undistort_true +
-                    K_inv.col(2);
+                    K_inv.block(0, 2, 2, 1);
 
     Scalar radial_dx, radial_dy, decenter_dx, decenter_dy;
     RadialDistortor radial_distortor;
@@ -45,7 +45,7 @@ public:
     point_distort[0] += radial_dx + decenter_dx;
     point_distort[1] += radial_dy + decenter_dy;
 
-    point_distort = K.block(0, 0, 2, 2) * point_distort + K.col(2);
+    point_distort = K.block(0, 0, 2, 2) * point_distort + K.block(0, 2, 2, 1);
 
     Undistortor undistortor;
     ImagePoint point_undistort =
