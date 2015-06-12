@@ -161,33 +161,62 @@ public:
     }
   }
 
-  const ViewInfo& GetViewInfoByTrackImage(size_t track_id,
+  const ViewInfo* GetViewInfoByTrackImage(size_t track_id,
                                           size_t image_id) const
   {
     auto view_itr = track_image_index_.find(std::make_pair(track_id,
                                                             image_id));
-    return views_info_[view_itr->second];
+    if (view_itr != track_image_index_.end())
+    {
+      return &views_info_[view_itr->second];
+    }
+    else
+    {
+      return nullptr;
+    }
   }
 
-  ViewInfo& GetViewInfoByTrackImage(size_t track_id,
+  ViewInfo* GetViewInfoByTrackImage(size_t track_id,
                                     size_t image_id)
   {
-    return views_info_[track_image_index_[std::make_pair(track_id,
-                                                         image_id)]];
+    auto view_itr = track_image_index_.find(std::make_pair(track_id,
+                                                            image_id));
+    if (view_itr != track_image_index_.end())
+    {
+      return &views_info_[view_itr->second];
+    }
+    else
+    {
+      return nullptr;
+    }
   }
 
-  const ViewInfo& GetViewInfoByImageKey(size_t image_id,
-                                        size_t key_id) const
+  const ViewInfo* GetViewInfoByImageKey(size_t image_id,
+                                           size_t key_id) const
   {
-    auto view_itr = image_key_index_.find(std::make_pair(image_id,
-                                                         key_id));
-    return views_info_[view_itr->second];
+    auto view_itr = image_key_index_.find(std::make_pair(image_id, key_id));
+    if (view_itr == image_key_index_.end())
+    {
+      return nullptr;
+    }
+    else
+    {
+      return &views_info_[view_itr->second];
+    }
   }
 
-  ViewInfo& GetViewInfoByImageKey(size_t image_id,
-                                size_t key_id)
+  ViewInfo* GetViewInfoByImageKey(size_t image_id,
+                                     size_t key_id)
   {
-    return views_info_[image_key_index_[std::make_pair(image_id, key_id)]];
+    auto view_itr = image_key_index_.find(std::make_pair(image_id, key_id));
+    if (view_itr == image_key_index_.end())
+    {
+      return nullptr;
+    }
+    else
+    {
+      return &views_info_[view_itr->second];
+    }
   }
 
   bool operator == (const ViewInfoIndexer& other) const

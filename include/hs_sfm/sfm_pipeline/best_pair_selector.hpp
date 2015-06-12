@@ -110,6 +110,7 @@ public:
     best_identity_id = std::numeric_limits<size_t>::max();
     best_relative_id = std::numeric_limits<size_t>::max();
     IndexSet estimated_inlier_indices;
+    PointContainer points_essential;
     for (; itr_image_pair_size != itr_image_pair_size_end;
          ++itr_image_pair_size)
     {
@@ -166,7 +167,7 @@ public:
       if (extrinsic_points_calculator(e_matrix,
                                       key_pairs_refined,
                                       relative_extrinsic_params,
-                                      points) != 0)
+                                      points_essential) != 0)
       {
         continue;
       }
@@ -178,7 +179,6 @@ public:
     if (best_identity_id != std::numeric_limits<size_t>::max() &&
         best_relative_id != std::numeric_limits<size_t>::max())
     {
-      std::map<std::pair<size_t, size_t>, size_t> key_pair_indexer;
       auto itr_image_pair =
         matches.find(std::make_pair(best_identity_id, best_relative_id));
       if (itr_image_pair == matches.end())
@@ -186,53 +186,104 @@ public:
         return -1;
       }
 
-      for (size_t i = 0; i < estimated_inlier_indices.size(); i++)
+      for (size_t i = 0; i < itr_image_pair->second.size(); i++)
       {
-        size_t key_pair_id = size_t(estimated_inlier_indices[i]);
-        key_pair_indexer[
-          std::make_pair(itr_image_pair->second[key_pair_id].first,
-                         itr_image_pair->second[key_pair_id].second)] = i;
-      }
-      for (size_t i = 0; i < tracks.size(); i++)
-      {
-        size_t number_of_views = tracks[i].size();
-        size_t key_id_identity = std::numeric_limits<size_t>::max();
-        size_t key_id_relative = std::numeric_limits<size_t>::max();
-        for (size_t j = 0; j < number_of_views; j++)
+        size_t key_id_identity = itr_image_pair->second[i].first;
+        size_t key_id_relative = itr_image_pair->second[i].second;
+        ViewInfo* view_info_identity =
+          view_info_indexer.GetViewInfoByImageKey(best_identity_id,
+                                                     key_id_identity);
+        ViewInfo* view_info_relative =
+          view_info_indexer.GetViewInfoByImageKey(best_relative_id,
+                                                     key_id_relative);
+        if (view_info_identity != nullptr)
         {
-          size_t image_id = tracks[i][j].first;
-          size_t key_id = tracks[i][j].second;
-          if (image_id == best_identity_id)
-          {
-            key_id_identity = key_id;
-          }
-          if (image_id == best_relative_id)
-          {
-            key_id_relative = key_id;
-          }
+          view_info_identity->is_blunder = true;
         }
-        if (key_id_identity != std::numeric_limits<size_t>::max() &&
-            key_id_relative != std::numeric_limits<size_t>::max())
+        if (view_info_relative != nullptr)
         {
-          auto itr_key_pair =
-            key_pair_indexer.find(std::make_pair(key_id_identity,
-                                                 key_id_relative));
-          if (itr_key_pair != key_pair_indexer.end())
-          {
-            track_point_map[i] = itr_key_pair->second;
-          }
-          else
-          {
-            for (size_t j = 0; j < number_of_views; j++)
-            {
-              ViewInfo& view_info = view_info_indexer.GetViewInfoByTrackImage(
-                                      i, tracks[i][j].first);
-              view_info.is_blunder = true;
-            }
-          }
+          view_info_relative->is_blunder = true;
         }
       }
 
+      points.clear();
+      for (size_t i = 0; i < estimated_inlier_indices.size(); i++)
+      {
+        size_t key_pair_id = size_t(estimated_inlier_indices[i]);
+        size_t key_id_identity = itr_image_pair->second[key_pair_id].first;
+        size_t key_id_relative = itr_image_pair->second[key_pair_id].second;
+        ViewInfo* view_info_identity =
+          view_info_indexer.GetViewInfoByImageKey(best_identity_id,
+                                                     key_id_identity);
+        ViewInfo* view_info_relative =
+          view_info_indexer.GetViewInfoByImageKey(best_relative_id,
+                                                     key_id_relative);
+        if (view_info_identity != nullptr &&
+            view_info_relative != nullptr)
+        {
+          view_info_identity->is_blunder = false;
+          view_info_relative->is_blunder = false;
+          size_t track_id = view_info_identity->track_id;
+          if (track_id == view_info_relative->track_id)
+          {
+            track_point_map[track_id] = points.size();
+            points.push_back(points_essential[i]);
+          }
+        }
+      }
+//#if 1
+//      size_t number_of_points = 0;
+//#endif
+//      for (size_t i = 0; i < tracks.size(); i++)
+//      {
+//        size_t number_of_views = tracks[i].size();
+//        size_t key_id_identity = std::numeric_limits<size_t>::max();
+//        size_t key_id_relative = std::numeric_limits<size_t>::max();
+//        for (size_t j = 0; j < number_of_views; j++)
+//        {
+//          size_t image_id = tracks[i][j].first;
+//          size_t key_id = tracks[i][j].second;
+//          if (image_id == best_identity_id)
+//          {
+//            key_id_identity = key_id;
+//          }
+//          if (image_id == best_relative_id)
+//          {
+//            key_id_relative = key_id;
+//          }
+//        }
+//        if (key_id_identity != std::numeric_limits<size_t>::max() &&
+//            key_id_relative != std::numeric_limits<size_t>::max())
+//        {
+//          auto itr_key_pair =
+//            key_pair_indexer.find(std::make_pair(key_id_identity,
+//                                                 key_id_relative));
+//          if (itr_key_pair != key_pair_indexer.end())
+//          {
+//            track_point_map[i] = itr_key_pair->second;
+//#if 1
+//            std::cout << "key_id_identity:" << key_id_identity << "\n";
+//            std::cout << "key_id_relative:" << key_id_relative << "\n";
+//            std::cout << "point_id:" << itr_key_pair->second << "\n";
+//            number_of_points++;
+//#endif
+//          }
+//          else
+//          {
+//            for (size_t j = 0; j < number_of_views; j++)
+//            {
+//              ViewInfo& view_info = view_info_indexer.GetViewInfoByTrackImage(
+//                                      i, tracks[i][j].first);
+//              view_info.is_blunder = true;
+//            }
+//          }
+//        }
+//      }
+
+//#if 1
+//      std::cout << "number_of_points:" << number_of_points << "\n";
+//      std::cout << "points.size():" << points.size() << "\n";
+//#endif
 
       return 0;
     }

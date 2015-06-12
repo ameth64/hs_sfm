@@ -162,13 +162,17 @@ public:
         }
         size_t point_id = track_point_map[track_id];
 
-        ViewInfo& view_info =
+        ViewInfo* view_info =
           view_info_indexer.GetViewInfoByTrackImage(track_id, image_id);
-        view_info.is_blunder = true;
+        if (view_info == nullptr)
+        {
+          return -1;
+        }
+        view_info->is_blunder = true;
 
         Correspondence correspondence_distort;
         Correspondence correspondence_undistort;
-        Key key_distort = image_keysets[image_id][view_info.key_id];
+        Key key_distort = image_keysets[image_id][view_info->key_id];
 
         correspondence_distort.first = key_distort;
         correspondence_distort.second = points[point_id];
@@ -198,9 +202,12 @@ public:
         {
           size_t track_id =
             key_track_map[inlier_indices[i]];
-          ViewInfo& view_info =
+          ViewInfo* view_info =
             view_info_indexer.GetViewInfoByTrackImage(track_id, image_id);
-          view_info.is_blunder = false;
+          if (view_info != nullptr)
+          {
+            view_info->is_blunder = false;
+          }
         }
         new_extrinsic_params_set.push_back(new_extrinsic_params);
         new_image_ids.push_back(image_id);

@@ -67,10 +67,10 @@ public:
         for (size_t i = 0; i < number_of_views; i++)
         {
           size_t image_id = tracks[track_id][i].first;
-          const ViewInfo& view_info =
+          const ViewInfo* view_info =
             view_info_indexer.GetViewInfoByTrackImage(track_id, image_id);
           if (image_extrinsic_map.IsValid(image_id) &&
-              !view_info.is_blunder)
+              view_info != nullptr && !view_info->is_blunder)
           {
             track_views.push_back(tracks[track_id][i]);
           }
@@ -169,10 +169,13 @@ public:
               for (size_t i = 0; i < number_of_views; i++)
               {
                 size_t image_id = tracks[track_id][i].first;
-                ViewInfo& view_info =
+                ViewInfo* view_info =
                   view_info_indexer.GetViewInfoByTrackImage(track_id,
                   image_id);
-                view_info.is_blunder = true;
+                if (view_info != nullptr)
+                {
+                  view_info->is_blunder = true;
+                }
               }
             }
           }
