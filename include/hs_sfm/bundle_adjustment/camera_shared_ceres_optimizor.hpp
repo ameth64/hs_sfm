@@ -279,7 +279,7 @@ public:
         expected_values[0] = double(near_y[y_offset]);
         //double expected_value = double(near_y[y_offset]);
         constraints[0] =
-          y_covariance_inverse.GetConstraint(constraint_offset);
+          std::sqrt(y_covariance_inverse.GetConstraint(constraint_offset));
         //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
         //stddev = 1.0 / std::sqrt(stddev);
         //problem.SetParameterLowerBound(x_data + x_offset, 0,
@@ -294,7 +294,7 @@ public:
         expected_values[1] = double(near_y[y_offset]);
         //double expected_value = double(near_y[y_offset]);
         constraints[1] =
-          y_covariance_inverse.GetConstraint(constraint_offset);
+          std::sqrt(y_covariance_inverse.GetConstraint(constraint_offset));
         //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
         //stddev = 1.0 / std::sqrt(stddev);
         //problem.SetParameterLowerBound(x_data + x_offset, 1,
@@ -309,7 +309,7 @@ public:
         expected_values[2] = double(near_y[y_offset]);
         //double expected_value = double(near_y[y_offset]);
         constraints[2] =
-          y_covariance_inverse.GetConstraint(constraint_offset);
+          std::sqrt(y_covariance_inverse.GetConstraint(constraint_offset));
         //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
         //stddev = 1.0 / std::sqrt(stddev);
         //problem.SetParameterLowerBound(x_data + x_offset, 2,
@@ -344,7 +344,8 @@ public:
         {
           expected_values[i] = double(near_y[y_offset + i]);
           constraints[i] =
-            y_covariance_inverse.GetConstraint(constraint_offset + i);
+            std::sqrt(y_covariance_inverse.GetConstraint(
+                        constraint_offset + i));
           //double expected_value = double(near_y[y_offset + i]);
           //double stddev =
           //  y_covariance_inverse.GetConstraint(constraint_offset + i);
@@ -363,7 +364,7 @@ public:
         {
           expected_values[3 + i] = double(near_y[y_offset]);
           constraints[3 + i] =
-            y_covariance_inverse.GetConstraint(constraint_offset);
+            std::sqrt(y_covariance_inverse.GetConstraint(constraint_offset));
           //double expected_value = double(near_y[y_offset]);
           //double stddev =
           //  y_covariance_inverse.GetConstraint(constraint_offset);
@@ -411,7 +412,7 @@ public:
         {
           expected_values[i] = double(near_y[y_offset]);
           constraints[i] =
-            y_covariance_inverse.GetConstraint(constraint_offset);
+            std::sqrt(y_covariance_inverse.GetConstraint(constraint_offset));
           //double expected_value = double(near_y[y_offset]);
           //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
           //stddev = 1.0 / std::sqrt(stddev);
@@ -431,7 +432,7 @@ public:
         {
           expected_values[3 + i] = double(near_y[y_offset]);
           constraints[3 + i] =
-            y_covariance_inverse.GetConstraint(constraint_offset);
+            std::sqrt(y_covariance_inverse.GetConstraint(constraint_offset));
           //double expected_value = double(near_y[y_offset]);
           //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
           //stddev = 1.0 / std::sqrt(stddev);
@@ -450,7 +451,7 @@ public:
         {
           expected_values[5 + i] = double(near_y[y_offset]);
           constraints[5 + i] =
-            y_covariance_inverse.GetConstraint(constraint_offset);
+            std::sqrt(y_covariance_inverse.GetConstraint(constraint_offset));
           //double expected_value = double(near_y[y_offset]);
           //double stddev = y_covariance_inverse.GetConstraint(constraint_offset);
           //stddev = 1.0 / std::sqrt(stddev);
