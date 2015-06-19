@@ -12,6 +12,7 @@
 #include "hs_math/random/uniform_random_var.hpp"
 
 #include "hs_sfm/sfm_utility/match_type.hpp"
+#include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/projective_functions.hpp"
 #include "hs_sfm/sfm_utility/matches_tracks_convertor.hpp"

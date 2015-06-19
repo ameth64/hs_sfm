@@ -113,6 +113,7 @@ set(PIPELINE_UTEST_SOURCES
   "unit_test/test_main.cpp"
   "unit_test/sfm_pipeline/test_incremental_sfm.cpp"
   "unit_test/sfm_pipeline/test_global_sfm.cpp"
+  "unit_test/sfm_pipeline/test_point_cloud_norm_calculator.cpp"
   )
 if (MSVC)
   set_source_files_properties(
@@ -138,6 +139,7 @@ hslib_add_dep(${PIPELINE_NAME}_utest
     DEP_STATIC_LIBS clp CoinUtils Osi OsiClpSolver
   3RDPARTY_DEPS cereal HEADONLY
   3RDPARTY_DEPS lemon
+  3RDPARTY_DEPS flann DEP_STATIC_LIBS flann
   #3RDPARTY_DEPS tiff DEP_LIBS tiff
   #3RDPARTY_DEPS jpeg_turbo DEP_LIBS jpeg_turbo
   #3RDPARTY_DEPS png DEP_LIBS png
