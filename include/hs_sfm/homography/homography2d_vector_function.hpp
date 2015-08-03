@@ -26,7 +26,7 @@ public:
 private:
   enum
   {
-    Major = EIGEN_DEFAULT_MATRIX_STORAGE_ORDER_OPTION
+    Major = Eigen::EIGEN_DEFAULT_MATRIX_STORAGE_ORDER_OPTION
   };
 
 public:

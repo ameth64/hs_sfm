@@ -7,8 +7,6 @@
 #include "real_synthetic_data_generator.hpp"
 #include "synthetic_1dsfm_data_generator.hpp"
 
-#include "hs_test_utility/test_env/data_path.hpp"
-
 #include "hs_sfm/sfm_utility/matches_tracks_convertor.hpp"
 #include "hs_sfm/sfm_pipeline/global_sfm.hpp"
 #include "hs_sfm/sfm_pipeline/gcp_similar_transform_estimator.hpp"
@@ -45,11 +43,10 @@ TEST(TestGlobalSFM, RealSynthetic242ImageTest)
   typedef hs::sfm::MatchContainer MatchContainer;
   typedef hs::sfm::TrackContainer TrackContainer;
 
-  std::string data_path = hs::test::getTestDataPath();
   std::string out_path =
-    data_path + "sfm/incremental/real_data_242_images/bundler.out";
+    "../../sfm_pipeline/real_data_242_images/bundler.out";
   std::string gcp_path =
-    data_path + "sfm/incremental/real_data_242_images/gcp.xml";
+    "../../sfm_pipeline/real_data_242_images/gcp.xml";
   IntrinsicParamsContainer intrinsic_params_set_initial;
   intrinsic_params_set_initial.push_back(IntrinsicParams(4666.67,
                                                          0,

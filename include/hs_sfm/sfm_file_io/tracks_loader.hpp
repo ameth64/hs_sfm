@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_SFM_FILE_IO_TRACKS_LOADER_HPP_
+﻿#ifndef _HS_SFM_SFM_FILE_IO_TRACKS_LOADER_HPP_
 #define _HS_SFM_SFM_FILE_IO_TRACKS_LOADER_HPP_
 
 #include <string>
@@ -59,9 +59,9 @@ struct TracksLoader
       size_t track_id = itr_flag->first.first;
       size_t image_id = itr_flag->first.second;
       int flag = itr_flag->second;
-      ViewInfo& view_info =
+      ViewInfo* view_info =
         view_info_indexer.GetViewInfoByTrackImage(track_id, image_id);
-      view_info.is_blunder = (flag == 1);
+      view_info->is_blunder = (flag == 1);
     }
 
     return 0;

@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_SFM_FILE_IO_TRACKS_SAVER_HPP_
+﻿#ifndef _HS_SFM_SFM_FILE_IO_TRACKS_SAVER_HPP_
 #define _HS_SFM_SFM_FILE_IO_TRACKS_SAVER_HPP_
 
 #include <string>
@@ -39,9 +39,9 @@ struct TracksSaver
       {
         size_t image_id = tracks[track_id][i].first;
         size_t key_id = tracks[track_id][i].second;
-        const ViewInfo& view_info =
+        const ViewInfo* view_info =
           view_info_indexer.GetViewInfoByTrackImage(track_id, image_id);
-        int flag = view_info.is_blunder ? 1 : 0;
+        int flag = view_info->is_blunder ? 1 : 0;
         tracks_file<<" "<<image_id<<" "<<key_id<<" "<<flag;
       }
       tracks_file<<"\n";

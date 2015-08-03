@@ -1,3 +1,6 @@
 [submodule "cmake"]
 	path = cmake
 	url = ../hslib_cmake.git
+[submodule "test_data"]
+	path = test_data
+	url = ../hs_sfm_test_data.git

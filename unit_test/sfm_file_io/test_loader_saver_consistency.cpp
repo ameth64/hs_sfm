@@ -1,8 +1,6 @@
-#include <iostream>
+﻿#include <iostream>
 
 #include <gtest/gtest.h>
-
-#include "hs_test_utility/test_env/data_path.hpp"
 
 #include "hs_sfm/sfm_file_io/keyset_loader.hpp"
 #include "hs_sfm/sfm_file_io/keyset_saver.hpp"
@@ -226,21 +224,20 @@ TEST(TestLoaderSaverConsistency, SimpleTest)
 {
   typedef double Scalar;
   typedef TestLoaderSaverConsistency<Scalar> Tester;
-  std::string data_path = hs::test::getTestDataPath();
-  std::string keyset_path = data_path +
-    "sfm/sfm_file_io/TestLoaderSaverConsistency/IMG_127816_DxO.feat";
-  std::string matches_path = data_path +
-    "sfm/sfm_file_io/TestLoaderSaverConsistency/matches.init.txt";
-  std::string tracks_path = data_path +
-    "sfm/sfm_file_io/TestLoaderSaverConsistency/tracks.txt";
-  std::string intrinsic_set_path = data_path +
-    "sfm/sfm_file_io/TestLoaderSaverConsistency/intrinsic_params_set.txt";
-  std::string extrinsic_set_path = data_path +
-    "sfm/sfm_file_io/TestLoaderSaverConsistency/extrinsic_params_set.txt";
-  std::string image_extrinsic_path = data_path +
-    "sfm/sfm_file_io/TestLoaderSaverConsistency/image_extrinsic_map.txt";
-  std::string track_point_path = data_path +
-    "sfm/sfm_file_io/TestLoaderSaverConsistency/track_point_map.txt";
+  std::string keyset_path =
+    "../../sfm_file_io/TestLoaderSaverConsistency/IMG_127816_DxO.feat";
+  std::string matches_path =
+    "../../sfm_file_io/TestLoaderSaverConsistency/matches.init.txt";
+  std::string tracks_path =
+    "../../sfm_file_io/TestLoaderSaverConsistency/tracks.txt";
+  std::string intrinsic_set_path =
+    "../../sfm_file_io/TestLoaderSaverConsistency/intrinsic_params_set.txt";
+  std::string extrinsic_set_path =
+    "../../sfm_file_io/TestLoaderSaverConsistency/extrinsic_params_set.txt";
+  std::string image_extrinsic_path =
+    "../../sfm_file_io/TestLoaderSaverConsistency/image_extrinsic_map.txt";
+  std::string track_point_path =
+    "../../sfm_file_io/TestLoaderSaverConsistency/track_point_map.txt";
   Tester tester(keyset_path,
                 matches_path,
                 tracks_path,

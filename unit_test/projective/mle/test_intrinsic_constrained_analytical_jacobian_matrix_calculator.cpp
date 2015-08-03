@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 
 #include <gtest/gtest.h>
 
@@ -109,7 +109,7 @@ public:
       {
         Scalar ffd_value = ffd_jacobian_matrix.coeff(i, j);
         Scalar analytical_value = analytical_jacobian_matrix.coeff(i, j);
-        Scalar absolute_error = abs(analytical_value - ffd_value);
+        Scalar absolute_error = std::abs(analytical_value - ffd_value);
         Scalar relative_error = absolute_error;
         if (ffd_value != Scalar(0)) relative_error /= ffd_value;
         if (relative_error > Scalar(5e-4) && absolute_error > Scalar(1e-4))
