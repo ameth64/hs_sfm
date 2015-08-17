@@ -7,8 +7,12 @@ include("cmake/yong_hslib.cmake")
 
 hs_project(hs_sfm)
 
+yong_option(BUILD_UNIT_TEST OFF)
+
 hs_parse_dependencies("dependencies.txt")
 
-add_subdirectory("unit_test")
+if (BUILD_UNIT_TEST)
+  add_subdirectory("unit_test")
+endif()
 
 hs_project_end(hs_sfm)
