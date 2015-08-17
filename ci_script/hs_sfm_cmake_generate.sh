@@ -14,7 +14,7 @@
   --submodules "ALL" "Release" "flann"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/resolve_dependency.sh \
   --submodules "ALL" "Release" "gtest"
-jpeg_turbo_extra_cmake_defs="-DNASM=nasm"
+jpeg_turbo_extra_cmake_defs="-DNASM=${CI_NASM_PATH}"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/resolve_dependency.sh \
   --submodules "ALL" \
   --extra_cmake_defs "${jpeg_turbo_extra_cmake_defs}" "Release" "jpeg_turbo"
