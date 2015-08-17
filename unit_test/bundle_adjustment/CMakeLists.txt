@@ -23,40 +23,40 @@ set(BA_UTEST_SOURCES
 hslib_add_utest(bundle_adjustment SOURCES ${BA_UTEST_SOURCES})
 yong_add_dependence(hs_sfm bundle_adjustment_utest
   DEPENDENT_PROJECT boost
-    COMMIT_HASH ${BOOST_HASH}
+    COMMIT_HASH ${boost_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT cereal
-    COMMIT_HASH ${CEREAL_HASH}
+    COMMIT_HASH ${cereal_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT ceres
-    COMMIT_HASH ${CERES_HASH}
+    COMMIT_HASH ${ceres_HASH}
     DEPENDENT_LIBS ceres
   DEPENDENT_PROJECT eigen
-    COMMIT_HASH ${EIGEN_HASH}
+    COMMIT_HASH ${eigen_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT jpeg_turbo
-    COMMIT_HASH ${JPEG_TURBO_HASH}
+    COMMIT_HASH ${jpeg_turbo_HASH}
     DEPENDENT_LIBS jpeg_turbo
   DEPENDENT_PROJECT png
-    COMMIT_HASH ${PNG_HASH}
+    COMMIT_HASH ${png_HASH}
     DEPENDENT_LIBS png
   DEPENDENT_PROJECT tiff
-    COMMIT_HASH ${TIFF_HASH}
+    COMMIT_HASH ${tiff_HASH}
     DEPENDENT_LIBS tiff
   DEPENDENT_PROJECT zlib
-    COMMIT_HASH ${ZLIB_HASH}
+    COMMIT_HASH ${zlib_HASH}
     DEPENDENT_LIBS zlib
   DEPENDENT_PROJECT hs_image_io
-    COMMIT_HASH ${HS_IMAGE_IO_HASH}
+    COMMIT_HASH ${hs_image_io_HASH}
     DEPENDENT_LIBS whole_io
   DEPENDENT_PROJECT hs_math
-    COMMIT_HASH ${HS_MATH_HASH}
+    COMMIT_HASH ${hs_math_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT hs_optimizor
-    COMMIT_HASH ${HS_OPTIMIZOR_HASH}
+    COMMIT_HASH ${hs_optimizor_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT hs_test_utility
-    COMMIT_HASH ${HS_TEST_UTILITY_HASH}
+    COMMIT_HASH ${hs_test_utility_HASH}
     HEADER_ONLY
   )
 hslib_add_mkl_dep(bundle_adjustment_utest)

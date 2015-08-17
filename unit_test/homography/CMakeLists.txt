@@ -7,16 +7,16 @@ set(HOMOGRAPHY_UTEST_SOURCES
 hslib_add_utest(homography SOURCES ${HOMOGRAPHY_UTEST_SOURCES})
 yong_add_dependence(hs_sfm homography_utest
   DEPENDENT_PROJECT cereal
-    COMMIT_HASH ${CEREAL_HASH}
+    COMMIT_HASH ${cereal_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT eigen
-    COMMIT_HASH ${EIGEN_HASH}
+    COMMIT_HASH ${eigen_HASH}
     HEADER_ONLY
     #DEPENDENT_PROJECT hs_fit
     #  COMMIT_HASH ${HS_FIT_HASH}
     #  HEADER_ONLY
   DEPENDENT_PROJECT hs_math
-    COMMIT_HASH ${HS_MATH_HASH}
+    COMMIT_HASH ${hs_math_HASH}
     HEADER_ONLY
     #DEPENDENT_PROJECT hs_optimizor
     #  COMMIT_HASH ${HS_OPTIMIZOR_HASH}

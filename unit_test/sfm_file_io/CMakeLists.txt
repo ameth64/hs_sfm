@@ -5,16 +5,16 @@ set(FILE_IO_UTEST_SOURCES
 hslib_add_utest(sfm_file_io SOURCES ${FILE_IO_UTEST_SOURCES})
 yong_add_dependence(hs_sfm sfm_file_io_utest
   DEPENDENT_PROJECT boost
-    COMMIT_HASH ${BOOST_HASH}
+    COMMIT_HASH ${boost_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT cereal
-    COMMIT_HASH ${CEREAL_HASH}
+    COMMIT_HASH ${cereal_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT eigen
-    COMMIT_HASH ${EIGEN_HASH}
+    COMMIT_HASH ${eigen_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT hs_math
-    COMMIT_HASH ${HS_MATH_HASH}
+    COMMIT_HASH ${hs_math_HASH}
     HEADER_ONLY
     #DEPENDENT_PROJECT hs_test_utility
     #  COMMIT_HASH ${HS_TEST_UTILITY_HASH}

@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+cmake_policy(SET CMP0054 OLD)
 
 include("cmake/yong_injector/injector.cmake")
 include("cmake/yong_hsprj.cmake")
@@ -6,26 +7,7 @@ include("cmake/yong_hslib.cmake")
 
 hs_project(hs_sfm)
 
-set(BOOST_HASH a24ea08cf80df33730c0eb447cb8c3a86cebfcb7)
-set(CEREAL_HASH b63a7eba95c10ecbaace4688341589802e6b63e7)
-set(CERES_HASH 86df519b4d70b94cf0d59a68f3ddb0b530b07296)
-set(EIGEN_HASH ac36b528a661eb9733f3069d2b6537ed6c8848b5)
-set(FLANN_HASH 02c40a96b3ab9f2776a50941cddc6b1efb3e56c0)
-set(GTEST_HASH b4e50a7c50dd39924dcc3513a42a09745c2cd0d0)
-set(JPEG_TURBO_HASH c5f46459881c068960fae0d2257cd907e917f8cc)
-set(LEMON_HASH 41642e9092c4b243d28f77b3df169efff494cab9)
-set(OPENCV_HASH 0fd4242987c9b53770d60d055ee132472af06df9)
-set(OPENMVG_HASH 14706030bcc7e201d6c846cc43bd2363d4ebb3f1)
-set(OSI_CLP_HASH adeedc8ec6d173f3d89031082ed303ef3d05ca08)
-set(PNG_HASH c552004bfc1a471e9e1925fdea4b6d2c30b42f6b)
-set(TIFF_HASH c391be0872a593de8362d76a60ad879dcbcc69b4)
-set(ZLIB_HASH 04ad1c7e937d2835c1c54c50bec9cfaa4f43a1c8)
-set(HS_FIT_HASH d744cf24d05b12a4b63d5d66856de3278eaf9779)
-set(HS_IMAGE_IO_HASH 4982d0de0426aa423a649449854be9925eee31df)
-set(HS_MATH_HASH 0987c8d3a1eb92a02f4c7c10879d4e576400bdc0)
-set(HS_OPTIMIZOR_HASH 40d761fc6382fd98306917cdbe3ed9ebd72937f4)
-set(HS_PROGRESS_HASH 2a018807c672a889c1272c5df18196fd67657bdd)
-set(HS_TEST_UTILITY_HASH f9a22e1cda6fb259fac4bec72cf1327e63cced7c)
+hs_parse_dependencies("dependencies.txt")
 
 add_subdirectory("unit_test")
 

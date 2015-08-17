@@ -4,3 +4,6 @@
 [submodule "test_data"]
 	path = test_data
 	url = ../hs_sfm_test_data.git
+[submodule "ci_script/hslib_ci_script"]
+	path = ci_script/hslib_ci_script
+	url = ../hslib_ci_script.git
