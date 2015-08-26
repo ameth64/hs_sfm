@@ -136,12 +136,20 @@ public:
         for (size_t k = 0; k < number_of_views_; k++)
         {
           Key key =
-            hs::sfm::ProjectiveFunctions<Scalar>::WorldPointProjectToImageKey(
-              intrinsic_params_, extrinsic_params_set[k], point);
+            hs::sfm::ProjectiveFunctions<Scalar>::
+              WorldPointProjectToImageKeyNoDistort(
+                intrinsic_params_, extrinsic_params_set[k], point);
           if (key[0] >=0 && key[0] < Scalar(image_width_) &&
               key[1] >=0 && key[1] < Scalar(image_height_))
           {
-            pattern_views[k].push_back(Correspondence(key, point));
+            key = hs::sfm::ProjectiveFunctions<Scalar>::
+              WorldPointProjectToImageKey(
+                intrinsic_params_, extrinsic_params_set[k], point);
+            if (key[0] >= 0 && key[0] < Scalar(image_width_) &&
+                key[1] >= 0 && key[1] < Scalar(image_height_))
+            {
+              pattern_views[k].push_back(Correspondence(key, point));
+            }
           }
         }
       }

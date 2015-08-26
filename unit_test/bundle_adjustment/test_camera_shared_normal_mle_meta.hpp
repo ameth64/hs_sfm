@@ -6,7 +6,8 @@
 #include "hs_test_utility/test_monte_carlo/normal_mle_meta_eigen_dense_residuals_calculator_type.hpp"
 #include "hs_test_utility/test_monte_carlo/normal_mle_meta_eigen_dense_statistical_x_covariance_calculator_type.hpp"
 
-#include "hs_sfm/bundle_adjustment/camera_shared_levenberg_marquardt_optimizor.hpp"
+//#include "hs_sfm/bundle_adjustment/camera_shared_levenberg_marquardt_optimizor.hpp"
+#include "hs_sfm/bundle_adjustment/camera_shared_ceres_optimizor.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_noised_y_generator.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_mahalanobis_distance_calculator.hpp"
 #include "hs_sfm/bundle_adjustment/camera_shared_analytical_x_covariance_calculator.hpp"
@@ -22,7 +23,7 @@ template <typename _Scalar>
 struct NormalMLEXVectorOptimizorType<hs::sfm::ba::CameraSharedVectorFunction<
                                        _Scalar> >
 {
-  typedef hs::sfm::ba::CameraSharedLevenbergMarquardtOptimizor<
+  typedef hs::sfm::ba::CameraSharedCeresOptimizor<
             hs::sfm::ba::CameraSharedVectorFunction<_Scalar> > type;
 };
 

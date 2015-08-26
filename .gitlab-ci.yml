@@ -4,37 +4,53 @@ build_test_shared_unix:
     - unix
   script:
     - git remote set-url origin ${CI_BUILD_REPO}
-    - git submodule update --init --recursive -- cmake
-    - git submodule update --init --recursive -- ci_script/hslib_ci_script
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh --build_shared --build_type "Release" "Unix Makefiles"
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh --build_shared --build_type "Release" "Unix Makefiles"
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh --build_shared --build_type "Release" "Unix Makefiles"
+    - git submodule update --init --recursive
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh --build_shared "Release" "Unix Makefiles"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh --build_shared "Release" "Unix Makefiles"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh --build_shared "Release" "Unix Makefiles"
 
 run_test_shared_unix:
   type: test
   tags:
     - unix
   script:
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh --build_shared --build_type "Release" "Unix Makefiles"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh --build_shared "Release" "Unix Makefiles"
 
-build_test_shared_windows:
+build_test_shared_windows7:
   type: build
   tags:
-    - windows
+    - windows7
   script:
     - git remote set-url origin ${CI_BUILD_REPO}
-    - git submodule update --init --recursive -- cmake
-    - git submodule update --init --recursive -- ci_script/hslib_ci_script
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh --build_shared "Visual Studio 12 Win64"
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh --build_shared "Visual Studio 12 Win64"
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh --build_shared "Visual Studio 12 Win64"
+    - git submodule update --init --recursive
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh --build_shared --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh --build_shared --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh --build_shared --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
 
-run_test_shared_windows:
+run_test_shared_windows7:
   type: test
   tags:
-    - windows
+    - windows7
   script:
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh --build_shared "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh --build_shared --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+
+build_test_shared_windows10:
+  type: build
+  tags:
+    - windows10
+  script:
+    - git remote set-url origin ${CI_BUILD_REPO}
+    - git submodule update --init --recursive
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh --build_shared --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh --build_shared --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh --build_shared --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+
+run_test_shared_windows10:
+  type: test
+  tags:
+    - windows10
+  script:
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh --build_shared --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
 
 build_test_static_unix:
   type: build
@@ -42,34 +58,50 @@ build_test_static_unix:
     - unix
   script:
     - git remote set-url origin ${CI_BUILD_REPO}
-    - git submodule update --init --recursive -- cmake
-    - git submodule update --init --recursive -- ci_script/hslib_ci_script
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh --build_type "Release" "Unix Makefiles"
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh --build_type "Release" "Unix Makefiles"
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh --build_type "Release" "Unix Makefiles"
+    - git submodule update --init --recursive
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh "Release" "Unix Makefiles"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh "Release" "Unix Makefiles"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh "Release" "Unix Makefiles"
 
 run_test_static_unix:
   type: test
   tags:
     - unix
   script:
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh --build_type "Release" "Unix Makefiles"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh "Release" "Unix Makefiles"
 
-build_test_static_windows:
+build_test_static_windows7:
   type: build
   tags:
-    - windows
+    - windows7
   script:
     - git remote set-url origin ${CI_BUILD_REPO}
-    - git submodule update --init --recursive -- cmake
-    - git submodule update --init --recursive -- ci_script/hslib_ci_script
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh "Visual Studio 12 Win64"
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh "Visual Studio 12 Win64"
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh "Visual Studio 12 Win64"
+    - git submodule update --init --recursive
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
 
-run_test_static_windows:
+run_test_static_windows7:
   type: test
   tags:
-    - windows
+    - windows7
   script:
-    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+
+build_test_static_windows10:
+  type: build
+  tags:
+    - windows10
+  script:
+    - git remote set-url origin ${CI_BUILD_REPO}
+    - git submodule update --init --recursive
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_cmake_generate.sh --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_install.sh --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_build_test.sh --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"
+
+run_test_static_windows10:
+  type: test
+  tags:
+    - windows10
+  script:
+    - ${CI_PROJECT_DIR}/ci_script/${CI_PROJECT_NAME}_run_test.sh --build_types "Debug;Release;RelWithDebInfo" "Release" "Visual Studio 12 Win64"

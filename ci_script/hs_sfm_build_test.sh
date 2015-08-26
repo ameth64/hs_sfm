@@ -1,25 +1,25 @@
-#!/bin/sh
+#!/bin/bash
 
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/initialize.sh "$@"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "bundle_adjustment_utest"
+  "bundle_adjustment_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "calibrate_utest"
+  "calibrate_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "essential_utest"
+  "essential_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "fundamental_utest"
+  "fundamental_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "homography_utest"
+  "homography_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "projective_utest"
+  "projective_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "sfm_file_io_utest"
+  "sfm_file_io_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "sfm_pipeline_utest"
+  "sfm_pipeline_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "sfm_utility_utest"
+  "sfm_utility_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "synthetic_utest"
+  "synthetic_utest"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/build_test.sh \
-  "Release" "triangulate_utest"
+  "triangulate_utest"

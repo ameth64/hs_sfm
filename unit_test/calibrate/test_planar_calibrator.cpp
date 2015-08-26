@@ -136,14 +136,14 @@ public:
       intrinsic_vector_stddev = intrinsic_vector_stddev.cwiseSqrt();
       intrinsic_vector_mean /= Scalar(number_of_samples);
 
-      if (intrinsic_vector_stddev[0] > Scalar(1) ||
+      if (intrinsic_vector_stddev[0] > Scalar(5) ||
           intrinsic_vector_stddev[1] > Scalar(1e-3) ||
-          intrinsic_vector_stddev[2] > Scalar(1) ||
-          intrinsic_vector_stddev[3] > Scalar(1) ||
-          intrinsic_vector_stddev[4] > Scalar(5e-3) ||
-          intrinsic_vector_stddev[5] > Scalar(5e-3) ||
-          intrinsic_vector_stddev[6] > Scalar(5e-3) ||
-          intrinsic_vector_stddev[7] > Scalar(5e-3) ||
+          intrinsic_vector_stddev[2] > Scalar(3) ||
+          intrinsic_vector_stddev[3] > Scalar(3) ||
+          intrinsic_vector_stddev[4] > Scalar(1e-8) ||
+          intrinsic_vector_stddev[5] > Scalar(1e-1) ||
+          intrinsic_vector_stddev[6] > Scalar(1e-1) ||
+          intrinsic_vector_stddev[7] > Scalar(1e-1) ||
           intrinsic_vector_stddev[8] > Scalar(1e-4) ||
           intrinsic_vector_stddev[9] > Scalar(1e-4))
       {
@@ -248,7 +248,7 @@ TEST(TestPlanarCalibrator, Nex7Test)
                                         Scalar( 0.03066927),
                                         Scalar(-0.00075512),
                                         Scalar(-9.32360526e-005));
-  Scalar pattern_grid_size = Scalar(0.005);
+  Scalar pattern_grid_size = Scalar(0.01);
   size_t number_of_grid_rows = 20;
   size_t number_of_grid_cols = 20;
   size_t number_of_views = 10;
@@ -293,7 +293,7 @@ TEST(TestPlanarCalibrator, A7RTest)
                                         Scalar( 0.01623284),
                                         Scalar(-0.00013183),
                                         Scalar(8.0993666e-6));
-  Scalar pattern_grid_size = Scalar(0.005);
+  Scalar pattern_grid_size = Scalar(0.01);
   size_t number_of_grid_rows = 20;
   size_t number_of_grid_cols = 20;
   size_t number_of_views = 10;

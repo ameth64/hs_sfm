@@ -129,9 +129,9 @@ public:
       points_true[i] = vector_function.GetPoint(i, true_x);
       points_optimized[i] = vector_function.GetPoint(i, optimized_x);
       Vector3 point_near = vector_function.GetPoint(i, near_x);
-      std::cout<<"point_true:\n"<<points_true[i]<<"\n";
-      std::cout<<"point_optimized:\n"<<points_optimized[i]<<"\n";
-      std::cout<<"point_near:\n"<<point_near<<"\n";
+      //std::cout<<"point_true:\n"<<points_true[i]<<"\n";
+      //std::cout<<"point_optimized:\n"<<points_optimized[i]<<"\n";
+      //std::cout<<"point_near:\n"<<point_near<<"\n";
     }
     SimilarEstimator estimator;
     Rotation rotation;
@@ -160,7 +160,7 @@ public:
       m.col(0) = image_true;
       m.col(1) = image_optimized;
       m.col(2) = image_near;
-      std::cout<<"images:\n"<<m<<"\n";
+      //std::cout<<"images:\n"<<m<<"\n";
     }
 
     Index number_of_cameras = vector_function.number_of_cameras();
@@ -174,7 +174,7 @@ public:
       m.col(0) = camera_true;
       m.col(1) = camera_optimized;
       m.col(2) = camera_near;
-      std::cout<<"camera:\n"<<m<<"\n";
+      //std::cout<<"camera:\n"<<m<<"\n";
     }
 
     std::cout<<"number_of_images:"<<number_of_images<<"\n";

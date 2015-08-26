@@ -225,19 +225,19 @@ TEST(TestLoaderSaverConsistency, SimpleTest)
   typedef double Scalar;
   typedef TestLoaderSaverConsistency<Scalar> Tester;
   std::string keyset_path =
-    "../../sfm_file_io/TestLoaderSaverConsistency/IMG_127816_DxO.feat";
+    "../../test_data/sfm_file_io/TestLoaderSaverConsistency/IMG_127816_DxO.feat";
   std::string matches_path =
-    "../../sfm_file_io/TestLoaderSaverConsistency/matches.init.txt";
+    "../../test_data/sfm_file_io/TestLoaderSaverConsistency/matches.init.txt";
   std::string tracks_path =
-    "../../sfm_file_io/TestLoaderSaverConsistency/tracks.txt";
+    "../../test_data/sfm_file_io/TestLoaderSaverConsistency/tracks.txt";
   std::string intrinsic_set_path =
-    "../../sfm_file_io/TestLoaderSaverConsistency/intrinsic_params_set.txt";
+    "../../test_data/sfm_file_io/TestLoaderSaverConsistency/intrinsic_params_set.txt";
   std::string extrinsic_set_path =
-    "../../sfm_file_io/TestLoaderSaverConsistency/extrinsic_params_set.txt";
+    "../../test_data/sfm_file_io/TestLoaderSaverConsistency/extrinsic_params_set.txt";
   std::string image_extrinsic_path =
-    "../../sfm_file_io/TestLoaderSaverConsistency/image_extrinsic_map.txt";
+    "../../test_data/sfm_file_io/TestLoaderSaverConsistency/image_extrinsic_map.txt";
   std::string track_point_path =
-    "../../sfm_file_io/TestLoaderSaverConsistency/track_point_map.txt";
+    "../../test_data/sfm_file_io/TestLoaderSaverConsistency/track_point_map.txt";
   Tester tester(keyset_path,
                 matches_path,
                 tracks_path,

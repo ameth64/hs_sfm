@@ -8,14 +8,13 @@ set(SYNTHETIC_UTEST_SOURCES
   )
 hslib_add_utest(synthetic SOURCES ${SYNTHETIC_UTEST_SOURCES})
 yong_add_dependence(hs_sfm synthetic_utest
+  DEPENDENT_PROJECT boost
+    HEADER_ONLY
   DEPENDENT_PROJECT cereal
-    COMMIT_HASH ${cereal_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT eigen
-    COMMIT_HASH ${eigen_HASH}
     HEADER_ONLY
   DEPENDENT_PROJECT hs_math
-    COMMIT_HASH ${hs_math_HASH}
     HEADER_ONLY
   )
 hslib_add_mkl_dep(synthetic_utest)

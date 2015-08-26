@@ -155,7 +155,8 @@ public:
                      number_of_keys,
                      number_of_available_images,
                      number_of_available_points,
-                     feature_maps) != 0)
+                     feature_maps,
+                     image_camera_map) != 0)
     {
       return -1;
     }
@@ -269,7 +270,8 @@ private:
                    size_t& number_of_keys,
                    size_t& number_of_available_images,
                    size_t& number_of_available_points,
-                   FeatureMapContainer& feature_maps) const
+                   FeatureMapContainer& feature_maps,
+                   ImageCameraMap& image_camera_map) const
   {
     number_of_keys = 0;
     auto itr_keyset = keysets.begin();
@@ -322,6 +324,16 @@ private:
         feature_maps[feature_id].second = Index(point_map[i] - 1);
       }
     }
+
+    ImageCameraMap image_camera_map_new(number_of_available_images);
+    for (size_t i = 0; i < image_map.size(); i++)
+    {
+      if (image_map[i] > 0)
+      {
+        image_camera_map_new[image_map[i] - 1] = image_camera_map[i];
+      }
+    }
+    image_camera_map.swap(image_camera_map_new);
 
     return 0;
   }
@@ -545,15 +557,15 @@ private:
           {
             CameraConstraint camera_constraint;
             camera_constraint.camera_id = camera_id;
-            camera_constraint.radial_mask.set();
-            camera_constraint.decentering_mask.set();
-            camera_constraint.intrinsic_mask.set();
-            //camera_constraint.radial_mask.reset();
-            //camera_constraint.decentering_mask.reset();
-            //camera_constraint.intrinsic_mask.reset();
-            //camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_SKEW);
-            //camera_constraint.intrinsic_mask.set(
-            //  INTRINSIC_CONSTRAIN_PIXEL_RATIO);
+            //camera_constraint.radial_mask.set();
+            //camera_constraint.decentering_mask.set();
+            //camera_constraint.intrinsic_mask.set();
+            camera_constraint.radial_mask.reset();
+            camera_constraint.decentering_mask.reset();
+            camera_constraint.intrinsic_mask.reset();
+            camera_constraint.intrinsic_mask.set(INTRINSIC_CONSTRAIN_SKEW);
+            camera_constraint.intrinsic_mask.set(
+              INTRINSIC_CONSTRAIN_PIXEL_RATIO);
             camera_constraints.push_back(camera_constraint);
             break;
           }
