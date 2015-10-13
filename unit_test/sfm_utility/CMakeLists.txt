@@ -7,6 +7,7 @@ set(UTILITY_UTEST_SOURCES
   "test_similar_transform_estimator.cpp"
   "test_matches_tracks_convertor.cpp"
   "test_undistortor.cpp"
+  "test_camera_rotated_bounding_box_intersector.cpp"
   )
 hslib_add_utest(sfm_utility SOURCES ${UTILITY_UTEST_SOURCES})
 yong_add_dependence(hs_sfm sfm_utility_utest
