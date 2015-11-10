@@ -200,13 +200,17 @@ public:
     for (size_t i = 0; i < number_of_points; i++)
     {
       const Point3D point_estimate = points_estimate[i];
-      Point3D diff = point_estimate - points_true[i];
+      const Point3D point_true = points_true[i];
+      Point3D diff = point_estimate - point_true;
       Scalar planar_error = diff.segment(0, 2).norm();
       Scalar height_error = std::abs(diff(2));
       mean_point_planar_error += planar_error;
       mean_point_height_error += height_error;
 
       accuracy_file<<i<<" "
+                   <<point_true[0]<<" "
+                   <<point_true[1]<<" "
+                   <<point_true[2]<<" "
                    <<point_estimate[0]<<" "
                    <<point_estimate[1]<<" "
                    <<point_estimate[2]<<" "

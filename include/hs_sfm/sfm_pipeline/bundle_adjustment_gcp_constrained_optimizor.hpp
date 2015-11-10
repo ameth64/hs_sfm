@@ -94,6 +94,7 @@ public:
     TrackContainer tracks_bundle;
     ObjectIndexMap track_point_map_bundle;
     Index number_of_keys = 0;
+    estimate_measure_map.Resize(0);
     for (size_t track_id = 0; track_id < number_of_tracks; track_id++)
     {
       if (track_point_map.IsValid(track_id))

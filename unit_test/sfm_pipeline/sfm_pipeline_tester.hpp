@@ -299,7 +299,7 @@ private:
       Point& gcp = gcps_absolute_estimate[i];
       gcp = scale_similar * (rotation_similar * gcp) + translate_similar;
     }
-    ObjectIndexMap estimate_measure_map = track_point_map_gcp;
+    ObjectIndexMap estimate_measure_map;
     GCPConstrainedOptimizor gcp_constrained_optimizor(
                               1, Scalar(0.005), Scalar(0.005));
     Tester tester;

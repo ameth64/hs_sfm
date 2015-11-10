@@ -4,6 +4,11 @@ set(PIPELINE_UTEST_SOURCES
   #"test_global_sfm.cpp"
   "test_point_cloud_norm_calculator.cpp"
   )
+if (MSVC)
+  set_source_files_properties(
+    "test_incremental_sfm.cpp"
+    PROPERTIES COMPILE_FLAGS "/bigobj")
+endif()
 hslib_add_utest(sfm_pipeline SOURCES ${PIPELINE_UTEST_SOURCES})
 yong_add_dependence(hs_sfm sfm_pipeline_utest
   DEPENDENT_PROJECT boost

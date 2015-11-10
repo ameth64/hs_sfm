@@ -9,7 +9,7 @@ include("cmake/yong_hslib.cmake")
 
 hs_project(hs_sfm)
 
-yong_option(BUILD_UNIT_TEST OFF)
+option(BUILD_UNIT_TEST OFF)
 
 hs_parse_dependencies("dependencies.txt")
 
