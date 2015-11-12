@@ -9,7 +9,9 @@
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/resolve_dependency.sh \
   --submodules "ALL" "yong" "eigen"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/resolve_dependency.sh \
-  --submodules "ALL" --deps "eigen" "yong" "ceres"
+  --submodules "ALL" "yong" "SuiteSparse"
+. ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/resolve_dependency.sh \
+  --submodules "ALL" --deps "eigen SuiteSparse" "yong" "ceres"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/resolve_dependency.sh \
   --submodules "ALL" "yong" "flann"
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/resolve_dependency.sh \
@@ -50,4 +52,4 @@
 
 . ${CI_PROJECT_DIR}/ci_script/hslib_ci_script/cmake_generate.sh \
   --extra_cmake_defs "-DHSLIB_BUILD_DOC=0 -DHSLIB_COPY_TEST_DATA=1 -DBUILD_UNIT_TEST=1" \
-  --deps "boost eigen cereal ceres flann gtest jpeg_turbo lemon osi_clp zlib png tiff OpenCV openmvg hs_image_io hs_math hs_fit hs_progress hs_test_utility hs_optimizor"
+  --deps "boost eigen cereal ceres flann gtest jpeg_turbo lemon osi_clp zlib png tiff OpenCV openmvg SuiteSparse hs_image_io hs_math hs_fit hs_progress hs_test_utility hs_optimizor"

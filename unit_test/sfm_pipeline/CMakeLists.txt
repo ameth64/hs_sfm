@@ -34,6 +34,8 @@ yong_add_dependence(hs_sfm sfm_pipeline_utest
                    openMVG_stlplus
   DEPENDENT_PROJECT osi_clp
     DEPENDENT_LIBS clp CoinUtils Osi OsiClpSolver
+  DEPENDENT_PROJECT SuiteSparse
+    DEPENDENT_LIBS amd camd cholmod colamd suitesparseconfig
   DEPENDENT_PROJECT zlib
     DEPENDENT_LIBS zlib
   DEPENDENT_PROJECT hs_fit
