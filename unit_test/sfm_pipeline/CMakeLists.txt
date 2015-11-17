@@ -3,6 +3,7 @@ set(PIPELINE_UTEST_SOURCES
   "test_incremental_sfm.cpp"
   #"test_global_sfm.cpp"
   "test_point_cloud_norm_calculator.cpp"
+  "test_image_expandor.cpp"
   )
 if (MSVC)
   set_source_files_properties(

@@ -63,8 +63,11 @@ public:
                << "property float ny\n"
                << "property float nz\n";
     }
-    //ply_file << "element face "<<number_of_images * 5<<"\n"
-    //         << "property list uchar int vertex_index\n";
+    else
+    {
+      ply_file << "element face "<<number_of_images * 5<<"\n"
+               << "property list uchar int vertex_index\n";
+    }
     ply_file << "end_header\n";
 
     for (size_t i = 0; i < number_of_images; i++)
@@ -124,18 +127,21 @@ public:
       ply_file << "\n";
     }
 
-    //for (size_t i = 0; i < number_of_images; i++)
-    //{
-    //  ply_file<<"4 "
-    //          <<i * 5 + 1<<" "
-    //          <<i * 5 + 2<<" "
-    //          <<i * 5 + 3<<" "
-    //          <<i * 5 + 4<<"\n";
-    //  ply_file<<"3 "<<i * 5 + 0<<" "<<i * 5 + 1<<" "<<i * 5 + 2<<"\n";
-    //  ply_file<<"3 "<<i * 5 + 0<<" "<<i * 5 + 2<<" "<<i * 5 + 3<<"\n";
-    //  ply_file<<"3 "<<i * 5 + 0<<" "<<i * 5 + 3<<" "<<i * 5 + 4<<"\n";
-    //  ply_file<<"3 "<<i * 5 + 0<<" "<<i * 5 + 4<<" "<<i * 5 + 1<<"\n";
-    //}
+    if (!norms)
+    {
+      for (size_t i = 0; i < number_of_images; i++)
+      {
+        ply_file<<"4 "
+                <<i * 5 + 1<<" "
+                <<i * 5 + 2<<" "
+                <<i * 5 + 3<<" "
+                <<i * 5 + 4<<"\n";
+        ply_file<<"3 "<<i * 5 + 0<<" "<<i * 5 + 1<<" "<<i * 5 + 2<<"\n";
+        ply_file<<"3 "<<i * 5 + 0<<" "<<i * 5 + 2<<" "<<i * 5 + 3<<"\n";
+        ply_file<<"3 "<<i * 5 + 0<<" "<<i * 5 + 3<<" "<<i * 5 + 4<<"\n";
+        ply_file<<"3 "<<i * 5 + 0<<" "<<i * 5 + 4<<" "<<i * 5 + 1<<"\n";
+      }
+    }
 
     return 0;
   }

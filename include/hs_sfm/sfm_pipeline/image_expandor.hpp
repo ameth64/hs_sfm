@@ -9,6 +9,7 @@
 
 #include "hs_sfm/sfm_utility/camera_type.hpp"
 #include "hs_sfm/sfm_utility/match_type.hpp"
+#include "hs_sfm/sfm_utility/key_type.hpp"
 #include "hs_sfm/sfm_utility/projective_functions.hpp"
 #include "hs_sfm/projective/single_camera_params_maximum_likelihood_estimator.hpp"
 #include "hs_sfm/projective/pmatrix_dlt_ransac_refiner.hpp"

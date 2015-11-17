@@ -472,7 +472,7 @@ public:
     ceres::Solver::Options options;
     options.max_num_iterations = max_num_iterations_;
     options.num_threads = number_of_threads_ > 1 ? number_of_threads_ : 1;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
     //options.linear_solver_type = ceres::ITERATIVE_SCHUR;
     //options.preconditioner_type = ceres::SCHUR_JACOBI;
     options.function_tolerance = function_tolerance_;
