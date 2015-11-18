@@ -17,6 +17,24 @@ namespace sfm
 namespace ba
 {
 
+/**
+ *  多个相机共享的Bundle Adjustment向量函数。
+ *
+ *  在该函数中所有的影像（image）都是由一个或多个相机（camera）拍摄，
+ *  因此所有的影像可以按使用相机的不同分成若干组，
+ *  每组都共享一个同样的相机内参数。
+ *
+ *  x向量的排列为：三维点、影像外参数、相机内参数。
+ *  y向量的排列为：特征点、三维点约束、影像外参数约束、相机内参数约束。
+ *
+ *  如果设置了fix_points，则三维点不出现在x向量中，
+ *  如果设置了fix_images，则影像外参数不出现在x向量中，
+ *  如果设置了fix_cameras，则相机内参数不出现在x向量中。
+ *
+ *  对于三维点到二维点的投影映射，
+ *  算法上与[ProjectiveFunctions](@ref ProjectiveFunctions)相同。
+ *
+ */
 template <typename _Scalar>
 class CameraSharedVectorFunction
 {

@@ -163,6 +163,9 @@ protected:
 template <typename _VectorFunction>
 class CameraSharedCeresOptimizor;
 
+/**
+ *  使用ceres库优化多个相机共享的Bundle Adjustment向量函数。
+ */
 template <typename _Scalar>
 class CameraSharedCeresOptimizor<CameraSharedVectorFunction<_Scalar> >
 {

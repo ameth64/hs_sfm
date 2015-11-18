@@ -12,6 +12,9 @@ namespace sfm
 namespace ba
 {
 
+/**
+ *  多个相机共享的Bundle Adjustment向量函数的增广正规矩阵。
+ */
 template <typename _Scalar>
 class CameraSharedAugmentedNormalMatrix
 {

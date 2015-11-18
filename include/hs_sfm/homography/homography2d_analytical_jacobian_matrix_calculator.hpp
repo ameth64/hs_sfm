@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_ANALYTICAL_JACOBIAN_MATRIX_CALCULATOR_HPP_
+﻿#ifndef _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_ANALYTICAL_JACOBIAN_MATRIX_CALCULATOR_HPP_
 #define _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_ANALYTICAL_JACOBIAN_MATRIX_CALCULATOR_HPP_
 
 #include "hs_sfm/homography/homography2d_vector_function.hpp"
@@ -14,6 +14,9 @@ namespace homography
 template <typename _VectorFunction>
 class Homography2DAnalyticalJacobianMatrixCalculator;
 
+/**
+ *  解析式的计算平面单应的Jacobian矩阵。
+ */
 template <typename _Scalar>
 class Homography2DAnalyticalJacobianMatrixCalculator<
         Homography2DVectorFunction<_Scalar> >
@@ -35,7 +38,7 @@ private:
   typedef typename JacobianMatrix::KeyBlockContainer KeyBlockContainer;
   typedef typename JacobianMatrix::HBlock HBlock;
   typedef typename JacobianMatrix::HBlockContainer HBlockContainer;
-  
+
 public:
   Scalar m_a;
   Err operator() (const VectorFunction& vector_function,
@@ -81,7 +84,7 @@ public:
          -transformed_key[1] * key.transpose() / w;
        h_blocks[i](1, 8) = -transformed_key[1] / w;
     }
-    
+
     return 0;
   }
 };

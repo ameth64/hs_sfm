@@ -29,6 +29,9 @@ namespace sfm
 namespace projective
 {
 
+/**
+ *  使用Ransac和直接线性变换算法，去错误的三维点二维点匹配。
+ */
 template <typename _Scalar>
 class PMatrixDLTRansacRefiner
 {

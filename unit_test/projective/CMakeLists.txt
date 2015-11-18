@@ -17,6 +17,8 @@ yong_add_dependence(hs_sfm projective_utest
     DEPENDENT_LIBS ceres
   DEPENDENT_PROJECT eigen
     HEADER_ONLY
+  DEPENDENT_PROJECT SuiteSparse
+    DEPENDENT_LIBS amd camd cholmod colamd suitesparseconfig
   DEPENDENT_PROJECT hs_fit
     HEADER_ONLY
   DEPENDENT_PROJECT hs_math

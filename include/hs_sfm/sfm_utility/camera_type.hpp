@@ -11,6 +11,24 @@ namespace hs
 namespace sfm
 {
 
+/**
+ *  相机内参数模板类。
+ *
+ *  相机内参数描述的是相机座标系到影像座标系的线性变换以及
+ *  镜头畸变带来的非线性变换。
+ *  描述相机座标系到影像座标系的线性变换由以下参数组成：
+ *  - 焦距（focal length）：以像素为单位，表示焦平面到相机中心的距离。
+ *  - 偏斜（skew）：表示像素x轴与y轴之间的倾斜程度，一般为0。
+ *  - 像主点（principal point x）：
+ *    表示主光轴与图像平面的交点在图像座标系中的x座标。
+ *  - 像主点（principal point y）：
+ *    表示主光轴与图像平面的交点在图像座标系中的y座标。
+ *  - 像素比率（pixel ratio）：
+ *    表示像素点在x方向上的大小与在y方向上的大小的比例。
+ *  描述镜头畸变带来的非线性变换由以下参数组成：
+ *  - [径向畸变](@ref RadialDistortor)参数（k1 k2 k3）。
+ *  - [偏心畸变](@ref DecenteringDistortor)参数（d1 d2）。
+ */
 template <typename _Scalar>
 class CameraIntrinsicParams
 {
@@ -18,9 +36,6 @@ public:
   typedef _Scalar Scalar;
   typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
   typedef EIGEN_VECTOR(Scalar, 3) Vector3;
-  /**
-   *  内参数矩阵，表示相机内部的固有参数
-   */
   typedef Matrix33 KMatrix;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -64,6 +79,21 @@ public:
       k1_(k1), k2_(k2), k3_(k3),
       d1_(d1), d2_(d2) {}
 
+  /**
+   *  获取表示相机座标系到影像座标系的线性变换K矩阵。
+   *
+   *  \f[
+   *    \mathbf{K} = \bigg[
+   *      \begin{array}{ccc}
+   *        f & s     & x \\
+   *        0 & f * r & y \\
+   *        0 & 0     & 1
+   *      \end{array}\bigg]
+   *  \f]
+   *
+   *  其中：\f$f\f$是焦距，\f$s\f$是偏斜，
+   *  \f$x\f$是像主点x座标，\f$y\f$是像主点y座标，\f$r\f$是像素比率。
+   */
   inline KMatrix GetKMatrix() const
   {
     KMatrix K;
@@ -188,6 +218,9 @@ public:
     d2_ = d2;
   }
 
+  /**
+   *  序列化成员模板函数。用于序列化中。
+   */
   template <class Archive>
   void serialize(Archive & archive)
   {
@@ -209,30 +242,57 @@ private:
    */
   Scalar focal_length_;
   /**
-   *  扭曲参数
+   *  偏斜参数
    */
   Scalar skew_;
   /**
-   *  主点偏移
+   *  像主点x座标
    */
   Scalar principal_point_x_;
+  /**
+   *  像主点y座标
+   */
   Scalar principal_point_y_;
   /**
-   *  y方向与x方向上像素量纲比值
+   *  像素比率
    */
   Scalar pixel_ratio_;
 
   /**
-   *  径向畸变参数
+   *  径向畸变参数k1
    */
-  Scalar k1_, k2_, k3_;
+  Scalar k1_;
+  /**
+   *  径向畸变参数k2
+   */
+  Scalar k2_;
+  /**
+   *  径向畸变参数k3
+   */
+  Scalar k3_;
 
   /**
-   *  切向畸变参数
+   *  偏心畸变参数d1
    */
-  Scalar d1_, d2_;
+  Scalar d1_;
+  /**
+   *  偏心畸变参数d2
+   */
+  Scalar d2_;
 };
 
+/**
+ *  相机外参数模板类。
+ *
+ *  相机外参数表示从世界座标系到相机座标系的刚体变换，
+ *  由两部分组成：三维旋转和三维平移。
+ *
+ *  设\f$\mathbf{R}\f$为世界座标系到相机座标系的3*3旋转矩阵，
+ *  \f$\mathbf{c}\f$为相机中心在世界座标系的座标，
+ *  \f$\mathbf{x_c}\f$为相机座标系的座标，
+ *  \f$\mathbf{x_w}\f$为世界座标系的座标，
+ *  则：\f$\mathbf{x_c} = \mathbf{R}(\mathbf{x_w} - \mathbf{c})\f$
+ */
 template <typename _Scalar>
 class CameraExtrinsicParams
 {
@@ -243,15 +303,15 @@ public:
   typedef EIGEN_MATRIX(Scalar, 3, 3) Matrix33;
   typedef hs::math::geometry::Rotation3D<Scalar> Rotation;
   typedef Vector3 Position;
-  /**
-   *  外参数矩阵,表示相机运动
-   */
   typedef Matrix34 MotionMatrix;
 
   CameraExtrinsicParams() {rotation_.SetIdentity();position_.setZero();}
   CameraExtrinsicParams(const Rotation& rotation, const Position& position)
     : rotation_(rotation), position_(position) {}
 
+  /**
+   *  返回表示相机外参数的4*4仿射矩阵。
+   */
   inline MotionMatrix GetMotionMatrix() const
   {
     MotionMatrix M;
@@ -293,6 +353,9 @@ public:
     return position_;
   }
 
+  /**
+   *  序列化存储函数。
+   */
   template <class Archive>
   void save(Archive& archive) const
   {
@@ -300,6 +363,9 @@ public:
             position_[0], position_[1], position_[2]);
   }
 
+  /**
+   *  序列化读取函数。
+   */
   template <class Archive>
   void load(Archive& archive)
   {
@@ -315,13 +381,11 @@ public:
 
 private:
   /**
-   *  相机朝向。
-   *  表示由世界坐标系到相机坐标系的旋转。
+   *  相机朝向。表示由世界坐标系到相机坐标系的旋转。
    */
   Rotation rotation_;
   /**
-   *  相机位置。
-   *  表示相机在世界坐标系下的位置。
+   *  相机位置。表示相机在世界坐标系下的位置。
    */
   Position position_;
 };
@@ -338,6 +402,10 @@ struct ImageParams
   std::string m_path;
 };
 
+/**
+ *  该模板类已废弃，使用[ProjectiveFunctions](@ref ProjectiveFunctions)代替。
+ *  若无其他地方用到该模板类，可删除。
+ */
 template <typename _Scalar>
 class CameraFunctions
 {

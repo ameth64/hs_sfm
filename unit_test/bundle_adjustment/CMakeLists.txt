@@ -39,6 +39,8 @@ yong_add_dependence(hs_sfm bundle_adjustment_utest
     DEPENDENT_LIBS jpeg_turbo
   DEPENDENT_PROJECT png
     DEPENDENT_LIBS png
+  DEPENDENT_PROJECT SuiteSparse
+    DEPENDENT_LIBS amd camd cholmod colamd suitesparseconfig
   DEPENDENT_PROJECT tiff
     DEPENDENT_LIBS tiff
   DEPENDENT_PROJECT zlib

@@ -11,6 +11,14 @@ namespace hs
 namespace sfm
 {
 
+/**
+ *  计算相机的投影四棱锥与经过旋转的立方体矩形框是否相交的模板类。
+ *
+ *  计算方法如下：
+ *  - 计算立方体矩形框是否存在投影四棱锥内的顶点，若存在，则相交；
+ *  - 计算相机的投影四棱锥的四条边与立方体矩形框的交点，
+ *    若存在交点在立方体矩形框内，则相交。
+ */
 template <typename _Scalar>
 class CameraRotatedBoundingBoxIntersector
 {

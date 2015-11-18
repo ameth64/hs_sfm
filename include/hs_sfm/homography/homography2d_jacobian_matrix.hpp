@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_JACOBIAN_MATRIX_HPP_
+﻿#ifndef _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_JACOBIAN_MATRIX_HPP_
 #define _HS_SFM_HOMOGRAPHY_HOMOGRAPHY2D_JACOBIAN_MATRIX_HPP_
 
 #include <limits>
@@ -11,6 +11,9 @@ namespace sfm
 namespace homography
 {
 
+/**
+ *  平面单应的Jacobian矩阵类。
+ */
 template <typename _Scalar>
 class Homography2DJacobianMatrix
 {

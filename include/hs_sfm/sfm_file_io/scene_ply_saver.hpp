@@ -13,6 +13,11 @@ namespace sfm
 namespace fileio
 {
 
+/**
+ *  给定相机内外参数以及相片的宽度与高度，及点云数据，输出成ply格式文件。
+ *
+ *  该类主要方便内部调试使用，可直观的看到场景的大致状态。
+ */
 template <typename _Scalar, typename _ImageDimension>
 class ScenePLYSaver
 {

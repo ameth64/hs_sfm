@@ -15,6 +15,13 @@ namespace sfm
 namespace synthetic
 {
 
+/**
+ *  多个架次的无人机航拍模拟数据生成器。
+ *
+ *  每个架次表示不同相机内参数的相机拍摄的一组航拍影像。
+ *  架次之间会有一定的重叠以及偏转。
+ *  可生成每张影像的随机外参数以及随机的点云。
+ */
 template <typename _Scalar, typename _ImageDimension>
 class MultipleFlightGenerator
 {

@@ -19,6 +19,9 @@ namespace triangulate
 template <typename _VectorFunction>
 class MultipleViewLevenbergMarquardtOptimizor;
 
+/**
+ *  多视图三角化计算三维点的Levenberg-Marquardt优化算法实现。
+ */
 template <typename _Scalar>
 class MultipleViewLevenbergMarquardtOptimizor<
         MultipleViewVectorFunction<_Scalar> >

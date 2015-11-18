@@ -1,4 +1,4 @@
-#ifndef _HS_SFM_SFM_UTILITY_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
+﻿#ifndef _HS_SFM_SFM_UTILITY_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
 #define _HS_SFM_SFM_UTILITY_SIMILAR_TRANSFORM_ESTIMATOR_HPP_
 
 #include <limits>
@@ -11,6 +11,21 @@ namespace hs
 namespace sfm
 {
 
+/**
+ *  计算两个对应点集之间的相似变换七参数。
+ *
+ *  设\f$\mathbf{x_r}\f$是三维相似座标系点集中的点，
+ *  而\f$\mathbf{x_a}\f$是三维绝对座标系点集中的点，
+ *  该functor计算一个三维相似变换：\f$\mathbf{R}\f$旋转，\f$s\f$缩放，
+ *  \f$\mathbf{t}\f$平移，使得残差：
+ *  \f[
+ *    \Sigma \|\mathbf{x_a} - (sR(\mathbf{x_r}) + \mathbf{t})\|_2
+ *  \f]
+ *  最小。
+ *  该算法使用的是论文
+ *  Closed-form solution of absolute orientation using unit quaternions
+ *  中的方法。
+ */
 template <typename _Scalar>
 class SimilarTransformEstimator
 {

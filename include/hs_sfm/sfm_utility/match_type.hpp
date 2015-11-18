@@ -13,16 +13,55 @@ namespace hs
 namespace sfm
 {
 
+/**
+ *  表示所有图片对应的与其具有匹配关系的图片id。
+ */
 typedef std::vector<std::vector<int> > MatchGuide;
+/**
+ *  表示照片对，first与second分别表示两张照片的id。
+ */
 typedef std::pair<size_t, size_t> ImagePair;
+/**
+ *  表示特征点对，first与second分别表示该两个特征点在各自照片中的id。
+ */
 typedef std::pair<size_t, size_t> KeyPair;
+/**
+ *  表示多个特征点对。
+ */
 typedef std::vector<KeyPair> KeyPairContainer;
+/**
+ *  表示照片对对应的所有匹配点。
+ */
 typedef std::map<ImagePair, KeyPairContainer> MatchContainer;
+/**
+ *  表示某三维点在不同照片中的特征点。first表示照片id，second表示特征点id。
+ */
 typedef std::vector<std::pair<size_t, size_t> > Track;
+/**
+ *  表示多个Track。
+ */
 typedef std::vector<Track> TrackContainer;
+/**
+ *  表示某张照片观测到的所有track的id，first表示track的id，
+ *  second表示特征点在track中的id。
+ */
 typedef std::vector<std::pair<size_t, size_t> > CameraView;
+/**
+ *  表示多个CameraView。
+ */
 typedef std::vector<CameraView> CameraViewContainer;
 
+/**
+ *  目标索引映射类。
+ *
+ *  该类表示一组目标（object）与经过映射后的索引（index）之间的关系。
+ *  假设一组包含5个元素的目标经过映射后的序列，映射后变成包含4个元素的序列：
+ *  1，0，4，此时目标中的第0个元素则对应映射后的序列中的第1个元素，
+ *  第1个元素对应映射后的序列中第0个元素，
+ *  第5个元素对应映射后的序列中第2个元素，
+ *  而第3个以及第4个元素在映射后没有相对应的元素。
+ *  此时mapper中的元素为：1,0,invalid,invalid,2。
+ */
 class ObjectIndexMap
 {
 public:
@@ -105,6 +144,10 @@ private:
   std::vector<size_t> mapper_;
 };
 
+/**
+ *  表示一个特征点的可视信息，包括track id、image id和key id。
+ *
+ */
 struct ViewInfo
 {
   size_t track_id;
@@ -127,6 +170,9 @@ struct ViewInfo
   }
 };
 
+/**
+ *  特征点可视信息索引类。提供各种特征点可视信息查询方式。
+ */
 class ViewInfoIndexer
 {
 public:
@@ -137,6 +183,9 @@ public:
     image_key_index_.clear();
   }
 
+  /**
+   *  根据所有的track信息创建索引。
+   */
   void SetViewInfoByTracks(const hs::sfm::TrackContainer& tracks)
   {
     Clear();
@@ -161,6 +210,9 @@ public:
     }
   }
 
+  /**
+   *  根据track id和image id查询特征点可视信息。
+   */
   const ViewInfo* GetViewInfoByTrackImage(size_t track_id,
                                           size_t image_id) const
   {
@@ -176,6 +228,9 @@ public:
     }
   }
 
+  /**
+   *  根据track id和image id查询特征点可视信息。
+   */
   ViewInfo* GetViewInfoByTrackImage(size_t track_id,
                                     size_t image_id)
   {
@@ -191,8 +246,11 @@ public:
     }
   }
 
+  /**
+   *  根据image id和key id查询特征点可视信息。
+   */
   const ViewInfo* GetViewInfoByImageKey(size_t image_id,
-                                           size_t key_id) const
+                                        size_t key_id) const
   {
     auto view_itr = image_key_index_.find(std::make_pair(image_id, key_id));
     if (view_itr == image_key_index_.end())
@@ -205,8 +263,11 @@ public:
     }
   }
 
+  /**
+   *  根据image id和key id查询特征点可视信息。
+   */
   ViewInfo* GetViewInfoByImageKey(size_t image_id,
-                                     size_t key_id)
+                                  size_t key_id)
   {
     auto view_itr = image_key_index_.find(std::make_pair(image_id, key_id));
     if (view_itr == image_key_index_.end())

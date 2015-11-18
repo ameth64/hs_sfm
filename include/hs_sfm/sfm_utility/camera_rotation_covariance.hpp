@@ -14,6 +14,9 @@ namespace hs
 namespace sfm
 {
 
+/**
+ *  计算相机旋转的协方差。
+ */
 template <typename _Scalar>
 class CameraRotaionCovarianceCalculator
 {

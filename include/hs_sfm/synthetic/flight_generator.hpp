@@ -16,6 +16,12 @@ namespace sfm
 namespace synthetic
 {
 
+/**
+ *  一个驾次的无人机航拍模拟数据生成器。
+ *
+ *  给定生成的参数后，可生成随机的模拟相机外参数以及点云。
+ *  点云满足一定范围内的均匀分布。
+ */
 template <typename _Scalar, typename _ImageDimension>
 class FlightGenerator
 {

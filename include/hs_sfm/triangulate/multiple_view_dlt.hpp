@@ -10,6 +10,11 @@ namespace sfm
 namespace triangulate
 {
 
+/**
+ *  使用直接线性变换三角化计算多张照片下的三维点。
+ *
+ *  参照《计算机视觉中的多视几何》第11章的内容。
+ */
 template <typename _Scalar>
 class MultipleViewDLT
 {

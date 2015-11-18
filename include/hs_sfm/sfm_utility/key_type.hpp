@@ -12,6 +12,9 @@ namespace hs
 namespace sfm
 {
 
+/**
+ *  表示一张影像包含的特征点。
+ */
 template <typename _Scalar>
 class ImageKeys
 {
@@ -40,6 +43,9 @@ public:
 private:
   friend class cereal::access;
 
+  /**
+   *  序列化成员模板函数，用于cereal序列化。
+   */
   template <class Archive>
   void serialize(Archive& archive)
   {

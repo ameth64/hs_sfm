@@ -16,6 +16,12 @@ namespace sfm
 namespace calibrate
 {
 
+/**
+ *  平面对应点相机标定模板类。
+ *
+ *  使用A Flexible New Technique for Camera Calibration中的算法，
+ *  给定三维空间的平面点与影像点的对应，计算相机内参数。
+ */
 template <typename _Scalar>
 class PlanarCalibrator
 {

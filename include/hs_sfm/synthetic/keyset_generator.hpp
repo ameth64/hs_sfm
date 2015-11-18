@@ -12,6 +12,12 @@ namespace sfm
 namespace synthetic
 {
 
+/**
+ *  给定相机内外参数以及点云，计算模拟的匹配点数据。
+ *
+ *  匹配点根据三维点投影到各个相机上并加入一定的高斯误差和均匀分布误差产生。
+ *  可模拟带有一定误匹配的噪声数据。
+ */
 template <typename _Scalar, typename _ImageDimension>
 class KeysetGenerator
 {
