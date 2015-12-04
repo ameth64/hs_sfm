@@ -57,7 +57,7 @@ public:
     }
 
     EIGEN_STD_VECTOR(KeyContainer) keys_vector;
-    keys_vector.resize(number_of_images);
+    keys_vector.resize(number_of_images);	//每张图像使用一个KeyContainer保存关键点
     size_t number_of_points = points.size();
     tracks.resize(number_of_points);
     camera_views.resize(number_of_images);
@@ -76,7 +76,7 @@ public:
           ProjectiveFunctions::WorldPointProjectToImageKeyNoDistort(
             intrinsic_params,
             extrinsic_params,
-            point);
+            point);	//以不加扭曲的方式将空间点投影至像平面并判断是否在成像区域内
 
         if (key[0] > 0 && key[0] < Scalar(image.m_width) &&
             key[1] > 0 && key[1] < Scalar(image.m_height))
@@ -89,10 +89,10 @@ public:
               key[1] > 0 && key[1] < Scalar(image.m_height))
           {
             tracks[i].push_back(
-              std::make_pair(j, keys_vector[j].size()));
+              std::make_pair(j, keys_vector[j].size()));	//记录图像编号 - key点在该图像的特征点列表中的序号, 这两个变量pair也就是track
             camera_views[j].push_back(
-              std::make_pair(i, keys_vector[j].size()));
-            keys_vector[j].push_back(key);
+              std::make_pair(i, keys_vector[j].size()));	//记录3D点编号 - key点序号
+            keys_vector[j].push_back(key);	//第j张图像的KeyContainer记录key点
           }
         }
       }// for (size_t j = 0; j < number_of_images; j++)

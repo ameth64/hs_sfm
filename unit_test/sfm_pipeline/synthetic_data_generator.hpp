@@ -24,7 +24,7 @@ namespace pipeline
 {
 
 template <typename _Scalar>
-struct RichTrack
+struct RichTrack	//在Track的基础上封装的数据结构
 {
   typedef _Scalar Scalar;
   hs::sfm::Track track;
@@ -137,23 +137,23 @@ public:
                                      keysets_true,
                                      image_intrinsic_map,
                                      tracks,
-                                     camera_views);
+                                     camera_views);	//生成空间3D点及其在每个图像上的同名点等基础数据
       if (result != 0) break;
 
 
       RichTrackContainer rich_tracks;
-      for (size_t i = 0; i < number_of_points_; i++)
+      for (size_t i = 0; i < number_of_points_; i++)	//构造RichTrack集合
       {
         if (tracks[i].size() > 1)
         {
           RichTrackType rich_track;
           rich_track.point = points_absolute[i];
           rich_track.track = tracks[i];
-          std::sort(rich_track.track.begin(), rich_track.track.end());
+          std::sort(rich_track.track.begin(), rich_track.track.end());	//对track的成员排序
           rich_tracks.push_back(rich_track);
         }
       }
-      std::sort(rich_tracks.begin(), rich_tracks.end());
+      std::sort(rich_tracks.begin(), rich_tracks.end());	
       size_t number_of_rich_tracks = rich_tracks.size();
       TrackContainer tracks_true(number_of_rich_tracks);
 
@@ -165,10 +165,10 @@ public:
       }
 
       hs::sfm::MatchesTracksConvertor matches_tracks_convertor;
-      result = matches_tracks_convertor(tracks_true, matches);
+      result = matches_tracks_convertor(tracks_true, matches);	//从TrackContainer构造MatchesTracksConvertor
       if (result != 0) break;
 
-      result = GenerateNoisedKeysets(keysets_true, images, keysets_noised);
+      result = GenerateNoisedKeysets(keysets_true, images, keysets_noised);	//在生成的真值点的基础上添加随机噪声用于模拟
       if (result != 0) break;
 
       KeysetContainer keysets_gcp_true;
@@ -179,7 +179,7 @@ public:
                                number_of_gcps_,
                                keysets_gcp_true,
                                gcps,
-                               tracks_gcp);
+                               tracks_gcp);	//生成地面像控点数据
       if (result != 0) break;
 
       result = GenerateNoisedKeysets(keysets_gcp_true, images,
@@ -194,7 +194,7 @@ public:
                                number_of_check_points_,
                                keysets_check_point_true,
                                check_points,
-                               tracks_check_point);
+                               tracks_check_point);	
       if (result != 0) break;
 
       result = GenerateNoisedKeysets(keysets_check_point_true, images,
@@ -215,10 +215,10 @@ private:
     KeysetContainer& keysets,
     std::vector<size_t>& image_intrinsic_map,
     hs::sfm::TrackContainer& tracks,
-    hs::sfm::CameraViewContainer& camera_views) const
+    hs::sfm::CameraViewContainer& camera_views) const	//该方法完成空间随机点的生成, 航线上各图像的相机参数矩阵计算以及空间点在这些图像上的投影, 并生成track等数据结构
   {
     if (scene_generator_.GeneratePoints(number_of_points_,
-                                        points_absolute) != 0)
+                                        points_absolute) != 0)	//生成空间随机点,注意并未使用FlightGenerator对象的方法
     {
       return -1;
     }
@@ -234,7 +234,7 @@ private:
       ExtrinsicParamsContainer extrinsic_params_set_flight;
       ImageContainer images_flight;
       if (scene_generator_.GenerateExtrinsicParamsContainer(
-            i, extrinsic_params_set_flight, images_flight))
+            i, extrinsic_params_set_flight, images_flight))	//计算相机参数并映射至世界坐标系
       {
         return -1;
       }
@@ -264,7 +264,7 @@ private:
                           image_intrinsic_map,
                           keysets,
                           tracks,
-                          camera_views) != 0) //将空间点映射至每个图像的像平面, 并生成对应的track
+                          camera_views) != 0) //将空间点映射至每个图像的像平面, 并生成对应的track等数据结构对象
     {
       return -1;
     }
@@ -280,7 +280,7 @@ private:
     size_t number_of_gcps,
     KeysetContainer& keysets_gcp,
     Point3DContainer& gcps,
-    hs::sfm::TrackContainer& tracks_gcp) const
+    hs::sfm::TrackContainer& tracks_gcp) const	//调用MultipleFlightGenerator的方法生成随机的像控点数据
   {
     scene_generator_.GeneratePoints(number_of_gcps, gcps);
 
@@ -292,7 +292,7 @@ private:
                           image_intrinsic_map,
                           keysets_gcp,
                           tracks_gcp,
-                          camera_view_gcp) != 0)
+                          camera_view_gcp) != 0)	//将像控点投影至每张图片
     {
       return -1;
     }
@@ -330,7 +330,7 @@ private:
   Err GenerateNoisedKeysets(const KeysetContainer& keysets_true,
                             const ImageContainer& images,
                             KeysetContainer& keysets_noised,
-                            bool generate_outliers = true) const
+                            bool generate_outliers = true) const	//为图像上的同名点坐标加入随机噪声
   {
     typedef EIGEN_VECTOR(Scalar, 2) Key;
     keysets_noised = keysets_true;

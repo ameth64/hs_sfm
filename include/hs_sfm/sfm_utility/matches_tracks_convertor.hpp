@@ -17,7 +17,7 @@ struct MatchesTracksConvertor
 {
   typedef int Err;
 
-  struct KeyPairCompair
+  struct KeyPairCompair	//关键点比较functor, 以图像序号为比对
   {
     bool operator () (const KeyPair& key_pair0, const KeyPair& key_pair1) const
     {
@@ -333,7 +333,7 @@ struct MatchesTracksConvertor
   }
 
   Err operator() (const TrackContainer& tracks,
-                  MatchContainer& matches) const
+                  MatchContainer& matches) const	//从每个track的同名点列表中构造相邻的"匹配对"
   {
     matches.clear();
     size_t number_of_tracks = tracks.size();
