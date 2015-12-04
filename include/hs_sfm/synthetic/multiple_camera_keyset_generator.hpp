@@ -15,12 +15,6 @@ namespace sfm
 namespace synthetic
 {
 
-/**
- *  生成多个相机拍摄的特征点匹配随机模拟数据。
- *
- *  匹配点根据三维点投影到各个影像上并加入一定的高斯误差和均匀分布误差产生。
- *  可模拟带有一定误匹配的噪声数据。
- */
 template <typename _Scalar, typename _ImageDimension>
 class MultipleCameraKeysetGenerator
 {

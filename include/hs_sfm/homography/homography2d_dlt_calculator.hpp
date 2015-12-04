@@ -12,11 +12,6 @@ namespace sfm
 namespace homography
 {
 
-/**
- *  使用直接线性变换（Direct Linear Transform）算法估计单应矩阵。
- *
- *  参照《计算机视觉中的多视几何》中的第3章内容。
- */
 template <typename _Scalar>
 class Homography2DDLTCalculator
 {

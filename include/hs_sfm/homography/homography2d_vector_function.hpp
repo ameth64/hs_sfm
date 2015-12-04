@@ -10,12 +10,6 @@ namespace sfm
 namespace homography
 {
 
-/**
- *  平面单应的向量函数。
- *
- *  该向量函数对应《计算机视觉中的多视图几何》第3章中的重投影误差。
- *  因此最小化该误差函数，则对应于单应估计的最大似然估计。
- */
 template <typename _Scalar>
 class Homography2DVectorFunction
 {

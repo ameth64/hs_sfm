@@ -11,13 +11,6 @@ namespace sfm
 namespace triangulate
 {
 
-/**
- *  多视图三角化计算三维点的最大似然估计实现。
- *
- *  算法步骤如下：
- *  - 使用DLT算法计算三维点，作为初始值。
- *  - 使用Levenberg-Marquadt算法优化，获得三维点的最大似然估计。
- */
 template <typename _Scalar>
 class MultipleViewMaximumLikelihoodEstimator
 {

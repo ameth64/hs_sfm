@@ -13,9 +13,6 @@ namespace hs
 namespace sfm
 {
 
-/**
- *  计算[匹配](@ref MatchContainer)与[tracks](@ref TrackContainer)的相互转换。
- */
 struct MatchesTracksConvertor
 {
   typedef int Err;

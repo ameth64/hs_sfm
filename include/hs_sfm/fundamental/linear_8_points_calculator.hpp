@@ -12,12 +12,6 @@ namespace sfm
 namespace fundamental
 {
 
-/**
- *  8点法计算基本矩阵。
- *
- *  该算法使用Multiple View Geometry in Computer Vision
- *  中的方法，使用直接线性变换计算基本矩阵。
- */
 template <typename _Scalar>
 class Linear8PointsCalculator
 {

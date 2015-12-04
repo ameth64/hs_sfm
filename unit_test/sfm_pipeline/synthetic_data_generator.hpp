@@ -36,6 +36,12 @@ struct RichTrack
   }
 };
 
+/************************************************************************/
+/* 
+航线数据生成类, 下辖MultipleFlightGenerator, FlightGenerator等子类
+
+*/
+/************************************************************************/
 template <typename _Scalar, typename _ImageDimension>
 class SyntheticDataGenerator
 {
@@ -258,7 +264,7 @@ private:
                           image_intrinsic_map,
                           keysets,
                           tracks,
-                          camera_views) != 0)
+                          camera_views) != 0) //将空间点映射至每个图像的像平面, 并生成对应的track
     {
       return -1;
     }
@@ -420,7 +426,7 @@ private:
   //RelativeGenerator relative_generator_;
   Scalar outlier_ratio_;
   Scalar key_stddev_;
-  IntrinsicParamsContainer intrinsic_params_set_true_;
+  IntrinsicParamsContainer intrinsic_params_set_true_;	//相机内参数矩阵容器
   size_t number_of_points_;
   size_t number_of_gcps_;
   size_t number_of_check_points_;

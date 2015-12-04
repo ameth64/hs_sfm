@@ -28,9 +28,6 @@ namespace sfm
 namespace essential
 {
 
-/**
- *  使用Ransac算法，鲁棒的使用5点法计算E矩阵。
- */
 template <typename _Scalar>
 class EMatrix5PointsRansacRefiner
 {

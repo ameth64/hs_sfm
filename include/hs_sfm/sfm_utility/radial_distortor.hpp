@@ -6,25 +6,6 @@ namespace hs
 namespace sfm
 {
 
-/**
- *  给定径向畸变参数以及归一化相机座标系下的座标，计算径向畸变偏移值。
- *
- *  \f[
- *    \left[
- *      \begin{array}{l}
- *        dx \\
- *        dy
- *      \end{array}
- *    \right] =
- *    \left[
- *      \begin{array}{l}
- *        (k_1r^2+k_2r^4+k_3r^6)x \\
- *        (k_1r^2+k_2r^4+k_3r^6)y \\
- *      \end{array}
- *    \right]
- *  \f]
- *  其中\f$r^2 = x^2 + y^2\f$
- */
 template <typename _Scalar>
 struct RadialDistortor
 {

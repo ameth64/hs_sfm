@@ -13,9 +13,6 @@ namespace sfm
 namespace triangulate
 {
 
-/**
- *  多视图三角化的向量函数。
- */
 template <typename _Scalar>
 class MultipleViewVectorFunction
 {

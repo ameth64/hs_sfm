@@ -15,12 +15,6 @@ namespace sfm
 namespace essential
 {
 
-/**
- *  5点法计算相片对的E矩阵。
- *
- *  使用An Efficient Solution to the Five-Point Relative Pose Problem
- *  中的方法，给定一组点对应（至少5对点），计算本质矩阵（Essential Matrix）。
- */
 template <typename _Scalar>
 class EMatrix5PointsCalculator
 {

@@ -17,10 +17,6 @@ namespace ba
 template <typename _VectorFunction>
 class CameraSharedAnalyticalXCovarianceCalculator;
 
-/**
- *  解析式的计算多个相机共享的Bundle Adjustment向量函数的x向量协方差。
- *
- */
 template <typename _Scalar>
 class CameraSharedAnalyticalXCovarianceCalculator<
   CameraSharedVectorFunction<_Scalar> >

@@ -19,13 +19,6 @@ namespace sfm
 namespace projective
 {
 
-/**
- *  给定三维点二维点对应和初始的相机内参数，计算相机外参数。
- *
- *  计算过程如下：
- *  - 使用DLT算法计算P矩阵，并根据P矩阵分解出R和t作为外参数的初始值。
- *  - 根据外参数的初始值做约束优化，其中内参数应约束在初始内参数一定范围内。
- */
 template <typename _Scalar>
 class SingleCameraParamsMaximumLikelihoodEstimator
 {

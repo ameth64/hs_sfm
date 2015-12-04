@@ -17,12 +17,6 @@ namespace sfm
 namespace essential
 {
 
-/**
- *  给定E矩阵以及对应点，计算照片对的相对相机外参数以及稀疏点云。
- *
- *  通过E矩阵恢复的相对相机外参数有4种可能，需要通过三角化计算点云，
- *  并判断点是否在相机前方来选出正确的相机外参数。
- */
 template <typename _Scalar>
 class EMatrixExtrinsicParamsPointsCalculator
 {

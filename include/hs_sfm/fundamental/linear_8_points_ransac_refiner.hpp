@@ -29,9 +29,6 @@ namespace sfm
 namespace fundamental
 {
 
-/**
- *  使用Ransac以及8点法，去除误匹配点。
- */
 template <typename _Scalar>
 class Linear8PointsRansacRefiner
 {
@@ -113,7 +110,7 @@ private:
   typedef hs::fit::Ransac<KeyPair,
                           FMatrixCalculator,
                           FMatrixResidualsCalculator> RansacRefiner;
-
+  
 public:
   typedef typename RansacRefiner::IndexSet IndexSet;
 
@@ -128,7 +125,7 @@ public:
     FMatrixCalculator model_calculator;
     FMatrixResidualsCalculator distance_calculator;
     RansacRefiner ransac_refiner(model_calculator, distance_calculator);
-
+    
     ransac_refiner.SetAlphaThreshold(Scalar(0.95));
     ransac_refiner.SetDistanceThreshold(distance_threshold);
     if (number_of_samples > 0)

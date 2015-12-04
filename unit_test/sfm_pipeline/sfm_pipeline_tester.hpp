@@ -25,7 +25,7 @@ namespace sfm
 namespace pipeline
 {
 
-template <typename _SFMPipeline>
+template <typename _SFMPipeline>	//单元测试封装类
 class SFMPipelineTester
 {
 public:

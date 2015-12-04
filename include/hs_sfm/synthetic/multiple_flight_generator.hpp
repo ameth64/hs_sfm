@@ -15,13 +15,6 @@ namespace sfm
 namespace synthetic
 {
 
-/**
- *  多个架次的无人机航拍模拟数据生成器。
- *
- *  每个架次表示不同相机内参数的相机拍摄的一组航拍影像。
- *  架次之间会有一定的重叠以及偏转。
- *  可生成每张影像的随机外参数以及随机的点云。
- */
 template <typename _Scalar, typename _ImageDimension>
 class MultipleFlightGenerator
 {
@@ -31,7 +24,7 @@ public:
   typedef int Err;
 
   typedef FlightGenerator<Scalar, ImageDimension> FlightGenerator;
-  typedef EIGEN_STD_VECTOR(FlightGenerator) FlightGeneratorContainer;
+  typedef EIGEN_STD_VECTOR(FlightGenerator) FlightGeneratorContainer; //16字节对齐的Eigen库的vector, 与STL兼容
   typedef typename FlightGenerator::ExtrinsicParams ExtrinsicParams;
   typedef typename ExtrinsicParams::Position Position;
   typedef typename ExtrinsicParams::Rotation Rotation;
@@ -48,11 +41,11 @@ private:
   typedef EIGEN_STD_VECTOR(Point2D) Point2DContainer;
 
 public:
-  MultipleFlightGenerator(Scalar flight_longitudinal_overlap_ratio,
-                          Scalar flight_lateral_overlap_ratio,
-                          Scalar north_west_angle,
-                          Scalar north_west_angle_stddev,
-                          Scalar offset_stddev,
+  MultipleFlightGenerator(Scalar flight_longitudinal_overlap_ratio, //纵向重叠率
+                          Scalar flight_lateral_overlap_ratio,		//横向重叠率
+                          Scalar north_west_angle,	//东偏北方位角
+                          Scalar north_west_angle_stddev,	//方位角标准差
+                          Scalar offset_stddev,	//航线平面平移标准差
                           const FlightGeneratorContainer& flight_generators)
     : flight_generators_(flight_generators)
   {
@@ -151,7 +144,7 @@ public:
   Err GenerateExtrinsicParamsContainer(
     size_t flight_id,
     ExtrinsicParamsContainer& extrinsic_params_set,
-    ImageContainer& images) const
+    ImageContainer& images) const	//该方法计算相机参数并映射至世界坐标系(绝对坐标)
   {
     size_t number_of_flights = flight_generators_.size();
     Scalar pi = Scalar(3.141592653);
@@ -159,12 +152,12 @@ public:
     const FlightGenerator& flight = flight_generators_[flight_id];
     flight.GenerateCameras(extrinsic_params_set, images);
 
-    RMatrix rotation;
+    RMatrix rotation;	//计算相机在世界坐标系下的位移与方位角
     Scalar north_west_angle = north_west_angles_[flight_id] / Scalar(180) * pi;
     rotation << std::cos(north_west_angle), -std::sin(north_west_angle), 0,
                 std::sin(north_west_angle),  std::cos(north_west_angle), 0,
                 0, 0, 1;
-    for (size_t i = 0; i < extrinsic_params_set.size(); i++)
+    for (size_t i = 0; i < extrinsic_params_set.size(); i++)	//对每个图像的相机矩阵应用上述世界坐标系变换
     {
       ExtrinsicParams& extrinsic_params = extrinsic_params_set[i];
       extrinsic_params.position()[0] += offsets_[flight_id][0];

@@ -108,10 +108,6 @@ private:
   const std::vector<double>& intrinsic_params_;
 };
 
-/**
- *  给定三维点和二维点的对应，内参数，以及初始的外参数，计算优化后的外参数。
- *
- */
 template <typename _Scalar>
 class SingleCameraExtrinsicParamsOptimizor
 {

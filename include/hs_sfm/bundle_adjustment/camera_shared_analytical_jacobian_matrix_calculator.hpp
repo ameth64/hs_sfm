@@ -13,9 +13,6 @@ namespace ba
 template <typename _VectorFunction>
 class CameraSharedAnalyticalJacobianMatrixCalculator;
 
-/**
- *  解析式的计算多个相机共享的Bundle Adjustment向量函数的Jacobian矩阵。
- */
 template <typename _Scalar>
 class CameraSharedAnalyticalJacobianMatrixCalculator<
   CameraSharedVectorFunction<_Scalar> >

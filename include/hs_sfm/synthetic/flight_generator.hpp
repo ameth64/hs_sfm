@@ -16,12 +16,13 @@ namespace sfm
 namespace synthetic
 {
 
-/**
- *  一个驾次的无人机航拍模拟数据生成器。
- *
- *  给定生成的参数后，可生成随机的模拟相机外参数以及点云。
- *  点云满足一定范围内的均匀分布。
- */
+/************************************************************************/
+/*  
+飞行航线数据模拟生成类
+保存一个架次的航拍数据生成要素, 如相机参数, 分辨率, 航线重叠率, 空间3D点数量
+对于3D点, 提供一个随机生成方法.
+*/
+/************************************************************************/
 template <typename _Scalar, typename _ImageDimension>
 class FlightGenerator
 {
@@ -76,7 +77,7 @@ public:
     return focal_length_in_metre_ / pixel_size_;
   }
 
-  Err operator ()(ExtrinsicParamsContainer& extrinsic_params_set,
+  Err operator ()(ExtrinsicParamsContainer& extrinsic_params_set,	//主要方法, 生成相机外参数和空间随机3D点
                   ImageContainer& images,
                   Point3DContainer& points) const
   {
@@ -86,14 +87,14 @@ public:
     return 0;
   }
 
-  inline Scalar GetFlightHeight() const
+  inline Scalar GetFlightHeight() const	//根据简单三角关系确定的拍摄高度
   {
     return focal_length_in_metre_ * ground_resolution_ / pixel_size_;
   }
 
   void GetDimensions(Scalar& scene_x_dimension,
                      Scalar& scene_y_dimension,
-                     Scalar& scene_z_dimension) const
+                     Scalar& scene_z_dimension) const	//该方法返回航线拍摄覆盖的空间尺寸(x*y*z)
   {
     Scalar longitudinal_range_per_camera =
       (1 - longitudinal_overlap_ratio_) * ground_resolution_ *
@@ -101,16 +102,16 @@ public:
     Scalar lateral_range_per_camera = 
       (1 - lateral_overlap_ratio_) * ground_resolution_ *
       Scalar(image_width_);
-
+	
     scene_x_dimension = image_width_ * ground_resolution_ + 
-      lateral_range_per_camera * (number_of_strips_ - 1);
+      lateral_range_per_camera * (number_of_strips_ - 1);		//计算航线的横航向总覆盖面积, 假定航线内每条航带的旁向重叠率相同
     scene_y_dimension = image_height_ * ground_resolution_ +
-      longitudinal_range_per_camera * (number_of_cameras_in_strip_ - 1);
+      longitudinal_range_per_camera * (number_of_cameras_in_strip_ - 1);	//计算航线的纵向总覆盖面积, 假定每张照片的航向重叠率相同
     scene_z_dimension = scene_max_height_;
   }
 
   void GeneratePoints(size_t number_of_points,
-                      Point3DContainer& points) const
+                      Point3DContainer& points) const	//该方法以航线覆盖空间尺寸中心为基点, 随机生成3D坐标
   {
     points.resize(number_of_points);
     Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
@@ -134,7 +135,7 @@ public:
 
   void GeneratePlanarPoints(size_t number_of_points,
                             Scalar height,
-                            Point3DContainer& points) const
+                            Point3DContainer& points) const	//该方法在指定高度上随机生成3D坐标
   {
     points.resize(number_of_points);
     Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
@@ -155,7 +156,7 @@ public:
   }
 
   void GenerateCameras(ExtrinsicParamsContainer& extrinsic_params_set,
-                       ImageContainer& images) const
+                       ImageContainer& images) const	//该方法为航线内每个图像生成相机外参数矩阵
   {
     Scalar flight_height = GetFlightHeight();
 
@@ -174,7 +175,7 @@ public:
     Scalar scene_x_dimension, scene_y_dimension, scene_z_dimension;
     GetDimensions(scene_x_dimension, scene_y_dimension, scene_z_dimension);
 
-    Matrix33 camera_position_covariance = Matrix33::Identity();
+    Matrix33 camera_position_covariance = Matrix33::Identity();	//相机协方差矩阵
     camera_position_covariance(0, 0) = camera_planar_stddev_;
     camera_position_covariance(1, 1) = camera_planar_stddev_;
     camera_position_covariance(2, 2) = camera_height_stddev_;
@@ -190,7 +191,7 @@ public:
         images[id].m_id = id;
         images[id].m_path = "test";
 
-        Position mean_camera_position;
+        Position mean_camera_position;	//相机平均基准位置, 取航带中心
         mean_camera_position << -scene_x_dimension * 0.5 +
                                 image_width_ * ground_resolution_ * 0.5 +
                                 i * lateral_range_per_camera,
@@ -202,21 +203,21 @@ public:
         hs::math::random::NormalRandomVar<Scalar, 3>::Generate(
           mean_camera_position,
           camera_position_covariance,
-          extrinsic_params_set[id].position());
+          extrinsic_params_set[id].position());	//在相机位置上加入随机偏移量
         Position meanAngles = Position::Zero();
         Position angles;
         hs::math::random::NormalRandomVar<Scalar, 3>::Generate(
-          meanAngles, camera_rotation_covariance, angles);
+          meanAngles, camera_rotation_covariance, angles);	//计算相机旋转矩阵的随机偏移
 
         hs::math::geometry::EulerAngles<Scalar> euler_angles(
           angles[0] / 180 * Scalar(M_PI),
           angles[1] / 180 * Scalar(M_PI),
-          angles[2] / 180 * Scalar(M_PI));
-        Matrix33 R = euler_angles.template ToOrthoRotMat<2, 1, -3, 1>();
-        R.transposeInPlace();
+          angles[2] / 180 * Scalar(M_PI));	//生成欧拉角, 向量仍由Eigen库提供
+        Matrix33 R = euler_angles.template ToOrthoRotMat<2, 1, -3, 1>();	//转换为正交旋转矩阵
+        R.transposeInPlace();	//就地转置
         R.col(2) *= -1;
         R.col(1) *= -1;
-        extrinsic_params_set[id].rotation() = R;
+        extrinsic_params_set[id].rotation() = R;	//保存计算后的外参数矩阵
       }
     }
   }
@@ -305,7 +306,7 @@ private:
    */
   size_t number_of_cameras_in_strip_;
   /**
-   *  影像的地面分辨率
+   *  影像的地面分辨率(可理解为每像素在地面投影的尺寸)
    */
   Scalar ground_resolution_;
   /**
@@ -317,7 +318,7 @@ private:
    */
   ImageDimension image_height_;
   /**
-   *  像素大小，米为单位
+   *  像素大小，米为单位(同focal_length_in_metre_, 度量的是单个像素在成像平面上的尺寸,图像宽度乘以该值应得到CCD上成像的宽度)
    */
   Scalar pixel_size_;
   /**

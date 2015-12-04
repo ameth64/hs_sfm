@@ -27,9 +27,6 @@ struct PointScalarType
 //  typedef Scalar type;
 //};
 
-/**
- *  使用Ransac算法根据多个点拟合三维平面。
- */
 template <typename _Point>
 class RansacFitPlane
 {
