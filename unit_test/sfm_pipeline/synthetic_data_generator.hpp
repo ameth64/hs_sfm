@@ -165,7 +165,7 @@ public:
       }
 
       hs::sfm::MatchesTracksConvertor matches_tracks_convertor;
-      result = matches_tracks_convertor(tracks_true, matches);	//从TrackContainer构造MatchesTracksConvertor
+      result = matches_tracks_convertor(tracks_true, matches);	//从TrackContainer构造MatchesTracksConvertor,
       if (result != 0) break;
 
       result = GenerateNoisedKeysets(keysets_true, images, keysets_noised);	//在生成的真值点的基础上添加随机噪声用于模拟

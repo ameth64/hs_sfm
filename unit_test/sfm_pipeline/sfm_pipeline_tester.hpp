@@ -110,7 +110,7 @@ public:
     ObjectIndexMap image_intrinsic_map(image_intrinsic_map_input.size());
     for (size_t i = 0; i < image_intrinsic_map_input.size(); i++)
     {
-      image_intrinsic_map.SetObjectId(i, image_intrinsic_map_input[i]);
+      image_intrinsic_map.SetObjectId(i, image_intrinsic_map_input[i]);	//记录相机内参数的序号
     }
     ObjectIndexMap image_extrinsic_map;
     PointContainer points_relative_estimate;

@@ -15,7 +15,7 @@ namespace sfm
 namespace synthetic
 {
 
-template <typename _Scalar, typename _ImageDimension>
+template <typename _Scalar, typename _ImageDimension>	//该类是一个方法类, 负责对特征点集合进行像平面投影等操作
 class MultipleCameraKeysetGenerator
 {
 public:
@@ -66,7 +66,7 @@ public:
       const Point3D& point = points[i];
       for (size_t j = 0; j < number_of_images; j++)
       {
-        size_t intrinsic_id = image_intrinsic_map[j];
+        size_t intrinsic_id = image_intrinsic_map[j];	//标识相机的内参数的序号
         const IntrinsicParams& intrinsic_params =
           intrinsic_params_set[intrinsic_id];
         const ExtrinsicParams& extrinsic_params =
