@@ -26,7 +26,7 @@ struct MatchesTracksConvertor
   };
 
   Err operator() (const MatchContainer& matches,
-                  TrackContainer& tracks) const
+                  TrackContainer& tracks) const	//该重载将match集合转换为track集合, tracks为输出变量.
   {
 #if 0
     typedef std::pair<size_t, size_t> View;
@@ -120,13 +120,13 @@ struct MatchesTracksConvertor
     MatchContainer matches_normalized = matches;
     auto itr_image_pair = matches.begin();
     auto itr_image_pair_end = matches.end();
-    for (; itr_image_pair != itr_image_pair_end; ++itr_image_pair)
+    for (; itr_image_pair != itr_image_pair_end; ++itr_image_pair)	//开始遍历匹配对
     {
       ImagePair image_pair = itr_image_pair->first;
       ImagePair image_pair_reverse = ImagePair(image_pair.second,
-                                               image_pair.first);
+                                               image_pair.first);	//对调两幅图像序号
       if (matches_normalized.find(image_pair_reverse) ==
-          matches_normalized.end())
+          matches_normalized.end())	//如果对调后的图像序号在原match container中不存在, 则认为该匹配对还不是"对称的", 需补足对称的值
       {
         KeyPairContainer key_pairs_reverse;
         for (size_t i = 0; i < itr_image_pair->second.size(); i++)
@@ -147,19 +147,19 @@ struct MatchesTracksConvertor
     {
       std::sort(itr_image_pair_normalized->second.begin(),
                 itr_image_pair_normalized->second.end());
-    }
+    }//排序
 
     //Build image pair indexer.
-    ImageNeighborIndexer image_neighbor_indexer;
+    ImageNeighborIndexer image_neighbor_indexer;	//一个Indexer(索引器)的作用是, 对于任一图像编号, 索引到与之配对的所有图像编号, 存入一个set
     itr_image_pair_normalized = matches_normalized.begin();
     itr_image_pair_normalized_end = matches_normalized.end();
     for (; itr_image_pair_normalized != itr_image_pair_normalized_end;
          ++itr_image_pair_normalized)
     {
       size_t image0_id = itr_image_pair_normalized->first.first;
-      size_t image1_id = itr_image_pair_normalized->first.second;
+      size_t image1_id = itr_image_pair_normalized->first.second;	//取出每个匹配对的两个图像ID
       auto itr_image0_neighbor = image_neighbor_indexer.find(image0_id);
-      if (itr_image0_neighbor == image_neighbor_indexer.end())
+      if (itr_image0_neighbor == image_neighbor_indexer.end())	//若第一个ID在索引器中不存在, 则添加之
       {
         std::set<size_t> neighbors;
         neighbors.insert(image1_id);
@@ -169,7 +169,7 @@ struct MatchesTracksConvertor
       {
         itr_image0_neighbor->second.insert(image1_id);
       }
-      auto itr_image1_neighbor = image_neighbor_indexer.find(image1_id);
+      auto itr_image1_neighbor = image_neighbor_indexer.find(image1_id);	//反向操作
       if (itr_image1_neighbor == image_neighbor_indexer.end())
       {
         std::set<size_t> neighbors;
@@ -184,22 +184,22 @@ struct MatchesTracksConvertor
 
     itr_image_pair_normalized = matches_normalized.begin();
     itr_image_pair_normalized_end = matches_normalized.end();
-    std::set<View> marked_views;
+    std::set<View> marked_views;	//基于两视图的计算, View是个pair<size_t, size_t>,存储图像ID及
     std::set<View> error_views;
     hs::sfm::TrackContainer tracks_loose;
     for (; itr_image_pair_normalized != itr_image_pair_normalized_end;
-         ++itr_image_pair_normalized)
+         ++itr_image_pair_normalized)	//遍历match(匹配对)集合
     {
-      auto itr_key_pair = itr_image_pair_normalized->second.begin();
+      auto itr_key_pair = itr_image_pair_normalized->second.begin();	//取出该match中的key_pair向量.
       auto itr_key_pair_end = itr_image_pair_normalized->second.end();
-      size_t image0_id = itr_image_pair_normalized->first.first;
+      size_t image0_id = itr_image_pair_normalized->first.first;		//取出该匹配对的键中的两个图像ID
       size_t image1_id = itr_image_pair_normalized->first.second;
-      for (; itr_key_pair != itr_key_pair_end; ++itr_key_pair)
+      for (; itr_key_pair != itr_key_pair_end; ++itr_key_pair)	//遍历该匹配对的所有点集
       {
         size_t key0_id = itr_key_pair->first;
         size_t key1_id = itr_key_pair->second;
-        View view0(image0_id, key0_id);
-        if (marked_views.find(view0) != marked_views.end())
+        View view0(image0_id, key0_id);	//构造View对象, 空间点在某一ID的图像中的点视图, 即图像ID及其中某一同名点
+        if (marked_views.find(view0) != marked_views.end())	//如果已该view已被marked, 则跳过
         {
           continue;
         }
@@ -214,37 +214,37 @@ struct MatchesTracksConvertor
         {
           View view = view_queue.front();
           view_queue.pop();
-          auto itr_neighbors = image_neighbor_indexer.find(view.first);
-          if (itr_neighbors != image_neighbor_indexer.end())
+          auto itr_neighbors = image_neighbor_indexer.find(view.first);	//索引到当前图像ID的所有邻近匹配图像
+          if (itr_neighbors != image_neighbor_indexer.end())	//若当前图像ID存在匹配的邻近图像
           {
             auto itr_neighbor = itr_neighbors->second.begin();
             auto itr_neighbor_end = itr_neighbors->second.end();
-            for (; itr_neighbor != itr_neighbor_end; ++itr_neighbor)
+            for (; itr_neighbor != itr_neighbor_end; ++itr_neighbor)	//遍历其所有匹配的邻近图像
             {
               size_t image_id = *itr_neighbor;
 
               ImagePair image_pair(view.first, image_id);
               auto itr_image_pair =
-                matches_normalized.find(ImagePair(view.first, image_id));
+                matches_normalized.find(ImagePair(view.first, image_id));	//从两个邻近图像ID构造一匹配对, 在match集合中寻找, 后面将要用到该匹配对的key pair集合
               if (itr_image_pair == matches_normalized.end())
               {
                 return -1;
               }
-              KeyPair key_pair_to_find(view.second, 0);
+              KeyPair key_pair_to_find(view.second, 0);	//以当前图像ID上同名点编号为起点, 构造key_pair. 注意下方KeyPairCompair比对方法仅以pair的第一成员为键, 第二成员可忽略
               auto search_result =
                 std::equal_range(itr_image_pair->second.begin(),
                                  itr_image_pair->second.end(),
-                                 key_pair_to_find, KeyPairCompair());
-              if (search_result.first == search_result.second)
+                                 key_pair_to_find, KeyPairCompair());	//在邻近图像组成的match的key pair向量中查找同值范围.
+              if (search_result.first == search_result.second)	//若不存在与key_pair_to_find等值的区间, 则跳过;
               {
                 continue;
               }
-              if (std::distance(search_result.first, search_result.second) > 1)
+              if (std::distance(search_result.first, search_result.second) > 1)	//计算两个迭代器之间的距离, 即序号差, 若>1表示存在图像1的同名点在图像2有多个匹配, 无效.
               {
                 continue;
               }
-              View view_new(image_id, search_result.first->second);
-              if (track_set.find(view_new) != track_set.end())
+              View view_new(image_id, search_result.first->second);	//用邻近图像ID和在match的key_pair向量中寻找到的最近pair的邻对值, 组成邻近图像的View.
+              if (track_set.find(view_new) != track_set.end())	//如果该View在track_set中存在(即已tracked), 则跳过.
               {
                 continue;
               }
@@ -254,31 +254,31 @@ struct MatchesTracksConvertor
               //  continue;
               //}
               marked_views.insert(view_new);
-              track_set.insert(view_new);
-              view_queue.push(view_new);
-              image_touched.insert(image_id);
-            }// for (; itr_neighbor != itr_neighbor_end; ++itr_neighbor)
+              track_set.insert(view_new);	//保存未处理的view
+              view_queue.push(view_new);	//加入队列以进行下一次处理.
+              image_touched.insert(image_id);	//至此, 已遍历一个邻近图像, 并从中取出与当前View中的同名点一致的一个key, 组成一对邻近图像的View.
+            }// for (; itr_neighbor != itr_neighbor_end; ++itr_neighbor) //将一个view的所有相邻匹配都添加至track_set
           }// if (itr_neighbors != image_neighbor_indexer.end())
-        }// while (!view_queue.empty())
-        if (track_set.size() > 1 && image_touched.size() == track_set.size())
+        }// while (!view_queue.empty()) //
+        if (track_set.size() > 1 && image_touched.size() == track_set.size())	//已迭代遍历当前view的所有相关的view,
         {
           Track track;
           auto itr_track = track_set.begin();
           auto itr_track_end = track_set.end();
           bool is_error = false;
-          for (; itr_track != itr_track_end; ++itr_track)
+          for (; itr_track != itr_track_end; ++itr_track)	//遍历track_set, 
           {
-            if (error_views.find(*itr_track) != error_views.end())
+            if (error_views.find(*itr_track) != error_views.end())	//若在 error_views 中存在则跳过
             {
               is_error = true;
               break;
             }
-            track.push_back(*itr_track);
+            track.push_back(*itr_track);	//保存至track(track的数据结构与view相同)
           }
 
           if (!is_error)
           {
-            tracks_loose.push_back(track);
+            tracks_loose.push_back(track);	//有效的track保存至tracks_loose
           }
           else
           {
@@ -294,7 +294,7 @@ struct MatchesTracksConvertor
         {
           auto itr_track = track_set.begin();
           auto itr_track_end = track_set.end();
-          for (; itr_track != itr_track_end; ++itr_track)
+          for (; itr_track != itr_track_end; ++itr_track)	//track_set数与image_touched数不符的认为是无效的view或track
           {
             error_views.insert(*itr_track);
           }
@@ -303,7 +303,7 @@ struct MatchesTracksConvertor
     } //for (; itr_image_pair_normalized != itr_image_pair_normalized_end;
       //     ++itr_image_pair_normalized)
 
-    for (size_t i = 0; i < tracks_loose.size(); i++)
+    for (size_t i = 0; i < tracks_loose.size(); i++)	//检查tracks_loose中的每个成员track中的view是否存在于error_view
     {
       bool has_error = 0;
       for (size_t j = 0; j < tracks_loose[i].size(); j++)

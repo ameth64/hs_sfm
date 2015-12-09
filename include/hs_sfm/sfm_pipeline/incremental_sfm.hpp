@@ -71,7 +71,7 @@ public:
                   ) const
   {
     hs::sfm::MatchesTracksConvertor matches_track_convertor;
-    if (matches_track_convertor(matches, tracks) != 0)
+    if (matches_track_convertor(matches, tracks) != 0)	//将match匹配对转为tracks(即vector<Track>)
     {
       return -1;
     }
@@ -83,7 +83,7 @@ public:
     }
     std::sort(tracks.begin(), tracks.end());
     MatchContainer matches_filtered;
-    if (matches_track_convertor(tracks, matches_filtered) != 0)
+    if (matches_track_convertor(tracks, matches_filtered) != 0)	//从有效的tracks中再构建matches
     {
       return -1;
     }
@@ -94,7 +94,7 @@ public:
     //构造view info indexer
     view_info_indexer.SetViewInfoByTracks(tracks);
 
-    BestPairSelector selector(min_number_of_pair_matches_);
+    BestPairSelector selector(min_number_of_pair_matches_);	//选择最优的两张照片
     size_t best_identity_id;
     size_t best_relative_id;
     ExtrinsicParams extrinsic_params_relative;

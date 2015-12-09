@@ -35,31 +35,31 @@ class BestPairSelector
 public:
   typedef _Scalar Scalar;
   typedef int Err;
-  typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;
-  typedef CameraIntrinsicParams<Scalar> IntrinsicParams;
-  typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinsicParamsContainer;
+  typedef CameraExtrinsicParams<Scalar> ExtrinsicParams;	//相机外参数矩阵
+  typedef CameraIntrinsicParams<Scalar> IntrinsicParams;	//相机内参数矩阵
+  typedef EIGEN_STD_VECTOR(IntrinsicParams) IntrinsicParamsContainer;	//内参数矩阵容器
   typedef ImageKeys<Scalar> ImageKeyset;
   typedef EIGEN_STD_VECTOR(ImageKeyset) ImageKeysetContainer;
   typedef EIGEN_VECTOR(Scalar, 3) Point;
   typedef EIGEN_STD_VECTOR(Point) PointContainer;
 
 private:
-  typedef std::map<ImagePair, Scalar> ScoreContainer;
+  typedef std::map<ImagePair, Scalar> ScoreContainer;	//对每个相邻图像对进行评分的数据结构
   typedef hs::sfm::essential::EMatrix5PointsRansacRefiner<Scalar>
-          EMatrixRansacRefiner;
+          EMatrixRansacRefiner;		//本质矩阵的RANSAC优化
   typedef typename EMatrixRansacRefiner::IndexSet IndexSet;
   typedef hs::sfm::essential::EMatrix5PointsCalculator<Scalar>
-          EMatrixCalculator;
+          EMatrixCalculator;		//本质矩阵计算
   typedef typename EMatrixCalculator::HKey HKey;
   typedef typename EMatrixCalculator::HKeyPair HKeyPair;
   typedef typename EMatrixCalculator::HKeyPairContainer HKeyPairContainer;
-  typedef typename IntrinsicParams::KMatrix KMatrix;
+  typedef typename IntrinsicParams::KMatrix KMatrix;	//相机的K矩阵
   typedef EIGEN_MATRIX(Scalar, 3, 3) RMatrix;
-  typedef typename EMatrixCalculator::EMatrix EMatrix;
+  typedef typename EMatrixCalculator::EMatrix EMatrix;	//本质矩阵类型定义
   typedef hs::sfm::essential::EMatrixExtrinsicParamsPointsCalculator<Scalar>
           ExtrinsicParamsPointsCalculator;
 
-  struct ImagePairSize
+  struct ImagePairSize	//一个相邻图像对的key_pair尺寸比较器
   {
     size_t image0;
     size_t image1;
@@ -96,7 +96,7 @@ public:
     std::vector<ImagePairSize> image_pair_sizes;
     auto image_pair_itr = matches.begin();
     auto image_pair_itr_end = matches.end();
-    for (; image_pair_itr != image_pair_itr_end; ++image_pair_itr)
+    for (; image_pair_itr != image_pair_itr_end; ++image_pair_itr)	//创建ImagePairSize对象
     {
       ImagePairSize image_pair_size;
       image_pair_size.image0 = image_pair_itr->first.first;
