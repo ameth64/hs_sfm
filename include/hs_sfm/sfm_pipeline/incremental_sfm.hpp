@@ -92,9 +92,9 @@ public:
     track_point_map.Resize(number_of_tracks);
 
     //构造view info indexer
-    view_info_indexer.SetViewInfoByTracks(tracks);
+    view_info_indexer.SetViewInfoByTracks(tracks);	//从track集合中 构造ViewInfo索引器
 
-    BestPairSelector selector(min_number_of_pair_matches_);	//选择最优的两张照片
+    BestPairSelector selector(min_number_of_pair_matches_);	//选择最优的两张照片, 接收参数为最小匹配点数.
     size_t best_identity_id;
     size_t best_relative_id;
     ExtrinsicParams extrinsic_params_relative;

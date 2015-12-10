@@ -105,7 +105,7 @@ private:
   std::vector<size_t> mapper_;
 };
 
-struct ViewInfo
+struct ViewInfo		//描述一个视图的信息集合, 包括其所在track, 图像ID, key_id, 是否为野值
 {
   size_t track_id;
   size_t image_id;
@@ -127,7 +127,7 @@ struct ViewInfo
   }
 };
 
-class ViewInfoIndexer
+class ViewInfoIndexer	//针对ViewInfo对象的索引器, 并可由track集合生成
 {
 public:
   void Clear()
@@ -137,7 +137,7 @@ public:
     image_key_index_.clear();
   }
 
-  void SetViewInfoByTracks(const hs::sfm::TrackContainer& tracks)
+  void SetViewInfoByTracks(const hs::sfm::TrackContainer& tracks)	//
   {
     Clear();
     size_t number_of_tracks = tracks.size();
@@ -151,12 +151,12 @@ public:
         view_info.image_id = tracks[i][j].first;
         view_info.key_id = tracks[i][j].second;
         view_info.is_blunder = false;
-        views_info_.push_back(view_info);
+        views_info_.push_back(view_info);	//保存生成的ViewInfo
         size_t view_id = views_info_.size() - 1;
         track_image_index_[std::make_pair(view_info.track_id,
-                                          view_info.image_id)] = view_id;
+                                          view_info.image_id)] = view_id;	//保存track_id+image_id构成的索引
         image_key_index_[std::make_pair(view_info.image_id,
-                                        view_info.key_id)] = view_id;
+                                        view_info.key_id)] = view_id;		//保存image_id+key_id构成的索引
       }
     }
   }

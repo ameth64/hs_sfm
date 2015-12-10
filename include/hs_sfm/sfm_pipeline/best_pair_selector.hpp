@@ -1,4 +1,4 @@
-﻿#ifndef _HS_SFM_SFM_PIPELINE_BEST_PAIR_SELECTOR_HPP_
+#ifndef _HS_SFM_SFM_PIPELINE_BEST_PAIR_SELECTOR_HPP_
 #define _HS_SFM_SFM_PIPELINE_BEST_PAIR_SELECTOR_HPP_
 
 #include <map>
@@ -47,7 +47,7 @@ private:
   typedef std::map<ImagePair, Scalar> ScoreContainer;	//对每个相邻图像对进行评分的数据结构
   typedef hs::sfm::essential::EMatrix5PointsRansacRefiner<Scalar>
           EMatrixRansacRefiner;		//本质矩阵的RANSAC优化
-  typedef typename EMatrixRansacRefiner::IndexSet IndexSet;
+  typedef typename EMatrixRansacRefiner::IndexSet IndexSet;	//来自 Ransac 模板类, 取其点类型的迭代器差距为Index, 再作为vector模板参数得到 IndexSet.
   typedef hs::sfm::essential::EMatrix5PointsCalculator<Scalar>
           EMatrixCalculator;		//本质矩阵计算
   typedef typename EMatrixCalculator::HKey HKey;
@@ -59,7 +59,7 @@ private:
   typedef hs::sfm::essential::EMatrixExtrinsicParamsPointsCalculator<Scalar>
           ExtrinsicParamsPointsCalculator;
 
-  struct ImagePairSize	//一个相邻图像对的key_pair尺寸比较器
+  struct ImagePairSize	//一个相邻图像对的key_pair尺寸容器, 以key_pair数量为键进行比较
   {
     size_t image0;
     size_t image1;
@@ -96,7 +96,7 @@ public:
     std::vector<ImagePairSize> image_pair_sizes;
     auto image_pair_itr = matches.begin();
     auto image_pair_itr_end = matches.end();
-    for (; image_pair_itr != image_pair_itr_end; ++image_pair_itr)	//创建ImagePairSize对象
+    for (; image_pair_itr != image_pair_itr_end; ++image_pair_itr)	//从match集合中创建ImagePairSize对象集合
     {
       ImagePairSize image_pair_size;
       image_pair_size.image0 = image_pair_itr->first.first;
@@ -104,25 +104,25 @@ public:
       image_pair_size.number_of_key_pairs = image_pair_itr->second.size();
       image_pair_sizes.push_back(image_pair_size);
     }
-    std::sort(image_pair_sizes.begin(), image_pair_sizes.end());
-    auto itr_image_pair_size = image_pair_sizes.rbegin();
+    std::sort(image_pair_sizes.begin(), image_pair_sizes.end());	//对ImagePairSize对象集合进行排序
+    auto itr_image_pair_size = image_pair_sizes.rbegin();	//ImagePairSize对象集合开始逆序遍历
     auto itr_image_pair_size_end = image_pair_sizes.rend();
     best_identity_id = std::numeric_limits<size_t>::max();
     best_relative_id = std::numeric_limits<size_t>::max();
     IndexSet estimated_inlier_indices;
     PointContainer points_essential;
     for (; itr_image_pair_size != itr_image_pair_size_end;
-         ++itr_image_pair_size)
+         ++itr_image_pair_size)	//遍历相邻图像对
     {
       if (itr_image_pair_size->number_of_key_pairs <
-          min_number_of_pair_matches_) break;
+          min_number_of_pair_matches_) break;	//判断是否小于最小匹配点要求, 若不满足则可跳出循环不再处理.
       hs::sfm::ImagePair image_pair(itr_image_pair_size->image0,
                                     itr_image_pair_size->image1);
       auto itr_key_pairs = matches.find(image_pair);
       auto key_pair_itr = itr_key_pairs->second.begin();
       auto key_pair_itr_end = itr_key_pairs->second.end();
       HKeyPairContainer key_pairs;
-      size_t intrinsic_id_left = image_intrinsic_map[image_pair.first];
+      size_t intrinsic_id_left = image_intrinsic_map[image_pair.first];	//根据图像ID获取其对应的内参数矩阵ID
       size_t intrinsic_id_right = image_intrinsic_map[image_pair.second];
       const IntrinsicParams& intrinsic_params_left =
         intrinsic_params_set[intrinsic_id_left];

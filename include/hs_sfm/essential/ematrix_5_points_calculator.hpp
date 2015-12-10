@@ -32,7 +32,7 @@ private:
 
 public:
 
-  class HypothesesGenerator
+  class HypothesesGenerator	//!
   {
   private:
     typedef EIGEN_MATRIX(Scalar, 9, 4) NullspaceBasis;
@@ -85,7 +85,7 @@ public:
 
   private:
     Err ComputeNullspaceBasis(const HKeyPairContainer& key_pairs,
-                              NullspaceBasis& basis) const
+                              NullspaceBasis& basis) const	//求解零空间的一组基
     {
       typedef EIGEN_MATRIX(Scalar, Eigen::Dynamic, Eigen::Dynamic)
               KeyPairsMatrix;

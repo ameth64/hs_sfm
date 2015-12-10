@@ -38,17 +38,17 @@ public:
 private:
   typedef EMatrix5PointsCalculator<Scalar> Calculator;
 public:
-  typedef typename Calculator::HKey HKey;
-  typedef typename Calculator::HKeyPair HKeyPair;
+  typedef typename Calculator::HKey HKey;	//3*3矩阵
+  typedef typename Calculator::HKeyPair HKeyPair;	//
   typedef typename Calculator::HKeyPairContainer HKeyPairContainer;
   typedef typename Calculator::EMatrix EMatrix;
 private:
-  typedef typename Calculator::EMatrixHypotheses EMatrixHypotheses;
+  typedef typename Calculator::EMatrixHypotheses EMatrixHypotheses;	//EMatrixHypotheses的类型为EMatrix的向量
 
-  class RansacModelCalculator
+  class RansacModelCalculator	//用于Ransac类的模板参数之一
   {
   public:
-    typedef EMatrixHypotheses RansacModel;
+    typedef EMatrixHypotheses RansacModel;	//ransac模型, 本质矩阵估算器, 见EMatrix5PointsCalculator<Scalar>
     static const size_t model_min_set_size_ = 5;
 
   private:
