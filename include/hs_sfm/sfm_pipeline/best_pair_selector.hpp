@@ -109,7 +109,7 @@ public:
     auto itr_image_pair_size_end = image_pair_sizes.rend();
     best_identity_id = std::numeric_limits<size_t>::max();
     best_relative_id = std::numeric_limits<size_t>::max();
-    IndexSet estimated_inlier_indices;
+    IndexSet estimated_inlier_indices;	//Index的向量集合, 其中Index类型来自Ransac类, 即vector<Point>的difference_type类型(对于vector通常是size_t).
     PointContainer points_essential;
     for (; itr_image_pair_size != itr_image_pair_size_end;
          ++itr_image_pair_size)	//遍历相邻图像对
@@ -122,26 +122,26 @@ public:
       auto key_pair_itr = itr_key_pairs->second.begin();
       auto key_pair_itr_end = itr_key_pairs->second.end();
       HKeyPairContainer key_pairs;
-      size_t intrinsic_id_left = image_intrinsic_map[image_pair.first];	//根据图像ID获取其对应的内参数矩阵ID
-      size_t intrinsic_id_right = image_intrinsic_map[image_pair.second];
+      size_t intrinsic_id_left = image_intrinsic_map[image_pair.first];		//根据图像ID获取其对应的内参数矩阵ID, 下同
+      size_t intrinsic_id_right = image_intrinsic_map[image_pair.second];	
       const IntrinsicParams& intrinsic_params_left =
-        intrinsic_params_set[intrinsic_id_left];
+        intrinsic_params_set[intrinsic_id_left];	//获取内参数矩阵, 下同
       const IntrinsicParams& intrinsic_params_right =
         intrinsic_params_set[intrinsic_id_right];
-      KMatrix K_left_inverse = intrinsic_params_left.GetKMatrix().inverse();
+      KMatrix K_left_inverse = intrinsic_params_left.GetKMatrix().inverse();	//获取相机K矩阵的逆
       KMatrix K_right_inverse = intrinsic_params_right.GetKMatrix().inverse();
       for (; key_pair_itr != key_pair_itr_end; ++key_pair_itr)
       {
         size_t key_left_id = key_pair_itr->first;
         size_t key_right_id = key_pair_itr->second;
-        HKeyPair key_pair;
+        HKeyPair key_pair;	//HKeyPair 是EIGEN_VECTOR(Scalar, 3)的pair
         key_pair.first.segment(0, 2) =
-          image_keysets[image_pair.first][key_left_id];
-        key_pair.first[2] = Scalar(1);
+          image_keysets[image_pair.first][key_left_id];		//从ImageKeys类型的对象中取点坐标, 类型为EIGEN_VECTOR(Scalar, 2), 下同.
+        key_pair.first[2] = Scalar(1);	//齐次坐标, 第三位置1.
         key_pair.second.segment(0, 2) =
           image_keysets[image_pair.second][key_right_id];
         key_pair.second[2] = Scalar(1);
-        key_pair.first = K_left_inverse * key_pair.first;
+        key_pair.first = K_left_inverse * key_pair.first;		//取得图像点的归一化坐标, 下同.
         key_pair.second = K_right_inverse * key_pair.second;
         key_pairs.push_back(key_pair);
       }
@@ -151,7 +151,7 @@ public:
       estimated_inlier_indices.clear();
       if (ransac_refiner(key_pairs, 8 / intrinsic_params_left.focal_length(),
                          key_pairs_refined, estimated_inlier_indices,
-                         e_matrix))
+                         e_matrix))	//若返回非0值,则表示RANSAC求解无效, 跳过 
       {
         continue;
       }
@@ -167,38 +167,38 @@ public:
       if (extrinsic_points_calculator(e_matrix,
                                       key_pairs_refined,
                                       relative_extrinsic_params,
-                                      points_essential) != 0)
+                                      points_essential) != 0)	//在 求解成功 情况下返回0
       {
         continue;
       }
 
-      best_identity_id = image_pair.first;
+      best_identity_id = image_pair.first;	//找到最佳匹配image_pair, 准备输出.
       best_relative_id = image_pair.second;
       break;
     }
     if (best_identity_id != std::numeric_limits<size_t>::max() &&
-        best_relative_id != std::numeric_limits<size_t>::max())
+        best_relative_id != std::numeric_limits<size_t>::max())		//若图像的ID有效, 则继续
     {
       auto itr_image_pair =
-        matches.find(std::make_pair(best_identity_id, best_relative_id));
+        matches.find(std::make_pair(best_identity_id, best_relative_id));	//取得对应的match
       if (itr_image_pair == matches.end())
       {
         return -1;
       }
 
-      for (size_t i = 0; i < itr_image_pair->second.size(); i++)
+      for (size_t i = 0; i < itr_image_pair->second.size(); i++)	//遍历该match的所有点对key_pair
       {
         size_t key_id_identity = itr_image_pair->second[i].first;
         size_t key_id_relative = itr_image_pair->second[i].second;
         ViewInfo* view_info_identity =
           view_info_indexer.GetViewInfoByImageKey(best_identity_id,
-                                                     key_id_identity);
+                                                     key_id_identity);	//构造key_pair对应的ViewInfo
         ViewInfo* view_info_relative =
           view_info_indexer.GetViewInfoByImageKey(best_relative_id,
                                                      key_id_relative);
         if (view_info_identity != nullptr)
         {
-          view_info_identity->is_blunder = true;
+          view_info_identity->is_blunder = true;	//预设该成员的值?
         }
         if (view_info_relative != nullptr)
         {
@@ -206,8 +206,8 @@ public:
         }
       }
 
-      points.clear();
-      for (size_t i = 0; i < estimated_inlier_indices.size(); i++)
+      points.clear();	//准备输出
+      for (size_t i = 0; i < estimated_inlier_indices.size(); i++)	//遍历最佳匹配图像对的内点集合, 将其对应的match中, 关系正确的点输出.
       {
         size_t key_pair_id = size_t(estimated_inlier_indices[i]);
         size_t key_id_identity = itr_image_pair->second[key_pair_id].first;
@@ -223,8 +223,8 @@ public:
         {
           view_info_identity->is_blunder = false;
           view_info_relative->is_blunder = false;
-          size_t track_id = view_info_identity->track_id;
-          if (track_id == view_info_relative->track_id)
+          size_t track_id = view_info_identity->track_id;	//记录track ID
+          if (track_id == view_info_relative->track_id)		//记录并输出.
           {
             track_point_map[track_id] = points.size();
             points.push_back(points_essential[i]);

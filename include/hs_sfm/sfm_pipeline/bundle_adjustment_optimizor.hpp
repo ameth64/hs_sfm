@@ -15,7 +15,7 @@ namespace pipeline
 {
 
 template <typename _Scalar>
-class BundleAdjustmentOptimizor
+class BundleAdjustmentOptimizor		//!绑定调节优化
 {
 public:
   typedef _Scalar Scalar;

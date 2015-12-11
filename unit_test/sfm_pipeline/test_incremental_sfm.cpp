@@ -966,67 +966,67 @@ TEST(TestIncrementalSFM, Synthetic120ImagesTest)
 //
 //}
 
-TEST(TestIncrementalSFM, Real242ImagesTest)
-{
-  typedef double Scalar;
-  typedef size_t ImageDimension;
-  typedef hs::sfm::pipeline::IncrementalSFM<Scalar> SFMPipeline;
-  typedef hs::sfm::pipeline::SFMPipelineTester<SFMPipeline> Tester;
-  typedef Tester::IntrinsicParams IntrinsicParams;
-  typedef Tester::IntrinsicParamsContainer IntrinsicParamsContainer;
-  typedef Tester::KeysetContainer KeysetContainer;
-  typedef Tester::PointContainer PointContainer;
-
-  typedef hs::sfm::pipeline::RealDataGenerator<Scalar> Generator;
-
-  typedef hs::sfm::MatchContainer MatchContainer;
-  typedef hs::sfm::TrackContainer TrackContainer;
-
-  std::string out_path =
-    "../../test_data/sfm_pipeline/real_data_242_images/bundler.out";
-  std::string gcp_path =
-    "../../test_data/sfm_pipeline/real_data_242_images/gcp.xml";
-  IntrinsicParamsContainer intrinsic_params_set_initial;
-  intrinsic_params_set_initial.push_back(IntrinsicParams(4666.67,
-                                                         0,
-                                                         3000,
-                                                         2000));
-  std::vector<size_t> image_intrinsic_map(242);
-  for (size_t i = 0; i < 242; i++)
-  {
-    image_intrinsic_map[i] = 0;
-  }
-
-  KeysetContainer keysets;
-  MatchContainer matches;
-  PointContainer gcps;
-  TrackContainer tracks_gcp;
-  KeysetContainer keysets_gcp;
-  PointContainer check_points;
-  TrackContainer tracks_check_point;
-  KeysetContainer keysets_check_point;
-  ASSERT_EQ(0, Generator::LoadGCPs(
-    gcp_path,
-    gcps, tracks_gcp, keysets_gcp,
-    check_points, tracks_check_point, keysets_check_point));
-  ASSERT_EQ(0, Generator::LoadBundlerOutFile(out_path, 6000, 4000,
-                                             keysets, matches, false));
-
-  Scalar key_stddev = Scalar(1);
-  std::string test_name = "real_data_242_images";
-  SFMPipeline sfm_pipeline(100, 8, 2, 7);
-  Tester tester(sfm_pipeline, 0.1, key_stddev, test_name);
-  ASSERT_EQ(0, tester(intrinsic_params_set_initial,
-                      image_intrinsic_map,
-                      matches,
-                      keysets,
-                      gcps,
-                      tracks_gcp,
-                      keysets_gcp,
-                      check_points,
-                      tracks_check_point,
-                      keysets_check_point));
-}
+//TEST(TestIncrementalSFM, Real242ImagesTest)
+//{
+//  typedef double Scalar;
+//  typedef size_t ImageDimension;
+//  typedef hs::sfm::pipeline::IncrementalSFM<Scalar> SFMPipeline;
+//  typedef hs::sfm::pipeline::SFMPipelineTester<SFMPipeline> Tester;
+//  typedef Tester::IntrinsicParams IntrinsicParams;
+//  typedef Tester::IntrinsicParamsContainer IntrinsicParamsContainer;
+//  typedef Tester::KeysetContainer KeysetContainer;
+//  typedef Tester::PointContainer PointContainer;
+//
+//  typedef hs::sfm::pipeline::RealDataGenerator<Scalar> Generator;
+//
+//  typedef hs::sfm::MatchContainer MatchContainer;
+//  typedef hs::sfm::TrackContainer TrackContainer;
+//
+//  std::string out_path =
+//    "../../test_data/sfm_pipeline/real_data_242_images/bundler.out";
+//  std::string gcp_path =
+//    "../../test_data/sfm_pipeline/real_data_242_images/gcp.xml";
+//  IntrinsicParamsContainer intrinsic_params_set_initial;
+//  intrinsic_params_set_initial.push_back(IntrinsicParams(4666.67,
+//                                                         0,
+//                                                         3000,
+//                                                         2000));
+//  std::vector<size_t> image_intrinsic_map(242);
+//  for (size_t i = 0; i < 242; i++)
+//  {
+//    image_intrinsic_map[i] = 0;
+//  }
+//
+//  KeysetContainer keysets;
+//  MatchContainer matches;
+//  PointContainer gcps;
+//  TrackContainer tracks_gcp;
+//  KeysetContainer keysets_gcp;
+//  PointContainer check_points;
+//  TrackContainer tracks_check_point;
+//  KeysetContainer keysets_check_point;
+//  ASSERT_EQ(0, Generator::LoadGCPs(
+//    gcp_path,
+//    gcps, tracks_gcp, keysets_gcp,
+//    check_points, tracks_check_point, keysets_check_point));
+//  ASSERT_EQ(0, Generator::LoadBundlerOutFile(out_path, 6000, 4000,
+//                                             keysets, matches, false));
+//
+//  Scalar key_stddev = Scalar(1);
+//  std::string test_name = "real_data_242_images";
+//  SFMPipeline sfm_pipeline(100, 8, 2, 7);
+//  Tester tester(sfm_pipeline, 0.1, key_stddev, test_name);
+//  ASSERT_EQ(0, tester(intrinsic_params_set_initial,
+//                      image_intrinsic_map,
+//                      matches,
+//                      keysets,
+//                      gcps,
+//                      tracks_gcp,
+//                      keysets_gcp,
+//                      check_points,
+//                      tracks_check_point,
+//                      keysets_check_point));
+//}
 
 TEST(TestIncrementalSFM, Real1067ImagesTest)
 {

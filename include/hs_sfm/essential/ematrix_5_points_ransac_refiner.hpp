@@ -29,7 +29,7 @@ namespace essential
 {
 
 template <typename _Scalar>
-class EMatrix5PointsRansacRefiner
+class EMatrix5PointsRansacRefiner	//!本质矩阵5点方法的ransac优化类
 {
 public:
   typedef _Scalar Scalar;
@@ -45,7 +45,7 @@ public:
 private:
   typedef typename Calculator::EMatrixHypotheses EMatrixHypotheses;	//EMatrixHypotheses的类型为EMatrix的向量
 
-  class RansacModelCalculator	//用于Ransac类的模板参数之一
+  class RansacModelCalculator	//Ransac类的模板参数之一
   {
   public:
     typedef EMatrixHypotheses RansacModel;	//ransac模型, 本质矩阵估算器, 见EMatrix5PointsCalculator<Scalar>
@@ -156,14 +156,14 @@ public:
 public:
   Err operator() (const HKeyPairContainer& key_pairs,
                   Scalar distance_threshold,
-                  HKeyPairContainer& refined_key_pairs,
+                  HKeyPairContainer& refined_key_pairs,	//输出参数
                   IndexSet& inlier_indices,
-                  EMatrix& ematrix) const
+                  EMatrix& ematrix) const	//
   {
-    typedef typename Calculator::EMatrixEvaluator Evaluator;
+    typedef typename Calculator::EMatrixEvaluator Evaluator;	//ransac求值后的评估, 来自EMatrix5PointsCalculator
     RansacModelCalculator model_calculator;
     RansacDistanceCalculator distance_calculator;
-    RansacRefiner ransac_refiner(model_calculator, distance_calculator);
+    RansacRefiner ransac_refiner(model_calculator, distance_calculator);	//先配置Ransac
 
     ransac_refiner.SetAlphaThreshold(Scalar(0.95));
     ransac_refiner.SetDistanceThreshold(distance_threshold);
@@ -171,21 +171,21 @@ public:
     EMatrixHypotheses ematrix_hypotheses;
     Err result = ransac_refiner(key_pairs, refined_key_pairs,
                                 inlier_indices, best_key_pairs,
-                                &ematrix_hypotheses);
+                                &ematrix_hypotheses);	//调用Ransac, 
 
-    if (result != 0) return result;
+    if (result != 0) return result;	//若返回结果非零, 则表示求解未正常结束.
     Evaluator evaluator;
     Scalar threshold_sqr = distance_threshold * distance_threshold;
     Scalar min_score = std::numeric_limits<Scalar>::max();
     size_t max_number_of_inliers = 0;
-    for (size_t i = 0; i < ematrix_hypotheses.size(); i++)
+    for (size_t i = 0; i < ematrix_hypotheses.size(); i++)	//遍历求解的E矩阵估计向量, 评估其结果.
     {
       Scalar score = Scalar(0);
       size_t number_of_inliers = 0;
       for (size_t j = 0; j < key_pairs.size(); j++)
       {
         Scalar distance;
-        evaluator(key_pairs[j], ematrix_hypotheses[i], distance);
+        evaluator(key_pairs[j], ematrix_hypotheses[i], distance);	//计算点与对极线的距离.作为误差评定标准.
         score += std::log(Scalar(1) +
           distance * distance / threshold_sqr);
         if (distance < distance_threshold)

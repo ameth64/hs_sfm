@@ -59,7 +59,7 @@ public:
 
     for (size_t track_id = 0; track_id < number_of_tracks; track_id++)
     {
-      if (!track_point_map.IsValid(track_id))
+      if (!track_point_map.IsValid(track_id))	//若某个track不在已处理的map容器中
       {
         size_t number_of_views = tracks[track_id].size();
 

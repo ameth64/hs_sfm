@@ -18,7 +18,7 @@ namespace essential
 {
 
 template <typename _Scalar>
-class EMatrixExtrinsicParamsPointsCalculator
+class EMatrixExtrinsicParamsPointsCalculator	//该类封装本质矩阵的相关操作.
 {
 public:
   typedef _Scalar Scalar;
@@ -41,7 +41,7 @@ public:
   Err operator() (const EMatrix& e_matrix,
                   const HKeyPairContainer& key_pairs,
                   ExtrinsicParams& extrin_params,
-                  PointContainer& points) const
+                  PointContainer& points) const		//输入本质矩阵, 平面点对, 外参数矩阵, 估算空间点相对坐标, points为输出参数.
   {
     Err result = -1;
     EIGEN_MATRIX(Scalar, 3, 3) W;
@@ -58,7 +58,7 @@ public:
     if (Ra.determinant() < 0) Ra *= -1;
     if (Rb.determinant() < 0) Rb *= -1;
 
-    if (TriangulatePoints(key_pairs, Rb, t, points) != 0)
+    if (TriangulatePoints(key_pairs, Rb, t, points) != 0)	//根据R与t的取值组合分四种情况求解.
     {
       return -1;
     }
@@ -176,7 +176,7 @@ public:
         key_pairs_sample[id_id] = key_pairs[id];
       }
 
-      for (size_t solution_id = 0; solution_id < 4; solution_id++)
+      for (size_t solution_id = 0; solution_id < 4; solution_id++)	//判断4个解的有效性
       {
         PointContainer points_sample;
         if (TriangulatePoints(key_pairs_sample,
@@ -212,7 +212,7 @@ private:
   Err TriangulatePoints(const HKeyPairContainer& key_pairs,
                         const RMatrix& R,
                         const Point& t,
-                        PointContainer& points) const
+                        PointContainer& points) const	//该方法进行空三前方解算.
   {
     typedef hs::sfm::triangulate::MultipleViewVectorFunction<Scalar>
             VectorFunction;
@@ -268,7 +268,7 @@ private:
 
   Err IsValidPoints(const RMatrix& R,
                     const Point& t,
-                    const PointContainer& points) const
+                    const PointContainer& points) const	//判断所求的解是否对应相机前方的点
   {
     typedef EIGEN_MATRIX(Scalar, 3, 4) PMatrix;
     PMatrix P_left;

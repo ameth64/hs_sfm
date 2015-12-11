@@ -16,14 +16,14 @@ namespace essential
 {
 
 template <typename _Scalar>
-class EMatrix5PointsCalculator
+class EMatrix5PointsCalculator	//本质矩阵的5点方法解算类
 {
 public:
   typedef _Scalar Scalar;
   typedef int Err;
   typedef EIGEN_MATRIX(Scalar, 3, 3) EMatrix;
   typedef EIGEN_STD_VECTOR(EMatrix) EMatrixHypotheses;
-  typedef EIGEN_VECTOR(Scalar, 3) HKey;
+  typedef EIGEN_VECTOR(Scalar, 3) HKey;	//2D齐次坐标点
   typedef std::pair<HKey, HKey> HKeyPair;
   typedef EIGEN_STD_VECTOR(HKeyPair) HKeyPairContainer;
 
@@ -315,15 +315,15 @@ public:
                    const EMatrix& ematrix,
                    Scalar& distance) const
     {
-      HLine epiline_left = ematrix * key_pair.first;
+      HLine epiline_left = ematrix * key_pair.first;	//计算两图的对极线(点)
       HLine epiline_right = ematrix.transpose() *
                             key_pair.second;
-
+	  //计算点与对极线距离, 作为误差评定值.
       Scalar error_left = std::abs(key_pair.second.dot(epiline_left)) /
                                     epiline_left.segment(0, 2).norm();
       Scalar error_right = std::abs(key_pair.first.dot(epiline_right)) /
                                     epiline_right.segment(0, 2).norm();
-      distance = error_left + error_right;
+      distance = error_left + error_right;	
 
       return 0;
     }

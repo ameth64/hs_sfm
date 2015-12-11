@@ -78,11 +78,11 @@ public:
                   const ImageIntrinsicMap& image_intrinsic_map,
                   const PointContainer& points,
                   const TrackPointMap& track_point_map,
-                  const ImageViewTracksContainer& image_view_tracks_set,
+                  const ImageViewTracksContainer& image_view_tracks_set,	//图像-track的对象集合.
                   const ImageExtrinsicMap& image_extrinsic_map,
                   ViewInfoIndexer& view_info_indexer,
                   ExtrinsicParamsContainer& new_extrinsic_params_set,
-                  std::vector<size_t>& new_image_ids) const
+                  std::vector<size_t>& new_image_ids) const		//负责加入新照片
   {
     size_t number_of_images = image_keysets.size();
     if (number_of_images != image_intrinsic_map.Size())
@@ -96,9 +96,9 @@ public:
 
     size_t max_matches_image_id = 0;
     size_t max_number_of_view_tracks = 0;
-    std::map<size_t, size_t> number_of_view_tracks_map;
-    std::map<size_t, ImageViewTracks> image_view_tracks_map;
-    for (size_t i = 0; i < number_of_images; i++)
+    std::map<size_t, size_t> number_of_view_tracks_map;	//键为图像编号, 值为与图像相关的track数.
+    std::map<size_t, ImageViewTracks> image_view_tracks_map;	//键为图像编号, 值为该图像相关的track编号向量.
+    for (size_t i = 0; i < number_of_images; i++)	//该循环计算未加入的图像的"与图像相关的track数及编号向量".
     {
       //已加入的影像排除在外
       if (image_extrinsic_map.IsValid(i))
@@ -115,7 +115,7 @@ public:
           continue;
         }
 
-        image_view_tracks.push_back(image_view_tracks_set[i][j]);
+        image_view_tracks.push_back(image_view_tracks_set[i][j]);	//保存track编号
         number_of_view_tracks++;
       }
 
@@ -180,7 +180,7 @@ public:
 
         correspondence_undistort.first =
           undistortor.UndistortImagePoint(key_distort,
-                                          intrinsic_params_set[intrinsic_id]);
+                                          intrinsic_params_set[intrinsic_id]);	//根据内参数进行畸变校正
         correspondence_undistort.second = points[point_id];
         coarse_correspondences_distort.push_back(correspondence_distort);
         coarse_correspondences_undistort.push_back(correspondence_undistort);

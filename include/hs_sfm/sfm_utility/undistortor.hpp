@@ -10,7 +10,7 @@ namespace sfm
 {
 
 template <typename _Scalar>
-class Undistortor
+class Undistortor	//!畸变校正, 将影像上畸变后的2D坐标变换为未畸变的坐标.
 {
 public:
   typedef _Scalar Scalar;

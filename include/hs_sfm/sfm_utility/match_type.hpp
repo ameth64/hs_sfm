@@ -23,7 +23,7 @@ typedef std::vector<Track> TrackContainer;
 typedef std::vector<std::pair<size_t, size_t> > CameraView;
 typedef std::vector<CameraView> CameraViewContainer;
 
-class ObjectIndexMap	//记录每张图像的?
+class ObjectIndexMap	//通用的序列-索引向量, 向量的序号对应一个size_t类型的索引值.
 {
 public:
   ObjectIndexMap(){}

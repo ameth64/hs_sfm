@@ -119,7 +119,7 @@ public:
     rotation_extra[2] = Scalar(3.141592653) / 180;
 
     extrinsic_params_relative.rotation() =
-      extrinsic_params_relative.rotation() * rotation_extra.Inverse();
+      extrinsic_params_relative.rotation() * rotation_extra.Inverse();	//将变换rotation_extra应用至两个外参数矩阵.
 
     extrinsic_params_relative.position() =
       rotation_extra * extrinsic_params_relative.position();
@@ -128,7 +128,7 @@ public:
     extrinsic_params_identity.rotation() = rotation_extra.Inverse();
     extrinsic_params_identity.position().setZero();
 
-    size_t number_of_points = points_best_pair.size();
+    size_t number_of_points = points_best_pair.size();	//将变换rotation_extra应用至所有点集.
     for (size_t i = 0; i < number_of_points; i++)
     {
       Point point = points_best_pair[i];
@@ -142,7 +142,7 @@ public:
     image_extrinsic_map[best_identity_id] = 0;
     image_extrinsic_map[best_relative_id] = 1;
 
-    points.swap(points_best_pair);
+    points.swap(points_best_pair);	//将最佳匹配对的点集与输入参数互换?
     SceneExpandor<Scalar> expandor(add_new_image_matches_threshold_,
                                    Scalar(16),
                                    min_triangulate_views_,

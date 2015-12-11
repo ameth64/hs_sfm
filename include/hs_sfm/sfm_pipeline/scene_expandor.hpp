@@ -113,7 +113,7 @@ public:
 
     while (1)
     {
-      if (progress_manager)
+      if (progress_manager)	//若指定了ProgressManager
       {
         if (!progress_manager->CheckKeepWorking())
         {
@@ -200,7 +200,7 @@ public:
 protected:
   Err Initialize(size_t number_of_images,
                  const TrackContainer& tracks,
-                 ImageViewTracksContainer& image_view_tracks_set,
+                 ImageViewTracksContainer& image_view_tracks_set,	//这个container是ImageViewTracks的向量, 而ImageViewTracks是vector<size_t>
                  ViewInfoIndexer& view_info_indexer) const
   {
     //计算每张影像拍到的track
@@ -208,7 +208,7 @@ protected:
     size_t number_of_tracks = tracks.size();
     for (size_t i = 0; i < number_of_tracks; i++)
     {
-      size_t number_of_views = tracks[i].size();
+      size_t number_of_views = tracks[i].size();	//获取每个track的size
       for (size_t j = 0; j < number_of_views; j++)
       {
         image_view_tracks_set[tracks[i][j].first].push_back(i);
