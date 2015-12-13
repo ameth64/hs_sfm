@@ -122,7 +122,7 @@ public:
       }
 
       BundleAdjustmentOptimizor bundle_adjustment_optimizor(
-                                  number_of_threads_);
+                                  number_of_threads_);	//光束法平差校准
       if (bundle_adjustment_optimizor(image_keysets,
                                       image_intrinsic_map,
                                       tracks,
@@ -147,7 +147,7 @@ public:
                           image_extrinsic_map,
                           view_info_indexer,
                           new_extrinsic_params_set,
-                          new_image_ids) != 0)
+                          new_image_ids) != 0)	//调用ImageExpandor处理新照片的加入, 若无新照片则跳出
       {
         break;
       }
@@ -171,7 +171,7 @@ public:
       //  break;
       //}
 
-      PointExpandor point_expandor;
+      PointExpandor point_expandor;	//处理空间三维点的加入, 类似ImageExpandor
       if (point_expandor(image_keysets,
                          intrinsic_params_set,
                          image_intrinsic_map,

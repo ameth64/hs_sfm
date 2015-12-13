@@ -58,14 +58,14 @@ public:
       number_of_threads_(number_of_threads) {}
 
   Err operator() (const ObjectIndexMap& image_intrinsic_map,
-                  const hs::sfm::MatchContainer& matches,
-                  const KeysetContainer& keysets,
-                  IntrinsicParamsContainer& intrinsic_params_set,
+                  const hs::sfm::MatchContainer& matches,	//match集合, 关键输入.
+                  const KeysetContainer& keysets,			//每图像的同名点集合, 关键输入.
+                  IntrinsicParamsContainer& intrinsic_params_set,	//内参数集合, 关键输入.
                   ExtrinsicParamsContainer& extrinsic_params_set,
-                  hs::sfm::ObjectIndexMap& image_extrinsic_map,
+                  hs::sfm::ObjectIndexMap& image_extrinsic_map,	
                   PointContainer& points,
-                  TrackContainer& tracks,
-                  hs::sfm::ObjectIndexMap& track_point_map,
+                  TrackContainer& tracks,	//track集合, 关键输入.
+                  hs::sfm::ObjectIndexMap& track_point_map,	//
                   hs::sfm::ViewInfoIndexer& view_info_indexer,
                   hs::progress::ProgressManager* progress_manager = NULL
                   ) const
@@ -147,7 +147,7 @@ public:
                                    Scalar(16),
                                    min_triangulate_views_,
                                    Scalar(16),
-                                   number_of_threads_);
+                                   number_of_threads_);	//该类负责场景的增量迭代, 控制照片加入等.
     if (expandor(keysets,
                  image_intrinsic_map,
                  tracks,

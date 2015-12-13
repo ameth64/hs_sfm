@@ -87,10 +87,10 @@ public:
       ground_resolution_(ground_resolution) {}
 
   Err operator() (
-    const IntrinsicParamsContainer& intrinsic_params_set_initial,
+    const IntrinsicParamsContainer& intrinsic_params_set_initial,	//初始内参数集合
     const std::vector<size_t>& image_intrinsic_map_input,
-    const MatchContainer& matches,
-    const KeysetContainer& keysets,
+    const MatchContainer& matches,	//给定输入的match集合.
+    const KeysetContainer& keysets,	//给定输入的关键点集合.
     const PointContainer& gcps,
     const TrackContainer& tracks_gcp,
     const KeysetContainer& keysets_gcp,
